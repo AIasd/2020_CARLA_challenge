@@ -1,0 +1,9 @@
+[submodule "carla_project"]
+	path = carla_project
+	url = https://github.com/AIasd/carla_project.git
+[submodule "scenario_runner"]
+	path = scenario_runner
+	url = https://github.com/AIasd/scenario_runner.git
+[submodule "leaderboard"]
+	path = leaderboard
+	url = https://github.com/AIasd/leaderboard.git
