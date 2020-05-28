@@ -31,6 +31,35 @@ This code uses CARLA 0.9.9 and works with CARLA 0.9.8.
 You will also need to install CARLA 0.9.9, along with the additional maps.
 See [link](https://github.com/carla-simulator/carla/releases/tag/0.9.9) for more instructions.
 
+
+
+## Installation of Carla 0.9.9
+The following commands can be used to install carla 0.9.9
+
+Create a new conda environment:
+```
+conda create --name carla99 python=3.7
+conda activate carla99
+```
+Download CARLA_0.9.9.tar.gz and AdditionalMaps_0.9.9.tar.gz from [link](https://github.com/carla-simulator/carla/releases/tag/0.9.9) and run
+```
+mkdir carla_099
+tar -xvzf CARLA_0.9.9.tar.gz -C carla_099
+```
+unzip AdditionalMaps_0.9.9.tar.gz and merge the extracted two folders with the content inside carla_099.
+Then, run
+```
+cd carla_099/PythonAPI/carla/dist
+easy_install carla-0.9.9-py3.7-linux-x86_64.egg
+```
+Test the installation by running
+```
+cd ../../..
+./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
+```
+
+
+
 ## Dataset
 
 We provide a dataset of over 70k samples collected over the 75 routes provided in `leaderboard/data/routes_*.xml`.

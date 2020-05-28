@@ -7,7 +7,7 @@ export TEAM_AGENT=scenario_runner/team_code/image_agent.py
 export TEAM_CONFIG=/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/epoch=24.ckpt
 export HAS_DISPLAY=1
 export PYTHONPATH=$PYTHONPATH:.
-export WEATHER_INDEX=1
+export WEATHER_INDEX=19
 
 # modification: data collection
 # export CARLA_ROOT=/home/zhongzzy9/Documents/self-driving-car/carla_099
@@ -17,7 +17,7 @@ export WEATHER_INDEX=1
 # export TEAM_CONFIG=sample_data
 # export HAS_DISPLAY=1
 # export PYTHONPATH=$PYTHONPATH:.
-# export WEATHER_INDEX=0
+# export WEATHER_INDEX=19
 
 
 export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla
