@@ -101,12 +101,6 @@ First, spin up a CARLA server
 then run the agent.
 
 ```bash
-export CARLA_ROOT=/home/bradyzhou/software/CARLA_0.9.9      # change to where you installed CARLA
-export PORT=2000                                            # change to port that CARLA is running on
-export ROUTES=leaderboard/data/routes/route_19.xml          # change to desired route
-export TEAM_AGENT=scenario_runner/team_code/auto_pilot.py   # no need to change
-export TEAM_CONFIG=sample_data                              # change path to save data
-
 ./run_agent.sh
 ```
 
@@ -127,13 +121,6 @@ Spin up a CARLA server
 then run the agent.
 
 ```bash
-export CARLA_ROOT=/home/bradyzhou/software/CARLA_0.9.9      # change to where you installed CARLA
-export PORT=2000                                            # change to port that CARLA is running on
-export ROUTES=leaderboard/data/routes/route_19.xml          # change to desired route
-export TEAM_AGENT=scenario_runner/team_code/image_agent.py  # no need to change
-export TEAM_CONFIG=model.ckpt                               # change path to checkpoint
-export HAS_DISPLAY=1                                        # set to 0 if you don't want a debug window
-
 ./run_agent.sh
 ```
 

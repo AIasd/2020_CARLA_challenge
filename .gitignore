@@ -1,4 +1,5 @@
 collected_data/*
+collected_data_autopilot/*
 sample_data/*
 temp/*
 models/*
