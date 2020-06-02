@@ -7,7 +7,7 @@ eps = 0.001
 
 
 # ['collected_data', 'collected_data_autopilot']
-data_dir = 'collected_data_autopilot'
+data_dir = 'collected_data'
 
 
 # weather_indexes = [11, 19]
@@ -15,8 +15,8 @@ data_dir = 'collected_data_autopilot'
 # weather_indexes = [0]
 # routes = [11, 12, 13, 14, 15, 16]
 
-weather_indexes = [0]
-routes = [16, 26, 36, 46, 56, 66]
+weather_indexes = [19]
+routes = [16, 26, 36]
 # infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane', 'vehicle_blocked']
 infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane']
 for weather_id in weather_indexes:

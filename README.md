@@ -46,7 +46,10 @@ Download CARLA_0.9.9.tar.gz and AdditionalMaps_0.9.9.tar.gz from [link](https://
 mkdir carla_099
 tar -xvzf CARLA_0.9.9.tar.gz -C carla_099
 ```
-unzip AdditionalMaps_0.9.9.tar.gz and merge the extracted two folders with the content inside carla_099.
+move AdditionalMaps_0.9.9.tar.gz to Import/ and run:
+```
+./ImportAssets.sh
+```
 Then, run
 ```
 cd carla_099/PythonAPI/carla/dist
