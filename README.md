@@ -90,10 +90,7 @@ python3 -m carla_project.src.dataset sample_data/route_00/
 ```
 
 ## Data Collection
-
-The autopilot that we used to collect the data can use a lot of work and currently does not support stop signs.
-
-If you're interested in recollecting data after changing the autopilot's driving behavior in `scenario_runner/team_code/autopilot.py`, you can collect your own dataset by running the following.
+comment out the pretrained model lines in run_agent.sh.
 
 First, spin up a CARLA server
 
@@ -115,6 +112,8 @@ Navigate to one of the runs, like https://app.wandb.ai/bradyz/2020_carla_challen
 
 Go to the "files" tab, and download the model weights, named "epoch=24.ckpt", and pass in the file path as the `TEAM_CONFIG` below.
 
+comment out the autopilot model lines in run_agent.sh.
+
 Spin up a CARLA server
 
 ```bash
@@ -125,69 +124,4 @@ then run the agent.
 
 ```bash
 ./run_agent.sh
-```
-
-## Training models from scratch
-
-First, download and extract our provided dataset.
-
-Then run the stage 1 training of the privileged agent.
-
-```python
-python3 -m carla_project/src/map_model --dataset_dir /path/to/data
-```
-
-We use wandb for logging, so navigate to the generated experiment page to visualize training.
-
-![sample](assets/stage_1.gif)
-
-If you're interested in tuning hyperparameters, see `carla_project/src/map_model.py` for more detail.
-
-Training the sensorimotor agent (acts only on raw images) is similar, and can be done by
-
-```python
-python3 -m carla_project/src/image_model --dataset_dir /path/to/data
-```
-
-## Docker
-
-Build the docker container to submit, make sure to edit `scripts/Dockerfile.master` appropriately.
-
-```bash
-sudo ./scripts/make_docker.sh
-```
-
-Spin up a CARLA server
-
-```bash
-./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
-```
-
-Now you can either run the docker container or run it interactively.
-
-To run the docker container,
-
-```bash
-sudo docker run --net=host --gpus all -e NVIDIA_VISIBLE_DEVICES=0 -e REPETITIONS=1 -e DEBUG_CHALLENGE=0 -e PORT=2000 -e ROUTES=leaderboard/data/routes_devtest.xml -e CHECKPOINT_ENDPOINT=tmp.txt -e SCENARIOS=leaderboard/data/all_towns_traffic_scenarios_public.json leaderboard-user:latest ./leaderboard/scripts/run_evaluation.sh
-```
-
-Or if you need to debug something, you can run it interactively
-
-```bash
-sudo docker run --net=host --gpus all -it leaderboard-user:latest /bin/bash
-```
-
-Run the evaluation through the interactive shell.
-
-```bash
-export PORT=2000
-export DEBUG_CHALLENGE=0
-export REPETITIONS=1
-export ROUTES=leaderboard/data/routes_devtest.xml
-export CHECKPOINT_ENDPOINT=tmp.txt
-export SCENARIOS=leaderboard/data/all_towns_traffic_scenarios_public.json
-
-conda activate python37
-
-./leaderboard/scripts/run_evaluation.sh
 ```

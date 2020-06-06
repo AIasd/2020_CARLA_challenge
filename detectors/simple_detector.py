@@ -1,19 +1,46 @@
+import os
+from torch.utils.data import DataLoader, WeightedRandomSampler
+from dataloader import load_data, Set_Wrapper
+import torch
+import torch.nn as nn
 from models.VGG16 import VGGnet
-from dataloader import get_train_test_num, get_src_tgt_num, get_dataset, Source_Target_Train_Set, Source_Target_Train_Pair_Set, Set
+from tqdm import tqdm
+from time import time
+from utils import save_model
+import numpy as np
+import random
 
-def train(ce_loss, optim, device, net, loader, method):
+def train(ce_loss, optim, device, net, loader):
     # method will be ignored
     net.train()
-    for i, (img, label) in enumerate(loader):
+    label_list = []
+    idx_list = []
+    for i, (img, label) in tqdm(enumerate(loader)):
         img = img.to(device, dtype=torch.float)
-        label = label.to(device, dtype=torch.long)
-        pred, feature = net(img)
+        label_t = label.to(device, dtype=torch.long)
 
-        ce = ce_loss(pred, label)
-        loss = ce
+        pred, feature = net(img)
+        _, idx_t = pred.max(dim=1)
+
+        loss = ce_loss(pred, label_t)
         optim.zero_grad()
         loss.backward()
         optim.step()
+
+        idx = idx_t.cpu().detach().numpy()
+        idx_list.append(idx)
+        label_list.append(label)
+
+    idxs = np.concatenate(idx_list)
+    labels = np.concatenate(label_list)
+
+
+    corret_inds = idxs==labels
+    acc = np.mean(corret_inds)
+    acc_0 = np.mean(corret_inds[labels==0])
+    acc_1 = np.mean(corret_inds[labels==1])
+    correct_num = np.sum(corret_inds)
+    print('training:', '0:', acc_0, '1:', acc_1, 'correct_num:', correct_num)
 
     return loss.item()
 
@@ -21,72 +48,88 @@ def train(ce_loss, optim, device, net, loader, method):
 def test(device, net, loader):
     correct = 0
     net.eval()
+    idx_list = []
+    label_list = []
     with torch.no_grad():
         for img, label in loader:
-            img = img.to(device, dtype=torch.float)
-            label = label.to(device, dtype=torch.long)
-            pred, _ = net(img)
-            _, idx = pred.max(dim=1)
-            cor = (idx == label).sum().cpu().item()
-            correct += cor
-            # if (cor):
-                # print(label,cor)
-    acc = correct / len(loader.dataset)
-    # print(correct, len(loader.dataset))
+            img_t = img.to(device, dtype=torch.float)
+            label_t = label.to(device, dtype=torch.long)
+            pred, _ = net(img_t)
+            _, idx_t = pred.max(dim=1)
+            idx = idx_t.cpu().detach().numpy()
+            idx_list.append(idx)
+            label_list.append(label)
+    idxs = np.concatenate(idx_list)
+    labels = np.concatenate(label_list)
+
+    corret_inds = idxs==labels
+    acc = np.mean(corret_inds)
+    acc_0 = np.mean(corret_inds[labels==0])
+    acc_1 = np.mean(corret_inds[labels==1])
+    correct_num = np.sum(corret_inds)
+    print('testing', '0:', acc_0, '1:', acc_1, 'correct_num:', correct_num)
     return acc
 
 
 if __name__ == '__main__':
+    batch = 128
+    epoches = 1
+    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/detectors/saved_models'
+    if not os.path.exists(parent_folder):
+        os.mkdir(model_path)
+    model_path = parent_folder + '/vgg16.pth'
+
+
+
+
+    routes = [i for i in range(76)]
+    routes.remove(13)
+    random.shuffle(routes)
 
 
     train_weather_indexes = [0]
-    train_routes = [i for i in range(10)]
+    train_routes = routes[:50]
 
     test_weather_indexes = [0]
-    test_routes = [i for i in range(10, 20)]
+    test_routes = routes[50:]
 
+    train_data_dir = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data'
+    test_data_dir = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data'
 
     # get datasets
-    source_train_data, _ = get_dataset(dataset_names[0], source_train_num, -1, random_seed)
-    target_train_data, target_test_data = get_dataset(dataset_names[1], target_train_num, -1, random_seed, balanced_class=True)
+    x_center_train, y_train = load_data(train_data_dir, train_weather_indexes, train_routes)
+    x_center_test, y_test = load_data(test_data_dir, test_weather_indexes, test_routes)
 
-    source_train = Set(source_train_data, model_arch)
-    target_train = Set(target_train_data, model_arch)
+    train_dataset = Set_Wrapper((x_center_train, y_train), train_data_dir)
+    test_dataset = Set_Wrapper((x_center_test, y_test), test_data_dir)
 
+    # sample_weights = np.ones_like(y_train)
+    # sample_weights[y_train==1] *= 60
+    # print(np.mean(sample_weights))
+    # samp = WeightedRandomSampler(sample_weights, num_samples=len(sample_weights))
+    # train_loader = DataLoader(train_dataset, batch_size=batch, sampler=samp)
 
+    train_loader = DataLoader(train_dataset, batch_size=batch, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch, shuffle=True)
 
-    source_target_train = Source_Target_Train_Set(source_train_data, target_train_data, model_arch, [])
-
-    train_set_loader = DataLoader(source_target_train, batch_size=batch, shuffle=True)
-
-    test_loader = DataLoader(target_test, batch_size=batch, shuffle=True)
-
-    #
+    # training
     device = torch.device("cuda")
-
-     elif model_arch == 'vgg':
-            net = VGGnet().to(device)
-
-            if sampling == 'pair':
-                optim = torch.optim.Adadelta(net.parameters(), lr=0.1)
-            else:
-                optim = torch.optim.SGD(net.parameters(), momentum=0.95, lr=0.0003, weight_decay=0.0003)
-
+    net = VGGnet().to(device)
+    optim = torch.optim.Adadelta(net.parameters(), lr=0.1)
 
 
     best_test_acc = 0
-        ce_loss = nn.CrossEntropyLoss()
-
-        for epoch in range(epochs):
-            if sampling == 'pair':
-                train_loss = train(ce_loss, optim, device, net, train_set_loader, method)
-            else:
-                train_loss = train_plain(ce_loss, optim, device, net, train_set_loader, method)
-
-            test_acc = test(device, net, test_loader)
-            # writer.add_scalar('plain/train_loss', train_loss, epoch)
-            # writer.add_scalar('plain/test_acc', test_acc, epoch)
-            print('epoch:', epoch, 'test_acc:', test_acc)
-            if test_acc > best_test_acc:
-                best_test_acc = test_acc
-                save_model(net, train_baseline_path)
+    # 76 leads to predicting everything to be 0 VS 77 leads to predicting everything to be 1
+    class_weights = [1, 70]
+    # class_weights = [1, 1]
+    ce_loss = nn.CrossEntropyLoss(weight=torch.FloatTensor(class_weights).cuda())
+    time_start = time()
+    for epoch in range(epoches):
+        train_loss = train(ce_loss, optim, device, net, train_loader)
+        test_acc = test(device, net, test_loader)
+        # writer.add_scalar('plain/train_loss', train_loss, epoch)
+        # writer.add_scalar('plain/test_acc', test_acc, epoch)
+        print('epoch:', epoch, 'test_acc:', test_acc, 'train_loss:', train_loss, 'time elapsed:',  time()-time_start)
+        if test_acc > best_test_acc:
+            best_test_acc = test_acc
+            save_model(net, model_path)
