@@ -16,10 +16,10 @@ def train(ce_loss, optim, device, net, loader):
     label_list = []
     idx_list = []
     for i, (img, label) in tqdm(enumerate(loader)):
-        img = img.to(device, dtype=torch.float)
+        img_t = img.to(device, dtype=torch.float)
         label_t = label.to(device, dtype=torch.long)
 
-        pred, feature = net(img)
+        pred, feature = net(img_t)
         _, idx_t = pred.max(dim=1)
 
         loss = ce_loss(pred, label_t)
@@ -46,12 +46,11 @@ def train(ce_loss, optim, device, net, loader):
 
 
 def test(device, net, loader):
-    correct = 0
     net.eval()
-    idx_list = []
     label_list = []
+    idx_list = []
     with torch.no_grad():
-        for img, label in loader:
+        for img, label in tqdm(loader):
             img_t = img.to(device, dtype=torch.float)
             label_t = label.to(device, dtype=torch.long)
             pred, _ = net(img_t)
@@ -88,10 +87,10 @@ if __name__ == '__main__':
 
 
     train_weather_indexes = [0]
-    train_routes = routes[:50]
+    train_routes = routes[:45]
 
     test_weather_indexes = [0]
-    test_routes = routes[50:]
+    test_routes = routes[45:]
 
     train_data_dir = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data'
     test_data_dir = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data'

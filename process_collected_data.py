@@ -15,7 +15,7 @@ data_dir = 'collected_data'
 # weather_indexes = [0]
 # routes = [11, 12, 13, 14, 15, 16]
 
-weather_indexes = [0]
+weather_indexes = [11]
 routes = [i for i in range(76)]
 # infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane', 'vehicle_blocked']
 infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane']
