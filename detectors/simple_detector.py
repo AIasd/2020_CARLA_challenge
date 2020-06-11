@@ -119,7 +119,7 @@ if __name__ == '__main__':
 
     best_test_acc = 0
     # 76 leads to predicting everything to be 0 VS 77 leads to predicting everything to be 1
-    class_weights = [1, 70]
+    class_weights = [1, 75]
     # class_weights = [1, 1]
     ce_loss = nn.CrossEntropyLoss(weight=torch.FloatTensor(class_weights).cuda())
     time_start = time()

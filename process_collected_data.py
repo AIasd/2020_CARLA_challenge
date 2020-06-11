@@ -3,7 +3,7 @@ import json
 import re
 import numpy as np
 
-eps = 0.001
+eps = 1e-12
 
 
 # ['collected_data', 'collected_data_autopilot']
@@ -15,12 +15,14 @@ data_dir = 'collected_data'
 # weather_indexes = [0]
 # routes = [11, 12, 13, 14, 15, 16]
 
-weather_indexes = [11]
-routes = [i for i in range(76)]
+weather_indexes = [15]
+routes = [i for i in range(30)]
+
 # infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane', 'vehicle_blocked']
 infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane']
 for weather_id in weather_indexes:
     for route in routes:
+        print(route)
         route_str = str(route)
         if route < 10:
             route_str = '0'+route_str
