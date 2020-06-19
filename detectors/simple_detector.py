@@ -71,8 +71,8 @@ def test(device, net, loader):
 
 
 if __name__ == '__main__':
-    batch = 128
-    epoches = 1
+    batch = 32
+    epoches = 5
     parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/detectors/saved_models'
     if not os.path.exists(parent_folder):
         os.mkdir(model_path)
@@ -83,24 +83,49 @@ if __name__ == '__main__':
 
     routes = [i for i in range(76)]
     routes.remove(13)
+    random.seed(0)
     random.shuffle(routes)
 
 
-    train_weather_indexes = [0]
-    train_routes = routes[:45]
+    train_weather_indexes = [15]
+    train_routes = routes[:55]
 
-    test_weather_indexes = [0]
-    test_routes = routes[45:]
+    test_weather_indexes = [15]
+    test_routes = routes[55:]
 
     train_data_dir = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data'
     test_data_dir = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data'
 
     # get datasets
     x_center_train, y_train = load_data(train_data_dir, train_weather_indexes, train_routes)
+
+    inds_0 = y_train == 0
+    inds_1 = y_train == 1
+    x_center_train_0 = x_center_train[inds_0]
+    y_train_0 = y_train[inds_0]
+    x_center_train_1 = x_center_train[inds_1]
+    y_train_1 = y_train[inds_1]
+
+    x_center_train_0 = x_center_train_0[::1000]
+    y_train_0 = y_train_0[::1000]
+
+    x_center_train = np.concatenate([x_center_train_0, x_center_train_1])
+    y_train = np.concatenate([y_train_0, y_train_1])
+
+    inds = np.random.permutation(y_train.shape[0])
+
+    x_center_train = x_center_train[inds]
+    y_train = y_train[inds]
+
+
+
+
     x_center_test, y_test = load_data(test_data_dir, test_weather_indexes, test_routes)
 
     train_dataset = Set_Wrapper((x_center_train, y_train), train_data_dir)
     test_dataset = Set_Wrapper((x_center_test, y_test), test_data_dir)
+
+    print(y_train.shape, np.sum(y_train==0), np.sum(y_train==1))
 
     # sample_weights = np.ones_like(y_train)
     # sample_weights[y_train==1] *= 60
@@ -108,8 +133,8 @@ if __name__ == '__main__':
     # samp = WeightedRandomSampler(sample_weights, num_samples=len(sample_weights))
     # train_loader = DataLoader(train_dataset, batch_size=batch, sampler=samp)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch, shuffle=False)
 
     # training
     device = torch.device("cuda")
@@ -119,7 +144,7 @@ if __name__ == '__main__':
 
     best_test_acc = 0
     # 76 leads to predicting everything to be 0 VS 77 leads to predicting everything to be 1
-    class_weights = [1, 75]
+    class_weights = [1, 1]
     # class_weights = [1, 1]
     ce_loss = nn.CrossEntropyLoss(weight=torch.FloatTensor(class_weights).cuda())
     time_start = time()
@@ -131,4 +156,5 @@ if __name__ == '__main__':
         print('epoch:', epoch, 'test_acc:', test_acc, 'train_loss:', train_loss, 'time elapsed:',  time()-time_start)
         if test_acc > best_test_acc:
             best_test_acc = test_acc
+            print('saved model')
             save_model(net, model_path)

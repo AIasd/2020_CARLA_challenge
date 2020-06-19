@@ -166,6 +166,7 @@ class Set_Wrapper(Dataset):
 def load_data(data_dir, weather_indexes, route_indexes):
     x_center = None
     y = None
+    Misbehavior = []
     for weather in weather_indexes:
         for route in route_indexes:
 
@@ -173,6 +174,7 @@ def load_data(data_dir, weather_indexes, route_indexes):
             if route < 10:
                 route_str = '0'+route_str
             data_df = pd.read_csv(os.path.join(data_dir, 'route_'+route_str+'_'+str(weather), 'driving_log.csv'))
+
             if x_center is None:
                 x_center = data_df['center'].values
                 y = data_df['behaviors'].values
@@ -184,10 +186,14 @@ def load_data(data_dir, weather_indexes, route_indexes):
                 # x_left = numpy.concatenate((x_left, data_df['left'].values), axis=0)
                 # x_right = numpy.concatenate((x_right, data_df['right'].values), axis=0)
 
+            Misbehavior.extend(data_df['Misbehavior'])
 
-    chosen_inds = y >= 0
+    Misbehavior = np.array(Misbehavior)
+    chosen_inds = (y == 0) | ((y==1)&((Misbehavior=='_collisions_vehicle')|(Misbehavior=='_collisions_layout')))
+
     x_center = x_center[chosen_inds]
     y = y[chosen_inds]
+
     print('y==0:', y[y==0].shape)
     print('y==1:', y[y==1].shape)
     return x_center, y
