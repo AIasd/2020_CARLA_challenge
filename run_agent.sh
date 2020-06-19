@@ -1,5 +1,5 @@
 #!/bin/bash
-export CARLA_ROOT=/home/zhongzzy9/Documents/self-driving-car/carla_0992_no_rss
+export CARLA_ROOT=/home/zhongzzy9/Documents/self-driving-car/carla_0994_no_rss
 export PORT=2000
 export ROUTES=leaderboard/data/routes/route_19.xml
 export HAS_DISPLAY=1
