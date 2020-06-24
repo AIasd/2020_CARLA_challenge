@@ -2,7 +2,7 @@
 
 Clone this repo with all its submodules
 
-```bash
+```
 git clone https://github.com/AIasd/2020_CARLA_challenge.git --recursive
 ```
 
@@ -19,26 +19,26 @@ See [link](https://github.com/carla-simulator/carla/releases/tag/0.9.9) for more
 The following commands can be used to install carla 0.9.9
 
 Create a new conda environment:
-```bash
+```
 conda create --name carla99 python=3.7
 conda activate carla99
 ```
 Download CARLA_0.9.9.4.tar.gz and AdditionalMaps_0.9.9.4.tar.gz from [link](https://github.com/carla-simulator/carla/releases/tag/0.9.9) and run
-```bash
+```
 mkdir carla_0994_no_rss
 tar -xvzf CARLA_0.9.9.4_RSS.tar.gz -C carla_0994
 ```
 move `AdditionalMaps_0.9.9.4.tar.gz` to `carla_0994_no_rss/Import/` and in the folder `carla_0994_no_rss/` run:
-```bash
+```
 ./ImportAssets.sh
 ```
 Then, run
-```bash
-cd carla_099/PythonAPI/carla/dist
+```
+cd carla_0994_no_rss/PythonAPI/carla/dist
 easy_install carla-0.9.9-py3.7-linux-x86_64.egg
 ```
 Test the installation by running
-```bash
+```
 cd ../../..
 ./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
 ```
@@ -50,13 +50,13 @@ comment out the pretrained model lines in run_agent.sh and modify the paths insi
 
 Spin up a CARLA server
 
-```bash
+```
 ./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
 ```
 
 then run the agent.
 
-```bash
+```
 ./run_agent.sh
 ```
 
@@ -72,13 +72,13 @@ comment out the autopilot model lines in run_agent.sh and modify the paths insid
 
 Spin up a CARLA server
 
-```bash
+```
 ./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
 ```
 
 then run the agent.
 
-```bash
+```
 ./run_agent.sh
 ```
 

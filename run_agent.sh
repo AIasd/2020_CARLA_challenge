@@ -6,12 +6,12 @@ export HAS_DISPLAY=1
 export WEATHER_INDEX=19
 
 # modification: pre-trained model
-export TEAM_AGENT=scenario_runner/team_code/image_agent.py
-export TEAM_CONFIG=/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/epoch=24.ckpt
+# export TEAM_AGENT=scenario_runner/team_code/image_agent.py
+# export TEAM_CONFIG=/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/epoch=24.ckpt
 
 # modification: data collection
-# export TEAM_AGENT=leaderboard/team_code/auto_pilot.py
-# export TEAM_CONFIG=collected_data_autopilot
+export TEAM_AGENT=leaderboard/team_code/auto_pilot.py
+export TEAM_CONFIG=collected_data_autopilot
 
 
 
