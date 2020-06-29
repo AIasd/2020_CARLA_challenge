@@ -1024,7 +1024,7 @@ def game_loop(args):
 
         client = carla.Client(args.host, args.port)
         print(client.get_available_maps())
-        client.load_world('Town10HD')
+        client.load_world('Town02')
         client.set_timeout(2.0)
 
         display = pygame.display.set_mode(
@@ -1036,6 +1036,13 @@ def game_loop(args):
         controller = KeyboardControl(world, args.autopilot)
 
         # addition
+        all_agents = world.world.get_blueprint_library().filter("walker.*")
+        for a in all_agents:
+            print(a.id)
+        all_agents = world.world.get_blueprint_library().filter("vehicle.*")
+        for a in all_agents:
+            print(a.id)
+
         waypoints = world.map.get_topology()
         x_list = []
         y_list = []
@@ -1054,8 +1061,8 @@ def game_loop(args):
 
         import matplotlib.pyplot as plt
         loc_list = sorted(loc_list, key=lambda loc:loc[0])
-        for loc in loc_list:
-            print('<waypoint pitch="{}" roll="{}" x="{}" y="{}" yaw="{}" z="{}" />'.format(loc[3], loc[5], loc[0], loc[1], loc[4], loc[2]))
+        # for loc in loc_list:
+        #     print('<waypoint pitch="{}" roll="{}" x="{}" y="{}" yaw="{}" z="{}" />'.format(loc[3], loc[5], loc[0], loc[1], loc[4], loc[2]))
         plt.gca().invert_yaxis()
         plt.scatter(x_list, y_list, linewidths=0.5)
         plt.show()

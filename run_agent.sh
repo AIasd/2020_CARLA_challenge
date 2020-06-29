@@ -39,7 +39,6 @@ fi
 
 python leaderboard/leaderboard/leaderboard_evaluator.py \
 --challenge-mode \
---track=dev_track_3 \
 --scenarios=leaderboard/data/all_towns_traffic_scenarios_public.json  \
 --agent=${TEAM_AGENT} \
 --agent-config=${TEAM_CONFIG} \

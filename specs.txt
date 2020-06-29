@@ -1,0 +1,61 @@
+# walker modifiable attributes: speed: float
+walker.pedestrian.0005
+walker.pedestrian.0009
+walker.pedestrian.0008
+walker.pedestrian.0013
+walker.pedestrian.0010
+walker.pedestrian.0012
+walker.pedestrian.0011
+walker.pedestrian.0007
+walker.pedestrian.0004
+walker.pedestrian.0006
+walker.pedestrian.0003
+walker.pedestrian.0014
+walker.pedestrian.0002
+walker.pedestrian.0001
+
+
+# vehicle modifiable attributes: color: RGBColor
+# car
+vehicle.audi.a2
+vehicle.audi.tt
+vehicle.mercedes-benz.coupe
+vehicle.bmw.grandtourer
+vehicle.audi.etron
+vehicle.nissan.micra
+vehicle.lincoln.mkz2017
+vehicle.tesla.cybertruck
+vehicle.dodge_charger.police
+vehicle.tesla.model3
+vehicle.toyota.prius
+vehicle.seat.leon
+vehicle.nissan.patrol
+vehicle.mini.cooperst
+vehicle.jeep.wrangler_rubicon
+vehicle.mustang.mustang
+vehicle.volkswagen.t2
+vehicle.chevrolet.impala
+vehicle.citroen.c3
+vehicle.carlamotors.carlacola
+
+# motocycle
+vehicle.yamaha.yzf
+vehicle.harley-davidson.low_rider
+vehicle.kawasaki.ninja
+
+# cyclist
+vehicle.bh.crossbike
+vehicle.gazelle.omafiets
+vehicle.diamondback.century
+
+
+
+
+
+# weather
+cloudiness, precipitation, precipitation_deposits, wind_intensity, sun_azimuth_angle, sun_altitude_angle, fog_density, fog_distance, wetness, fog_falloff
+
+
+
+# road condition
+friction coefficient
