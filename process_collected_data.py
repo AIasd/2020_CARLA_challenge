@@ -6,7 +6,7 @@ import numpy as np
 eps = 1e-12
 
 
-# ['collected_data', 'collected_data_autopilot']
+# ['collected_data', 'collected_data_autopilot', 'collected_data_customized']
 data_dir = 'collected_data'
 
 

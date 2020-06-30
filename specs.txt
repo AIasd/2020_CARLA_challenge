@@ -38,7 +38,7 @@ vehicle.chevrolet.impala
 vehicle.citroen.c3
 vehicle.carlamotors.carlacola
 
-# motocycle
+# motorcycle
 vehicle.yamaha.yzf
 vehicle.harley-davidson.low_rider
 vehicle.kawasaki.ninja

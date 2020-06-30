@@ -6,13 +6,17 @@ export HAS_DISPLAY=1
 export WEATHER_INDEX=19
 
 # modification: pre-trained model
-# export TEAM_AGENT=scenario_runner/team_code/image_agent.py
-# export TEAM_CONFIG=/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/epoch=24.ckpt
+export TEAM_AGENT=scenario_runner/team_code/image_agent.py
+export TEAM_CONFIG=/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/epoch=24.ckpt
+# export SAVE_FOLDER=/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data
 
-# modification: data collection
-export TEAM_AGENT=leaderboard/team_code/auto_pilot.py
-export TEAM_CONFIG=collected_data_autopilot
+# modification: autopilot
+# export TEAM_AGENT=leaderboard/team_code/auto_pilot.py
+# export TEAM_CONFIG=collected_data_autopilot
+# export SAVE_FOLDER=/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_autopilot
 
+# customized routes+scenarios
+export SAVE_FOLDER=/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized
 
 
 export PYTHONPATH=$PYTHONPATH:.
@@ -45,6 +49,7 @@ python leaderboard/leaderboard/leaderboard_evaluator.py \
 --routes=${ROUTES} \
 --checkpoint=${CHECKPOINT_ENDPOINT} \
 --port=${PORT} \
---weather-index=${WEATHER_INDEX}
+--weather-index=${WEATHER_INDEX} \
+--save_folder=${SAVE_FOLDER}
 
 echo "Done. See $CHECKPOINT_ENDPOINT for detailed results."
