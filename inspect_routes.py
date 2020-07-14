@@ -1023,8 +1023,11 @@ def game_loop(args):
     try:
 
         client = carla.Client(args.host, args.port)
+        town_name = 'Town10HD'
+        print(town_name)
         print(client.get_available_maps())
-        client.load_world('Town01')
+
+        client.load_world(town_name)
         client.set_timeout(2.0)
 
         display = pygame.display.set_mode(
@@ -1036,6 +1039,9 @@ def game_loop(args):
         controller = KeyboardControl(world, args.autopilot)
 
         # addition
+        all_agents = world.world.get_blueprint_library().filter("static.*")
+        for a in all_agents:
+            print(a.id)
         all_agents = world.world.get_blueprint_library().filter("walker.*")
         for a in all_agents:
             print(a.id)

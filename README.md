@@ -26,7 +26,7 @@ conda activate carla99
 Download CARLA_0.9.9.4.tar.gz and AdditionalMaps_0.9.9.4.tar.gz from [link](https://github.com/carla-simulator/carla/releases/tag/0.9.9) and run
 ```
 mkdir carla_0994_no_rss
-tar -xvzf CARLA_0.9.9.4_RSS.tar.gz -C carla_0994
+tar -xvzf CARLA_0.9.9.4_RSS.tar.gz -C carla_0994_no_rss
 ```
 move `AdditionalMaps_0.9.9.4.tar.gz` to `carla_0994_no_rss/Import/` and in the folder `carla_0994_no_rss/` run:
 ```
@@ -54,7 +54,7 @@ Spin up a CARLA server
 ./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
 ```
 
-then run the agent.
+then run the agent in a separate window.
 
 ```
 ./run_agent.sh
@@ -66,9 +66,7 @@ Download the checkpoint from [Wandb project](https://app.wandb.ai/bradyz/2020_ca
 
 Navigate to one of the runs, like https://app.wandb.ai/bradyz/2020_carla_challenge_lbc/runs/command_coefficient=0.01_sample_by=even_stage2/files
 
-Go to the "files" tab, and download the model weights, named "epoch=24.ckpt", and pass in the file path as the `TEAM_CONFIG` below.
-
-comment out the autopilot model lines in run_agent.sh and modify the paths inside.
+Go to the "files" tab, and download the model weights, named "epoch=24.ckpt", and pass in the file path as the `TEAM_CONFIG` in `run_agent.sh`. comment out the autopilot model lines in `run_agent.sh` and modify the paths inside.
 
 Spin up a CARLA server
 
@@ -76,10 +74,23 @@ Spin up a CARLA server
 ./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
 ```
 
-then run the agent.
+then run the agent in a separate window.
 
 ```
 ./run_agent.sh
+```
+
+## Fuzzing
+Spin up a CARLA server
+
+```
+./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
+```
+
+then run the agent in a separate window.
+
+```
+./run_fuzzing.sh
 ```
 
 
