@@ -26,7 +26,7 @@ conda activate carla99
 Download CARLA_0.9.9.4.tar.gz and AdditionalMaps_0.9.9.4.tar.gz from [link](https://github.com/carla-simulator/carla/releases/tag/0.9.9) and run
 ```
 mkdir carla_0994_no_rss
-tar -xvzf CARLA_0.9.9.4_RSS.tar.gz -C carla_0994_no_rss
+tar -xvzf CARLA_0.9.9.4.tar.gz -C carla_0994_no_rss
 ```
 move `AdditionalMaps_0.9.9.4.tar.gz` to `carla_0994_no_rss/Import/` and in the folder `carla_0994_no_rss/` run:
 ```
