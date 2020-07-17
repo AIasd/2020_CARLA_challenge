@@ -7,6 +7,3 @@
 [submodule "leaderboard"]
 	path = leaderboard
 	url = https://github.com/AIasd/leaderboard.git
-[submodule "jMetalPy"]
-	path = jMetalPy
-	url = https://github.com/AIasd/jMetalPy.git
