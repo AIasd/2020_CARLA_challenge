@@ -1,7 +1,5 @@
 '''
-
 TBD:
-* fix infractions = events['_checkpoint']['records'][0]['infractions'], IndexError: list index out of range
 * show params
 * multi-process of simulations
 * free-view window of the map
@@ -30,8 +28,7 @@ from pymoo.model.duplicate import ElementwiseDuplicateElimination
 from pymoo.algorithms.nsga2 import NSGA2
 from pymoo.optimize import minimize
 
-from object_types import WEATHERS, pedestrian_types, vehicle_types,
- static_types, vehicle_colors
+from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors
 
 from customized_utils import create_transform, rand_real, specify_args
 
