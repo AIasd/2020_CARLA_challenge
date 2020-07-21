@@ -8,3 +8,4 @@ detectors/__pycache__/*
 misbehaviors_log.txt
 detectors/models/__pycache__/*
 detectors/saved_models/*
+__pycache__/*
