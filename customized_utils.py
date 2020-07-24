@@ -1,5 +1,8 @@
 import argparse
 import carla
+import os
+import numpy as np
+from leaderboard.customized.object_params import Static, Pedestrian, Vehicle
 
 def visualize_route(route):
     n = len(route)
@@ -113,3 +116,115 @@ def add_transform(transform1, transform2):
     yaw = transform1.rotation.yaw + transform2.rotation.yaw
     roll = transform1.rotation.roll + transform2.rotation.roll
     return create_transform(x, y, z, pitch, yaw, roll)
+
+
+def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_num_of_pedestrians, max_num_of_vehicles, static_types, pedestrian_types, vehicle_types, vehicle_colors):
+
+    # parameters
+    # global
+    friction = x[0]
+    weather_index = int(x[1])
+    num_of_static = int(x[2])
+    num_of_pedestrians = int(x[3])
+    num_of_vehicles = int(x[4])
+
+    ind = 5
+    # ego car
+    ego_car_waypoints_perturbation = []
+    for _ in range(waypoints_num_limit):
+        dx = x[ind]
+        dy = x[ind+1]
+        ego_car_waypoints_perturbation.append([dx, dy])
+        ind += 2
+
+    # static
+    static_list = []
+    for i in range(max_num_of_static):
+        if i < num_of_static:
+            static_type_i = static_types[int(x[ind])]
+            static_transform_i = create_transform(x[ind+1], x[ind+2], 0, 0, x[ind+3], 0)
+            static_i = Static(model=static_type_i, spawn_transform=static_transform_i)
+            static_list.append(static_i)
+        ind += 4
+
+    # pedestrians
+    pedestrian_list = []
+    for i in range(max_num_of_pedestrians):
+        if i < num_of_pedestrians:
+            pedestrian_type_i = pedestrian_types[int(x[ind])]
+            pedestrian_transform_i = create_transform(x[ind+1], x[ind+2], 0, 0, x[ind+3], 0)
+            pedestrian_i = Pedestrian(model=pedestrian_type_i, spawn_transform=pedestrian_transform_i, trigger_distance=x[ind+4], speed=x[ind+5], dist_to_travel=x[ind+6], after_trigger_behavior='stop')
+            pedestrian_list.append(pedestrian_i)
+        ind += 7
+
+    # vehicles
+    vehicle_list = []
+    for i in range(max_num_of_vehicles):
+        if i < num_of_vehicles:
+            vehicle_type_i = vehicle_types[int(x[ind])]
+
+            vehicle_transform_i = create_transform(x[ind+1], x[ind+2], 0, 0, x[ind+3], 0)
+
+            vehicle_initial_speed_i = x[ind+4]
+            vehicle_trigger_distance_i = x[ind+5]
+
+            targeted_speed_i = x[ind+6]
+            waypoint_follower_i = bool(x[ind+7])
+
+            targeted_waypoint_i = create_transform(x[ind+8], x[ind+9], 0, 0, 0, 0)
+
+            vehicle_avoid_collision_i = bool(x[ind+10])
+            vehicle_dist_to_travel_i = x[ind+11]
+            vehicle_target_yaw_i = x[ind+12]
+            x_dir = np.cos(np.deg2rad(vehicle_target_yaw_i))
+            y_dir = np.sin(np.deg2rad(vehicle_target_yaw_i))
+            target_direction_i = carla.Vector3D(x_dir, y_dir, 0)
+
+            vehicle_color_i = vehicle_colors[int(x[ind+13])]
+
+            ind += 14
+
+            vehicle_waypoints_perturbation_i = []
+            for _ in range(waypoints_num_limit):
+                dx = x[ind]
+                dy = x[ind+1]
+                vehicle_waypoints_perturbation_i.append([dx, dy])
+                ind += 2
+
+            vehicle_i = Vehicle(model=vehicle_type_i, spawn_transform=vehicle_transform_i, avoid_collision=vehicle_avoid_collision_i, initial_speed=vehicle_initial_speed_i, trigger_distance=vehicle_trigger_distance_i, waypoint_follower=waypoint_follower_i, targeted_waypoint=targeted_waypoint_i, dist_to_travel=vehicle_dist_to_travel_i,
+            target_direction=target_direction_i,
+            targeted_speed=targeted_speed_i, after_trigger_behavior='stop', color=vehicle_color_i, waypoints_perturbation=vehicle_waypoints_perturbation_i)
+
+            vehicle_list.append(vehicle_i)
+        else:
+            ind += 14 + waypoints_num_limit*2
+
+
+
+
+    customized_data = {
+    'friction': friction,
+    'weather_index': weather_index,
+    'num_of_static': num_of_static,
+    'num_of_pedestrians': num_of_pedestrians,
+    'num_of_vehicles': num_of_vehicles,
+    'static_list': static_list,
+    'pedestrian_list': pedestrian_list,
+    'vehicle_list': vehicle_list,
+    'using_customized_route_and_scenario': True,
+    'ego_car_waypoints_perturbation': ego_car_waypoints_perturbation,
+    'add_center': True}
+
+
+    return customized_data
+
+
+
+def make_hierarchical_dir(folder_names):
+    cur_folder_name = ''
+    for i in range(len(folder_names)):
+        cur_folder_name += folder_names[i]
+        if not os.path.exists(cur_folder_name):
+            os.mkdir(cur_folder_name)
+        cur_folder_name += '/'
+    return cur_folder_name

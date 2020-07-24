@@ -93,6 +93,19 @@ then run the agent in a separate window.
 ./run_fuzzing.sh
 ```
 
+## Genetic Fuzzing (Searching for error scenario)
+Spin up a CARLA server
+
+```
+./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
+```
+
+then run the agent in a separate window.
+
+```
+python ga_fuzzing.py
+```
+
 
 # Reference
 This repo is modified from [here](https://github.com/bradyz/2020_CARLA_challenge)
