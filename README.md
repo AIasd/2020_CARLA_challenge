@@ -106,6 +106,11 @@ then run the agent in a separate window.
 python ga_fuzzing.py
 ```
 
+## Analyze results of Genetic Fuzzing
+```
+python analyze_ga_results.py
+```
+
 
 # Reference
 This repo is modified from [here](https://github.com/bradyz/2020_CARLA_challenge)

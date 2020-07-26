@@ -200,7 +200,8 @@ def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_
             ind += 14 + waypoints_num_limit*2
 
 
-
+    # for parallel simulation
+    port = x[ind]
 
     customized_data = {
     'friction': friction,
@@ -213,7 +214,8 @@ def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_
     'vehicle_list': vehicle_list,
     'using_customized_route_and_scenario': True,
     'ego_car_waypoints_perturbation': ego_car_waypoints_perturbation,
-    'add_center': True}
+    'add_center': True,
+    'port': port}
 
 
     return customized_data
