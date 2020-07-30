@@ -51,6 +51,6 @@ python leaderboard/leaderboard/fuzzing.py \
 --checkpoint=${CHECKPOINT_ENDPOINT} \
 --port=${PORT} \
 --weather-index=${WEATHER_INDEX} \
---save_folder=${SAVE_FOLDER}
+--save-folder=${SAVE_FOLDER}
 
 echo "Done. See $CHECKPOINT_ENDPOINT for detailed results."

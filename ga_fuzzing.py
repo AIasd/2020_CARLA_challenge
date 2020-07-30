@@ -1,6 +1,21 @@
 '''
 TBD:
 
+* Traceback (most recent call last):
+  File "ga_fuzzing.py", line 1017, in <module>
+    main()
+  File "ga_fuzzing.py", line 1005, in main
+    np.savez(problem.bug_folder+'/'+'res'+'_'+ind, res=res, algorithm_name=algorithm_name, time_bug_num_list=problem.time_bug_num_list)
+  File "<__array_function__ internals>", line 6, in savez
+  File "/home/zhongzzy9/anaconda3/envs/carla99/lib/python3.7/site-packages/numpy/lib/npyio.py", line 645, in savez
+    _savez(file, args, kwds, False)
+  File "/home/zhongzzy9/anaconda3/envs/carla99/lib/python3.7/site-packages/numpy/lib/npyio.py", line 754, in _savez
+    pickle_kwargs=pickle_kwargs)
+  File "/home/zhongzzy9/anaconda3/envs/carla99/lib/python3.7/site-packages/numpy/lib/format.py", line 676, in write_array
+    pickle.dump(array, fp, protocol=3, **pickle_kwargs)
+_pickle.PicklingError: Can't pickle <class '__main__.MySampling'>: it's not the same object as __main__.MySampling
+-------------------------------
+
 
 
 * need to consider static objects or avoid generating static objects on the way for autopilot and pid controller
@@ -937,9 +952,9 @@ def main():
     run_parallelization = True
     save = True
     save_path = 'ga_intermediate.pkl'
-    episode_max_time = 10000
+    episode_max_time = 0
     n_gen = 2
-    pop_size = 100
+    pop_size = 4
 
 
     scheduler_port = 8788
