@@ -104,8 +104,8 @@ from datetime import datetime
 
 import pathlib
 import shutil
-# import dill as pickle
-import pickle
+import dill as pickle
+# import pickle
 import argparse
 import atexit
 
@@ -939,6 +939,7 @@ def main():
     save_path = 'ga_intermediate.pkl'
     episode_max_time = 10000
     n_gen = 2
+    pop_size = 100
 
 
     scheduler_port = 8785
@@ -971,16 +972,15 @@ def main():
         # TBD: customize mutation and crossover to better fit our problem. e.g.
         # might deal with int and real separately
         if algorithm_name == 'nsga2':
-            algorithm = NSGA2(pop_size=100,
+            algorithm = NSGA2(pop_size=pop_size,
                           sampling=MySampling(),
                           crossover=SimulatedBinaryCrossover(eta=20, prob=0.6),
-                          mutation=PolynomialMutation(prob=3/problem.n_var, eta=20),
-                          eliminate_duplicates=MyDuplicateElimination())
+                          mutation=PolynomialMutation(prob=3/problem.n_var, eta=20))
         elif algorithm_name == 'random':
-            algorithm = NSGA2(pop_size=30,
+            pop_size = 1000
+            algorithm = NSGA2(pop_size=pop_size,
                           sampling=MySampling(),
-                          mutation=PolynomialMutation(prob=3/problem.n_var, eta=20),
-                          eliminate_duplicates=MyDuplicateElimination())
+                          mutation=PolynomialMutation(prob=3/problem.n_var, eta=20))
 
 
 
