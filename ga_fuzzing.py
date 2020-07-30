@@ -1,21 +1,30 @@
 '''
 TBD:
-* fix the problem that later generation produces less bugs (currently only observe this when run in parallel with multiple ports, mutation: prob=10/problem.n_var)
+
+
+
+* need to consider static objects or avoid generating static objects on the way for autopilot and pid controller
+* modify API of PID controller to make it run
+
+
 * fix OSError: [Errno 24] Too many open files: '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized/Town03/Scenario12/right/route_01_16/events.txt'
 RuntimeError: Resource temporarily unavailable
 * change to a more reliable controller
-* hyper-parameters for the GA
 * scenario that can run successfully when no other objects are added
-* multi-process of simulations and adjust saving data accordingly
 * focus on important parameter perturbation (e.g. waypoints perturbation are not very important but take too much dimensions.) If we reduce dimensions to e.g. less than 20, we might consider to apply out-of-box bayes optimization method on github.
-* narrow down the range of other actors and limit the time length of each run
+
 * maybe customize mutation and crossover (in particular, deal with real and int separately)
-* try to make npcs not stuck
-* free-view window of the map
+
 * understand n_gen |  n_eval |  n_nds  | delta_ideal  | delta_nadir  |   delta_f in the stdout
 * reproduce bug scenario
 
 * offsprings seem to be similar. need to be fixed.
+* save and resume_run a training after each generation
+
+* narrow down the range of other actors and limit the time length of each run
+* free-view window of the map
+
+
 
 
 check number of opened files:
@@ -29,13 +38,13 @@ su zhongzzy9
 
 
 Spin up carla simulator(s):
-DISPLAY= CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 ./CarlaUE4.sh -carla-rpc-port=2000 -carla-streaming-port=0
-DISPLAY= CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 ./CarlaUE4.sh -carla-rpc-port=2003 -carla-streaming-port=0
-DISPLAY= CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 ./CarlaUE4.sh -carla-rpc-port=2006 -carla-streaming-port=0
-DISPLAY= CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 ./CarlaUE4.sh -carla-rpc-port=2009 -carla-streaming-port=0
+DISPLAY= CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 ./CarlaUE4.sh -carla-rpc-port=2000 -carla-streaming-port=0 -opengl
+DISPLAY= CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 ./CarlaUE4.sh -carla-rpc-port=2003 -carla-streaming-port=0 -opengl
+DISPLAY= CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 ./CarlaUE4.sh -carla-rpc-port=2006 -carla-streaming-port=0 -opengl
+DISPLAY= CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 ./CarlaUE4.sh -carla-rpc-port=2009 -carla-streaming-port=0 -opengl
 
 Run genertic algorithm for fuzzing:
-sudo /home/zhongzzy9/anaconda3/envs/carla99/bin/python ga_fuzzing.py
+sudo -E /home/zhongzzy9/anaconda3/envs/carla99/bin/python ga_fuzzing.py
 '''
 
 # hack: increase the maximum number of files to open to avoid too many files open error due to leakage.
@@ -57,7 +66,7 @@ sys.path.append('.')
 sys.path.append('leaderboard')
 sys.path.append('leaderboard/team_code')
 sys.path.append('scenario_runner')
-os.environ['HAS_DISPLAY'] = '1'
+os.environ['HAS_DISPLAY'] = '0'
 
 
 from pymoo.model.problem import Problem
@@ -67,7 +76,6 @@ from pymoo.model.mutation import Mutation
 from pymoo.model.duplicate import ElementwiseDuplicateElimination
 
 from pymoo.algorithms.nsga2 import NSGA2
-from pymoo.optimize import minimize
 
 from pymoo.operators.mutation.polynomial_mutation import PolynomialMutation
 from pymoo.operators.crossover.simulated_binary_crossover import SimulatedBinaryCrossover
@@ -78,7 +86,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors
 
-from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir
+from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info
 
 import numpy as np
 import carla
@@ -96,17 +104,31 @@ from datetime import datetime
 
 import pathlib
 import shutil
+# import dill as pickle
+import pickle
+import argparse
+import atexit
 
+
+
+
+import copy
+
+from pymoo.factory import get_termination
+from pymoo.model.termination import Termination
+from pymoo.util.termination.default import MultiObjectiveDefaultTermination, SingleObjectiveDefaultTermination
+
+from dask.distributed import Client, LocalCluster
 
 
 
 rng = np.random.default_rng(20)
-
 bug_root_folder = 'bugs'
 town_name = 'Town03'
 scenario = 'Scenario12'
 direction = 'right'
 route = 1
+
 # ['nsga2', 'random']
 algorithm_name = 'nsga2'
 
@@ -116,12 +138,6 @@ if route < 10:
 
 folder_names = [bug_root_folder, town_name, scenario, direction, route_str]
 bug_parent_folder = make_hierarchical_dir(folder_names)
-# if os.path.exists(bug_parent_folder):
-#     os.remove(bug_parent_folder)
-
-
-
-
 
 
 
@@ -129,10 +145,13 @@ bug_parent_folder = make_hierarchical_dir(folder_names)
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, client, workers, ports):
-        self.client = client
-        self.workers = workers
+    def __init__(self, elementwise_evaluation, bug_parent_folder, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000):
+
+        self.run_parallelization = run_parallelization
+        self.scheduler_port = scheduler_port
+        self.dashboard_address = dashboard_address
         self.ports = ports
+        self.episode_max_time = episode_max_time
 
 
         now = datetime.now()
@@ -257,21 +276,24 @@ class MyProblem(Problem):
 
 
 
+
     def _evaluate(self, X, out, *args, **kwargs):
+
         waypoints_num_limit = self.waypoints_num_limit
         max_num_of_static = self.max_num_of_static
         max_num_of_pedestrians = self.max_num_of_pedestrians
         max_num_of_vehicles = self.max_num_of_vehicles
+        episode_max_time = self.episode_max_time
 
+        def fun(x, launch_server):
 
-        def fun(x):
             # x = denormalize_by_entry(self, x)
 
             customized_data = convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_num_of_pedestrians, max_num_of_vehicles, static_types, pedestrian_types, vehicle_types, vehicle_colors)
 
 
             # run simulation
-            objectives, info, save_path = run_simulation(customized_data)
+            objectives, info, save_path = run_simulation(customized_data, launch_server, episode_max_time)
             ego_linear_speed, offroad_dist, is_wrong_lane, is_run_red_light = objectives
             # multi-objectives
             # TBD: traffic light should be considered for model that supports traffic light
@@ -280,83 +302,134 @@ class MyProblem(Problem):
 
 
 
-        # jobs = []
-        # job_results = []
-        # for i in range(X.shape[0]):
-        #     j = i % len(ports)
-        #     port = ports[j]
-        #     x = np.concatenate([X[i], np.array([port])])
-        #     jobs.append(client.submit(fun, x))
-        #     if i % len(ports) == len(ports)-1 or i == X.shape[0]-1:
-        #         for job in jobs:
-        #             F, info, save_path = job.result()
-        #             job_results.append(F)
-        #
-        #
-        #             if np.sum(F) < 0:
-        #                 bug = {'counter':self.counter, 'x':x, 'ego_linear_speed':-F[0], 'offroad_dist':-F[1], 'is_wrong_lane':-F[2], 'is_run_red_light':-F[3], 'info': info}
-        #                 cur_folder = self.bug_folder+'/'+str(self.counter)
-        #                 if not os.path.exists(cur_folder):
-        #                     os.mkdir(cur_folder)
-        #                 np.savez(cur_folder+'/'+'bug_res', bug=bug)
-        #
-        #                 # copy data to another place
-        #
-        #                 shutil.copytree(save_path, cur_folder+'/'+'data')
-        #
-        #                 self.num_of_bugs += 1
-        #
-        #             self.counter += 1
-        #         # record specs for bugs
-        #         time_elapsed = time.time() - start_time
-        #         self.time_bug_num_list.append((time_elapsed, self.num_of_bugs))
-        #
-        #         print('+'*100)
-        #         print(self.counter, time_elapsed, self.num_of_bugs)
-        #         print('+'*100)
-        #         jobs = []
 
 
-        jobs = []
         job_results = []
-        for i in range(X.shape[0]):
-            j = i % len(self.ports)
-            port = self.ports[j]
-            worker = self.workers[j]
-            x = np.concatenate([X[i], np.array([port])])
 
-            jobs.append(self.client.submit(fun, x, workers=worker))
+        if self.run_parallelization:
+            with LocalCluster(scheduler_port=self.scheduler_port, dashboard_address=self.dashboard_address, n_workers=len(self.ports), threads_per_worker=1) as cluster, Client(cluster) as client:
+                workers = []
+                for k in client.has_what():
+                    workers.append(k[len('tcp://'):])
 
-        for i in range(len(jobs)):
-            job = jobs[i]
-            x = X[i]
-            F, info, save_path = job.result()
-            job_results.append(F)
-
-            # record bug
-            if np.sum(F) < 0:
-                bug = {'counter':self.counter, 'x':x, 'ego_linear_speed':-F[0], 'offroad_dist':-F[1], 'is_wrong_lane':-F[2], 'is_run_red_light':-F[3], 'info': info}
-                cur_folder = self.bug_folder+'/'+str(self.counter)
-                if not os.path.exists(cur_folder):
-                    os.mkdir(cur_folder)
-                np.savez(cur_folder+'/'+'bug_res', bug=bug)
-                # copy data to another place
-                shutil.copytree(save_path, cur_folder+'/'+'data')
-
-                self.num_of_bugs += 1
+                assert len(self.ports) <= X.shape[0]
+                jobs = []
+                for i in range(len(self.ports)):
+                    j = i % len(self.ports)
+                    port = self.ports[j]
+                    worker = workers[j]
+                    x = np.concatenate([X[i], np.array([port])])
+                    jobs.append(client.submit(fun, x, True, workers=worker))
 
 
+                for i in range(len(jobs)):
+                    job = jobs[i]
+                    x = X[i]
+                    F, info, save_path = job.result()
+                    job_results.append(F)
 
-            # record specs for bugs
-            time_elapsed = time.time() - self.start_time
-            self.time_bug_num_list.append((time_elapsed, self.num_of_bugs))
+                    # record bug
+                    if np.sum(F) < 0:
+                        bug = {'counter':self.counter, 'x':x, 'ego_linear_speed':-F[0], 'offroad_dist':-F[1], 'is_wrong_lane':-F[2], 'is_run_red_light':-F[3], 'info': info}
+                        cur_folder = self.bug_folder+'/'+str(self.counter)
+                        if not os.path.exists(cur_folder):
+                            os.mkdir(cur_folder)
+                        np.savez(cur_folder+'/'+'bug_res', bug=bug)
+                        # copy data to another place
+                        try:
+                            shutil.copytree(save_path, cur_folder+'/'+'data')
+                        except:
+                            print('fail to copy from', save_path)
 
-            print('+'*100)
-            print(self.counter, time_elapsed, self.num_of_bugs)
-            print('+'*100)
+                        self.num_of_bugs += 1
 
-            self.counter += 1
+                    # record specs for bugs
+                    time_elapsed = time.time() - self.start_time
+                    self.time_bug_num_list.append((time_elapsed, self.num_of_bugs))
 
+                    print('+'*100)
+                    print(self.counter, time_elapsed, self.num_of_bugs)
+                    print('+'*100)
+
+                    self.counter += 1
+
+
+                jobs = []
+                for i in range(len(self.ports), X.shape[0]):
+                    j = i % len(self.ports)
+                    port = self.ports[j]
+                    worker = workers[j]
+                    x = np.concatenate([X[i], np.array([port])])
+                    jobs.append(client.submit(fun, x, False, workers=worker))
+
+                for i in range(len(jobs)):
+                    job = jobs[i]
+                    x = X[i]
+                    F, info, save_path = job.result()
+                    job_results.append(F)
+
+                    # record bug
+                    if np.sum(F) < 0:
+                        bug = {'counter':self.counter, 'x':x, 'ego_linear_speed':-F[0], 'offroad_dist':-F[1], 'is_wrong_lane':-F[2], 'is_run_red_light':-F[3], 'info': info}
+                        cur_folder = self.bug_folder+'/'+str(self.counter)
+                        if not os.path.exists(cur_folder):
+                            os.mkdir(cur_folder)
+                        np.savez(cur_folder+'/'+'bug_res', bug=bug)
+                        # copy data to another place
+                        try:
+                            shutil.copytree(save_path, cur_folder+'/'+'data')
+                        except:
+                            print('fail to copy from', save_path)
+
+                        self.num_of_bugs += 1
+
+
+                    # record specs for bugs
+                    time_elapsed = time.time() - self.start_time
+                    self.time_bug_num_list.append((time_elapsed, self.num_of_bugs))
+
+                    print('+'*100)
+                    print(self.counter, time_elapsed, self.num_of_bugs)
+                    print('+'*100)
+
+                    self.counter += 1
+
+        else:
+            for i in range(X.shape[0]):
+                x = np.concatenate([X[i], np.array(self.ports)])
+                if i == 0:
+                    launch_server = True
+                else:
+                    launch_server = False
+
+                F, info, save_path = fun(x, launch_server)
+                job_results.append(F)
+
+                # record bug
+                if np.sum(F) < 0:
+                    bug = {'counter':self.counter, 'x':x, 'ego_linear_speed':-F[0], 'offroad_dist':-F[1], 'is_wrong_lane':-F[2], 'is_run_red_light':-F[3], 'info': info}
+                    cur_folder = self.bug_folder+'/'+str(self.counter)
+                    if not os.path.exists(cur_folder):
+                        os.mkdir(cur_folder)
+                    np.savez(cur_folder+'/'+'bug_res', bug=bug)
+                    # copy data to another place
+                    try:
+                        shutil.copytree(save_path, cur_folder+'/'+'data')
+                    except:
+                        print('fail to copy from', save_path)
+
+                    self.num_of_bugs += 1
+
+
+                # record specs for bugs
+                time_elapsed = time.time() - self.start_time
+                self.time_bug_num_list.append((time_elapsed, self.num_of_bugs))
+
+                print('+'*100)
+                print(self.counter, time_elapsed, self.num_of_bugs)
+                print('+'*100)
+
+                self.counter += 1
 
 
 
@@ -366,19 +439,41 @@ class MyProblem(Problem):
 
 
 
-def run_simulation(customized_data):
-    arguments = specify_args()
-    arguments.challenge_mode = True
-    arguments.agent='scenario_runner/team_code/image_agent.py'
-    arguments.agent_config='/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/epoch=24.ckpt'
+def run_simulation(customized_data, launch_server, episode_max_time):
+    arguments = arguments_info()
+    arguments.port = customized_data['port']
+    arguments.debug = 1
+
+
+
+
+
+    # ['lbc', 'auto_pilot', 'pid_agent']
+    ego_car_model = 'lbc'
+
+    if ego_car_model == 'lbc':
+        arguments.agent='scenario_runner/team_code/image_agent.py'
+        arguments.agent_config='/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/epoch=24.ckpt'
+        os.environ['SAVE_FOLDER'] = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized'
+    elif ego_car_model == 'auto_pilot':
+        arguments.agent = 'leaderboard/team_code/auto_pilot.py'
+        arguments.agent_config = ''
+        os.environ['SAVE_FOLDER'] = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_autopilot'
+    elif ego_car_model == 'pid_agent':
+        arguments.agent = 'scenario_runner/team_code/pid_agent.py'
+        arguments.agent_config = ''
+        os.environ['SAVE_FOLDER'] = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_pid_agent'
+
+
+
     arguments.scenarios = 'leaderboard/data/fuzzing_scenarios.json'
-    os.environ['SAVE_FOLDER'] = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized/'+str(customized_data['port'])
+    if not os.path.exists(os.environ['SAVE_FOLDER']):
+        os.mkdir(os.environ['SAVE_FOLDER'])
+    os.environ['SAVE_FOLDER'] += '/'+str(int(arguments.port))
     if not os.path.exists(os.environ['SAVE_FOLDER']):
         os.mkdir(os.environ['SAVE_FOLDER'])
 
 
-    arguments.port = customized_data['port']
-    arguments.debug = True
     statistics_manager = StatisticsManager()
 
 
@@ -416,7 +511,7 @@ def run_simulation(customized_data):
     arguments.routes = route_prefix + route_str + '.xml'
     os.environ['ROUTES'] = arguments.routes
 
-    save_path = str(pathlib.Path(os.environ['SAVE_FOLDER']) / (pathlib.Path(os.environ['ROUTES']).stem + '_' + os.environ['WEATHER_INDEX']))
+    save_path = str(pathlib.Path(os.environ['SAVE_FOLDER']) / (pathlib.Path(os.environ['ROUTES']).stem))
 
 
     # extract waypoints along route
@@ -459,7 +554,7 @@ def run_simulation(customized_data):
 
 
     try:
-        leaderboard_evaluator = LeaderboardEvaluator(arguments, statistics_manager)
+        leaderboard_evaluator = LeaderboardEvaluator(arguments, statistics_manager, launch_server, episode_max_time)
         leaderboard_evaluator.run(arguments, customized_data)
 
     except Exception as e:
@@ -467,7 +562,7 @@ def run_simulation(customized_data):
     finally:
         del leaderboard_evaluator
         # collect signals for estimating objectives
-        events_path = arguments.save_folder+'/route_'+route_str+'_'+str(arguments.weather_index)+'/events.txt'
+        events_path = arguments.save_folder+'/route_'+route_str+'/events.txt'
         objectives = estimate_objectives(events_path)
         print('objectives :', objectives)
 
@@ -485,8 +580,14 @@ def estimate_objectives(events_path):
     is_run_red_light = 0
 
     infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane', 'off_road']
-    with open(events_path) as json_file:
-        events = json.load(json_file)
+
+    try:
+        with open(events_path) as json_file:
+            events = json.load(json_file)
+    except:
+        print('events_path', events_path, 'is not found')
+        return [ego_linear_speed, offroad_dist, is_wrong_lane, is_run_red_light]
+
     infractions = events['_checkpoint']['records'][0]['infractions']
     for infraction_type in infraction_types:
         for infraction in infractions[infraction_type]:
@@ -522,7 +623,6 @@ def estimate_objectives(events_path):
 
 
 class MySampling(Sampling):
-
     def _do(self, problem, n_samples, **kwargs):
         X = []
         print('n_samples', n_samples)
@@ -585,6 +685,9 @@ class MySampling(Sampling):
 
 
             '''
+
+
+
             d = 4+problem.waypoints_num_limit*2+problem.max_num_of_static*4+problem.max_num_of_pedestrians*7+problem.max_num_of_vehicles*(12+problem.waypoints_num_limit*2)
 
             x = []
@@ -738,41 +841,157 @@ class MyDuplicateElimination(ElementwiseDuplicateElimination):
         return np.linalg.norm(a.X - b.X, 1) < 0.001 * a.X.shape[0]
 
 
+
+
+def customized_minimize(problem,
+             algorithm,
+             resume_run,
+             termination=None,
+             **kwargs):
+    """
+
+    Minimization of function of one or more variables, objectives and constraints.
+
+    This is used as a convenience function to execute several algorithms with default settings which turned
+    out to work for a test single. However, evolutionary computations utilizes the idea of customizing a
+    meta-algorithm. Customizing the algorithm using the object oriented interface is recommended to improve the
+    convergence.
+
+    Parameters
+    ----------
+
+    problem : :class:`~pymoo.model.problem.Problem`
+        A problem object which is defined using pymoo.
+
+    algorithm : :class:`~pymoo.model.algorithm.Algorithm`
+        The algorithm object that should be used for the optimization.
+
+    termination : :class:`~pymoo.model.termination.Termination` or tuple
+        The termination criterion that is used to stop the algorithm.
+
+    seed : integer
+        The random seed to be used.
+
+    verbose : bool
+        Whether output should be printed or not.
+
+    display : :class:`~pymoo.util.display.Display`
+        Each algorithm has a default display object for printouts. However, it can be overwritten if desired.
+
+    callback : :class:`~pymoo.model.callback.Callback`
+        A callback object which is called each iteration of the algorithm.
+
+    save_history : bool
+        Whether the history should be stored or not.
+
+    Returns
+    -------
+    res : :class:`~pymoo.model.result.Result`
+        The optimization result represented as an object.
+
+    """
+    # create a copy of the algorithm object to ensure no side-effects
+    algorithm = copy.deepcopy(algorithm)
+
+    if resume_run:
+        res = algorithm.solve()
+    else:
+        # get the termination if provided as a tuple - create an object
+        if termination is not None and not isinstance(termination, Termination):
+            if isinstance(termination, str):
+                termination = get_termination(termination)
+            else:
+                termination = get_termination(*termination)
+
+
+        # initialize the algorithm object given a problem
+        algorithm.initialize(problem, termination=termination, **kwargs)
+
+        # if no termination could be found add the default termination either for single or multi objective
+        if algorithm.termination is None:
+            if problem.n_obj > 1:
+                algorithm.termination = MultiObjectiveDefaultTermination()
+            else:
+                algorithm.termination = SingleObjectiveDefaultTermination()
+
+        # actually execute the algorithm
+        res = algorithm.solve()
+
+    # store the deep copied algorithm in the result object
+    res.algorithm = algorithm
+
+    return res
+
+
 def main():
+
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--resume-run', help='continue to run', default=False, action='store_true')
+    parser.add_argument('--ind', help='ind ', default=0)
+    arguments = parser.parse_args()
+
+    resume_run = arguments.resume_run
+    ind = arguments.ind
+
+    run_parallelization = True
+    save = True
+    save_path = 'ga_intermediate.pkl'
+    episode_max_time = 10000
+    n_gen = 2
+
+
+    scheduler_port = 8785
+    dashboard_address = 8786
     ports = [2000]
+    if run_parallelization:
+        ports = [2000, 2003, 2006, 2009]
+        # ports = [2003, 2006]
 
-    from dask.distributed import Client, LocalCluster
-    cluster = LocalCluster(scheduler_port=8785, diagnostics_port=8786, n_workers=len(ports), threads_per_worker=1)
-    client = Client(cluster)
-    # client = Client()
 
-    workers = []
-    for k in client.has_what():
-        workers.append(k[len('tcp://'):])
 
-    problem = MyProblem(elementwise_evaluation=False, client=client, workers=workers, ports=ports)
-    # TBD: customize mutation and crossover to better fit our problem. e.g.
-    # might deal with int and real separately
-    if algorithm_name == 'nsga2':
-        algorithm = NSGA2(pop_size=100,
-                      sampling=MySampling(),
-                      crossover=SimulatedBinaryCrossover(eta=20, prob=0.6),
-                      mutation=PolynomialMutation(prob=5/problem.n_var, eta=20),
-                      eliminate_duplicates=MyDuplicateElimination())
-        n_gen = 5
-    elif algorithm_name == 'random':
-        algorithm = NSGA2(pop_size=30,
-                      sampling=MySampling(),
-                      mutation=PolynomialMutation(prob=5/problem.n_var, eta=20),
-                      eliminate_duplicates=MyDuplicateElimination())
-        n_gen = 1
+    # close simulator(s)
+    atexit.register(exit_handler, ports)
+
+
+
+
+
+
+    if resume_run:
+        with open(save_path, 'rb') as f_in:
+            algorithm = pickle.load(f_in)
+
+        algorithm.launch_cluster = True
+        problem = algorithm.problem
+    else:
+        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time)
+
+
+        # TBD: customize mutation and crossover to better fit our problem. e.g.
+        # might deal with int and real separately
+        if algorithm_name == 'nsga2':
+            algorithm = NSGA2(pop_size=100,
+                          sampling=MySampling(),
+                          crossover=SimulatedBinaryCrossover(eta=20, prob=0.6),
+                          mutation=PolynomialMutation(prob=3/problem.n_var, eta=20),
+                          eliminate_duplicates=MyDuplicateElimination())
+        elif algorithm_name == 'random':
+            algorithm = NSGA2(pop_size=30,
+                          sampling=MySampling(),
+                          mutation=PolynomialMutation(prob=3/problem.n_var, eta=20),
+                          eliminate_duplicates=MyDuplicateElimination())
+
+
+
     # TypeError: can't pickle _asyncio.Task objects when save_history = True
-    res = minimize(problem,
+    res = customized_minimize(problem,
                    algorithm,
+                   resume_run,
                    ('n_gen', n_gen),
                    seed=0,
                    verbose=True,
-                   save_history=False)
+                   save_history=True)
 
     print('We have found', problem.num_of_bugs, 'bugs in total.')
 
@@ -781,8 +1000,12 @@ def main():
     print("Function value: %s" % res.F)
     print("Constraint violation: %s" % res.CV)
 
-    print("save results")
-    np.savez(problem.bug_folder+'/'+'res', res_X=res.X, res_F=res.F, res_CV=res.CV, algorithm_name=algorithm_name, time_bug_num_list=problem.time_bug_num_list)
+    np.savez(problem.bug_folder+'/'+'res'+'_'+ind, res=res, algorithm_name=algorithm_name, time_bug_num_list=problem.time_bug_num_list)
+
+    if save:
+        with open(save_path, 'wb') as f_out:
+            pickle.dump(res.algorithm, f_out)
+            print('-'*100, 'pickled')
 
 
 

@@ -3,6 +3,10 @@ import carla
 import os
 import numpy as np
 from leaderboard.customized.object_params import Static, Pedestrian, Vehicle
+from dask.distributed import Client, LocalCluster
+from psutil import process_iter
+from signal import SIGTERM
+import socket
 
 def visualize_route(route):
     n = len(route)
@@ -100,12 +104,38 @@ def specify_args():
 
     # addition
     parser.add_argument("--weather-index", type=int, default=0, help="see WEATHER for reference")
-    parser.add_argument("--save_folder", type=str, default='/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data', help="Path to save simulation data")
+    parser.add_argument("--save-folder", type=str, default='/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data', help="Path to save simulation data")
 
 
     arguments = parser.parse_args()
 
     return arguments
+
+
+
+
+class arguments_info:
+    def __init__(self):
+        self.host = 'localhost'
+        self.port = '2000'
+        self.sync = False
+        self.debug = 0
+        self.spectator = True
+        self.record = ''
+        self.timeout = '15.0'
+        self.challenge_mode = True
+        self.routes = None
+        self.scenarios = 'leaderboard/data/all_towns_traffic_scenarios_public.json'
+        self.repetitions = 1
+        self.agent = 'scenario_runner/team_code/image_agent.py'
+        self.agent_config = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/epoch=24.ckpt'
+        self.track = 'SENSORS'
+        self.resume = False
+        self.checkpoint = ''
+        self.weather_index = 19
+        self.save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized'
+
+
 
 
 def add_transform(transform1, transform2):
@@ -201,7 +231,7 @@ def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_
 
 
     # for parallel simulation
-    port = x[ind]
+    port = int(x[ind])
 
     customized_data = {
     'friction': friction,
@@ -230,3 +260,17 @@ def make_hierarchical_dir(folder_names):
             os.mkdir(cur_folder_name)
         cur_folder_name += '/'
     return cur_folder_name
+
+def is_port_in_use(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0
+
+
+def exit_handler(ports):
+    for port in ports:
+        if is_port_in_use(port):
+            for proc in process_iter():
+                for conns in proc.connections(kind='inet'):
+                    if conns.laddr.port == port:
+                        print('-'*100, 'kill server at port', port)
+                        proc.send_signal(SIGTERM)
