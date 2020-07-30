@@ -274,3 +274,6 @@ def exit_handler(ports):
                     if conns.laddr.port == port:
                         print('-'*100, 'kill server at port', port)
                         proc.send_signal(SIGTERM)
+
+
+port_to_gpu = {2000:0, 2003:1, 2006:0, 2009:1, 2012:0, 2015:1}

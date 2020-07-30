@@ -942,10 +942,12 @@ def main():
     pop_size = 100
 
 
-    scheduler_port = 8785
-    dashboard_address = 8786
-    ports = [2000]
+    scheduler_port = 8788
+    dashboard_address = 8789
+    ports = [2012]
     if run_parallelization:
+        scheduler_port = 8785
+        dashboard_address = 8786
         ports = [2000, 2003, 2006, 2009]
         # ports = [2003, 2006]
 
