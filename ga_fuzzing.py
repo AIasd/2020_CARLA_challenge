@@ -1,5 +1,14 @@
 '''
 TBD:
+* remove some very small static objects from the options (collision with them should not be considered as bug)
+* update recording/analysis such that the bugs can be categorized. 
+* maybe customize mutation and crossover (in particular, deal with real and int separately)
+* refactor code for _evaluate main loop
+* test a couple of more scenes
+
+* check diversity of generated scenes
+
+
 
 * Traceback (most recent call last):
   File "ga_fuzzing.py", line 1017, in <module>
@@ -28,7 +37,7 @@ RuntimeError: Resource temporarily unavailable
 * scenario that can run successfully when no other objects are added
 * focus on important parameter perturbation (e.g. waypoints perturbation are not very important but take too much dimensions.) If we reduce dimensions to e.g. less than 20, we might consider to apply out-of-box bayes optimization method on github.
 
-* maybe customize mutation and crossover (in particular, deal with real and int separately)
+
 
 * understand n_gen |  n_eval |  n_nds  | delta_ideal  | delta_nadir  |   delta_f in the stdout
 * reproduce bug scenario
@@ -164,7 +173,7 @@ class MyProblem(Problem):
 
 
         now = datetime.now()
-        self.bug_folder = bug_parent_folder + now.strftime("%d_%m_%Y_%H_%M_%S")
+        self.bug_folder = bug_parent_folder + now.strftime("%Y_%m_%d_%H_%M_%S")
         if not os.path.exists(self.bug_folder):
             os.mkdir(self.bug_folder)
 
@@ -294,6 +303,9 @@ class MyProblem(Problem):
         max_num_of_vehicles = self.max_num_of_vehicles
         episode_max_time = self.episode_max_time
 
+
+
+
         def fun(x, launch_server):
 
             # x = denormalize_by_entry(self, x)
@@ -306,7 +318,22 @@ class MyProblem(Problem):
             ego_linear_speed, offroad_dist, is_wrong_lane, is_run_red_light = objectives
             # multi-objectives
             # TBD: traffic light should be considered for model that supports traffic light
-            F = np.array([- ego_linear_speed, - offroad_dist, - is_wrong_lane, - is_run_red_light], dtype=np.float)
+
+
+
+            # hack:
+            # TBD:
+            # balance the influence of each term
+            ego_speed_normalization_term = 10
+
+            # since we are not sure about value of this term
+            if offroad_dist > 0:
+                offroad_dist = 1
+
+            # disable for now
+            is_run_red_light = 0
+
+            F = np.array([- ego_linear_speed / ego_speed_normalization_term, - offroad_dist, - is_wrong_lane, - is_run_red_light], dtype=np.float)
             return F, info, save_path
 
 
@@ -622,9 +649,6 @@ def estimate_objectives(events_path):
                 if loc:
                     x = float(loc.group(1))
                     y = float(loc.group(2))
-
-    # TBD: this should be removed for model that supports traffic light
-    is_run_red_light = 0
 
 
     return [ego_linear_speed, offroad_dist, is_wrong_lane, is_run_red_light]
@@ -947,8 +971,8 @@ def main():
     save = True
     save_path = 'ga_intermediate.pkl'
     episode_max_time = 10000
-    n_gen = 8
-    pop_size = 100
+    n_gen = 3
+    pop_size = 70
 
 
     scheduler_port = 8788
@@ -1009,7 +1033,7 @@ def main():
     print("Function value: %s" % res.F)
     print("Constraint violation: %s" % res.CV)
 
-    np.savez(problem.bug_folder+'/'+'res'+'_'+ind, res=res, algorithm_name=algorithm_name, time_bug_num_list=problem.time_bug_num_list)
+    np.savez(problem.bug_folder+'/'+'res'+'_'+str(ind), res=res, algorithm_name=algorithm_name, time_bug_num_list=problem.time_bug_num_list)
 
     if save:
         with open(save_path, 'wb') as f_out:
