@@ -95,7 +95,7 @@ then run the agent in a separate window.
 
 ## Genetic Fuzzing (Searching for error scenario)
 ```
-sudo -E <absolute_path_to_python> meta_ga_fuzzing.py
+sudo -E <absolute_path_to_python> ga_fuzzing.py
 ```
 
 ## Analyze results of Genetic Fuzzing

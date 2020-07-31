@@ -52,12 +52,6 @@ su zhongzzy9
 
 
 
-Spin up carla simulator(s):
-DISPLAY= CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 ./CarlaUE4.sh -carla-rpc-port=2000 -carla-streaming-port=0 -opengl
-DISPLAY= CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 ./CarlaUE4.sh -carla-rpc-port=2003 -carla-streaming-port=0 -opengl
-DISPLAY= CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 ./CarlaUE4.sh -carla-rpc-port=2006 -carla-streaming-port=0 -opengl
-DISPLAY= CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 ./CarlaUE4.sh -carla-rpc-port=2009 -carla-streaming-port=0 -opengl
-
 Run genertic algorithm for fuzzing:
 sudo -E /home/zhongzzy9/anaconda3/envs/carla99/bin/python ga_fuzzing.py
 '''
@@ -952,9 +946,9 @@ def main():
     run_parallelization = True
     save = True
     save_path = 'ga_intermediate.pkl'
-    episode_max_time = 0
-    n_gen = 2
-    pop_size = 4
+    episode_max_time = 10000
+    n_gen = 8
+    pop_size = 100
 
 
     scheduler_port = 8788
@@ -970,8 +964,6 @@ def main():
 
     # close simulator(s)
     atexit.register(exit_handler, ports)
-
-
 
 
 
