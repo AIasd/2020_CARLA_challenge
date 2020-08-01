@@ -268,12 +268,15 @@ def is_port_in_use(port):
 
 def exit_handler(ports):
     for port in ports:
-        if is_port_in_use(port):
-            for proc in process_iter():
-                for conns in proc.connections(kind='inet'):
-                    if conns.laddr.port == port:
-                        print('-'*100, 'kill server at port', port)
-                        proc.send_signal(SIGTERM)
+        while is_port_in_use(port):
+            try:
+                for proc in process_iter():
+                    for conns in proc.connections(kind='inet'):
+                        if conns.laddr.port == port:
+                            print('-'*100, 'kill server at port', port)
+                            proc.send_signal(SIGTERM)
+            except:
+                continue
 
 
 port_to_gpu = {2000:0, 2003:1, 2006:0, 2009:1, 2012:0, 2015:1}

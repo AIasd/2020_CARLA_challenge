@@ -1,15 +1,16 @@
 '''
 TBD:
-* remove some very small static objects from the options (collision with them should not be considered as bug)
-* update recording/analysis such that the bugs can be categorized. 
-* maybe customize mutation and crossover (in particular, deal with real and int separately)
-* refactor code for _evaluate main loop
+* fix random algorithm that always restart servers
 * test a couple of more scenes
+* save nsga2 and random separately
+* maybe customize mutation and crossover (in particular, deal with real and int separately)
+* remove some very small static objects from the options (collision with them should not be considered as bug)
+
 
 * check diversity of generated scenes
 
 
-
+* mutation cannot be picklized
 * Traceback (most recent call last):
   File "ga_fuzzing.py", line 1017, in <module>
     main()
@@ -94,6 +95,7 @@ from pymoo.model.mutation import Mutation
 from pymoo.model.duplicate import ElementwiseDuplicateElimination
 
 from pymoo.algorithms.nsga2 import NSGA2
+from pymoo.algorithms.random import RandomAlgorithm
 
 from pymoo.operators.mutation.polynomial_mutation import PolynomialMutation
 from pymoo.operators.crossover.simulated_binary_crossover import SimulatedBinaryCrossover
@@ -146,9 +148,6 @@ town_name = 'Town03'
 scenario = 'Scenario12'
 direction = 'right'
 route = 1
-
-# ['nsga2', 'random']
-algorithm_name = 'nsga2'
 
 route_str = str(route)
 if route < 10:
@@ -302,11 +301,12 @@ class MyProblem(Problem):
         max_num_of_pedestrians = self.max_num_of_pedestrians
         max_num_of_vehicles = self.max_num_of_vehicles
         episode_max_time = self.episode_max_time
+        bug_folder = self.bug_folder
 
 
 
 
-        def fun(x, launch_server):
+        def fun(x, launch_server, counter):
 
             # x = denormalize_by_entry(self, x)
 
@@ -314,17 +314,15 @@ class MyProblem(Problem):
 
 
             # run simulation
-            objectives, info, save_path = run_simulation(customized_data, launch_server, episode_max_time)
+            objectives, loc, object_type, status, info, save_path = run_simulation(customized_data, launch_server, episode_max_time)
             ego_linear_speed, offroad_dist, is_wrong_lane, is_run_red_light = objectives
             # multi-objectives
             # TBD: traffic light should be considered for model that supports traffic light
 
-
-
             # hack:
             # TBD:
             # balance the influence of each term
-            ego_speed_normalization_term = 10
+            ego_speed_normalization_term = 7
 
             # since we are not sure about value of this term
             if offroad_dist > 0:
@@ -334,8 +332,59 @@ class MyProblem(Problem):
             is_run_red_light = 0
 
             F = np.array([- ego_linear_speed / ego_speed_normalization_term, - offroad_dist, - is_wrong_lane, - is_run_red_light], dtype=np.float)
-            return F, info, save_path
 
+
+
+            if np.sum(F) < 0:
+                bug = {'counter':counter, 'x':x, 'ego_linear_speed':-F[0], 'offroad_dist':-F[1], 'is_wrong_lane':-F[2], 'is_run_red_light':-F[3], 'loc':loc, 'object_type':object_type, 'status':status, 'info': info}
+                cur_folder = bug_folder+'/'+str(counter)
+                if not os.path.exists(cur_folder):
+                    os.mkdir(cur_folder)
+                np.savez(cur_folder+'/'+'bug_info', bug=bug)
+                # copy data to another place
+                try:
+                    shutil.copytree(save_path, os.path.join(cur_folder, 'data'))
+                except:
+                    print('fail to copy from', save_path)
+
+
+            return F, loc, object_type, status, info
+
+
+
+
+        def submit_and_run_jobs(ind_start, ind_end, launch_server, job_results):
+            time_elapsed = 0
+            jobs = []
+            for i in range(ind_start, ind_end):
+                j = i % len(self.ports)
+                port = self.ports[j]
+                worker = workers[j]
+                x = np.concatenate([X[i], np.array([port])])
+                jobs.append(client.submit(fun, x, launch_server, self.counter, workers=worker))
+
+                self.counter += 1
+
+
+            for i in range(len(jobs)):
+                job = jobs[i]
+                x = X[i]
+                F, loc, object_type, status, info = job.result()
+                job_results.append(F)
+
+                # record bug
+                if np.sum(F) < 0:
+                    self.num_of_bugs += 1
+
+
+            time_elapsed = time.time() - self.start_time
+            print('+'*100)
+            print(self.counter, time_elapsed, self.num_of_bugs)
+            print('+'*100)
+
+
+            # record time elapsed and bug numbers
+            self.time_bug_num_list.append((time_elapsed, self.num_of_bugs))
 
 
 
@@ -348,87 +397,14 @@ class MyProblem(Problem):
                 for k in client.has_what():
                     workers.append(k[len('tcp://'):])
 
-                assert len(self.ports) <= X.shape[0]
-                jobs = []
-                for i in range(len(self.ports)):
-                    j = i % len(self.ports)
-                    port = self.ports[j]
-                    worker = workers[j]
-                    x = np.concatenate([X[i], np.array([port])])
-                    jobs.append(client.submit(fun, x, True, workers=worker))
+                assert X.shape[0] >= len(self.ports)
 
 
-                for i in range(len(jobs)):
-                    job = jobs[i]
-                    x = X[i]
-                    F, info, save_path = job.result()
-                    job_results.append(F)
+                submit_and_run_jobs(0, len(self.ports), True, job_results)
 
-                    # record bug
-                    if np.sum(F) < 0:
-                        bug = {'counter':self.counter, 'x':x, 'ego_linear_speed':-F[0], 'offroad_dist':-F[1], 'is_wrong_lane':-F[2], 'is_run_red_light':-F[3], 'info': info}
-                        cur_folder = self.bug_folder+'/'+str(self.counter)
-                        if not os.path.exists(cur_folder):
-                            os.mkdir(cur_folder)
-                        np.savez(cur_folder+'/'+'bug_res', bug=bug)
-                        # copy data to another place
-                        try:
-                            shutil.copytree(save_path, cur_folder+'/'+'data')
-                        except:
-                            print('fail to copy from', save_path)
+                if X.shape[0] > len(self.ports):
+                    submit_and_run_jobs(len(self.ports), X.shape[0], True, job_results)
 
-                        self.num_of_bugs += 1
-
-                    # record specs for bugs
-                    time_elapsed = time.time() - self.start_time
-                    self.time_bug_num_list.append((time_elapsed, self.num_of_bugs))
-
-                    print('+'*100)
-                    print(self.counter, time_elapsed, self.num_of_bugs)
-                    print('+'*100)
-
-                    self.counter += 1
-
-
-                jobs = []
-                for i in range(len(self.ports), X.shape[0]):
-                    j = i % len(self.ports)
-                    port = self.ports[j]
-                    worker = workers[j]
-                    x = np.concatenate([X[i], np.array([port])])
-                    jobs.append(client.submit(fun, x, False, workers=worker))
-
-                for i in range(len(jobs)):
-                    job = jobs[i]
-                    x = X[i]
-                    F, info, save_path = job.result()
-                    job_results.append(F)
-
-                    # record bug
-                    if np.sum(F) < 0:
-                        bug = {'counter':self.counter, 'x':x, 'ego_linear_speed':-F[0], 'offroad_dist':-F[1], 'is_wrong_lane':-F[2], 'is_run_red_light':-F[3], 'info': info}
-                        cur_folder = self.bug_folder+'/'+str(self.counter)
-                        if not os.path.exists(cur_folder):
-                            os.mkdir(cur_folder)
-                        np.savez(cur_folder+'/'+'bug_res', bug=bug)
-                        # copy data to another place
-                        try:
-                            shutil.copytree(save_path, cur_folder+'/'+'data')
-                        except:
-                            print('fail to copy from', save_path)
-
-                        self.num_of_bugs += 1
-
-
-                    # record specs for bugs
-                    time_elapsed = time.time() - self.start_time
-                    self.time_bug_num_list.append((time_elapsed, self.num_of_bugs))
-
-                    print('+'*100)
-                    print(self.counter, time_elapsed, self.num_of_bugs)
-                    print('+'*100)
-
-                    self.counter += 1
 
         else:
             for i in range(X.shape[0]):
@@ -438,22 +414,11 @@ class MyProblem(Problem):
                 else:
                     launch_server = False
 
-                F, info, save_path = fun(x, launch_server)
+                F, loc, object_type, status, info = fun(x, launch_server)
                 job_results.append(F)
 
                 # record bug
                 if np.sum(F) < 0:
-                    bug = {'counter':self.counter, 'x':x, 'ego_linear_speed':-F[0], 'offroad_dist':-F[1], 'is_wrong_lane':-F[2], 'is_run_red_light':-F[3], 'info': info}
-                    cur_folder = self.bug_folder+'/'+str(self.counter)
-                    if not os.path.exists(cur_folder):
-                        os.mkdir(cur_folder)
-                    np.savez(cur_folder+'/'+'bug_res', bug=bug)
-                    # copy data to another place
-                    try:
-                        shutil.copytree(save_path, cur_folder+'/'+'data')
-                    except:
-                        print('fail to copy from', save_path)
-
                     self.num_of_bugs += 1
 
 
@@ -547,7 +512,7 @@ def run_simulation(customized_data, launch_server, episode_max_time):
     arguments.routes = route_prefix + route_str + '.xml'
     os.environ['ROUTES'] = arguments.routes
 
-    save_path = str(pathlib.Path(os.environ['SAVE_FOLDER']) / (pathlib.Path(os.environ['ROUTES']).stem))
+    save_path = os.path.join(arguments.save_folder, 'route_'+route_str)
 
 
     # extract waypoints along route
@@ -598,13 +563,13 @@ def run_simulation(customized_data, launch_server, episode_max_time):
     finally:
         del leaderboard_evaluator
         # collect signals for estimating objectives
-        events_path = arguments.save_folder+'/route_'+route_str+'/events.txt'
-        objectives = estimate_objectives(events_path)
+        events_path = os.path.join(save_path, 'events.txt')
+        objectives, loc, object_type, status = estimate_objectives(events_path)
         print('objectives :', objectives)
 
     info = [arguments.scenarios, town_name, scenario, direction, route, sample_factor, customized_data['center_transform'].location.x, customized_data['center_transform'].location.y]
 
-    return objectives, info, save_path
+    return objectives, loc, object_type, status, info, save_path
 
 
 
@@ -614,6 +579,10 @@ def estimate_objectives(events_path):
     offroad_dist = 0
     is_wrong_lane = 0
     is_run_red_light = 0
+
+    x = None
+    y = None
+    object_type = None
 
     infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane', 'off_road']
 
@@ -625,9 +594,13 @@ def estimate_objectives(events_path):
         return [ego_linear_speed, offroad_dist, is_wrong_lane, is_run_red_light]
 
     infractions = events['_checkpoint']['records'][0]['infractions']
+    status = events['_checkpoint']['records'][0]['status']
     for infraction_type in infraction_types:
         for infraction in infractions[infraction_type]:
             if 'collisions' in infraction_type:
+                typ = re.search('.*with type=(.*) and.*', infraction)
+                if typ:
+                    object_type = typ.group(1)
                 loc = re.search('.*x=(.*), y=(.*), z=(.*), ego_linear_speed=(.*), other_actor_linear_speed=(.*)\)', infraction)
                 if loc:
                     x = float(loc.group(1))
@@ -651,7 +624,7 @@ def estimate_objectives(events_path):
                     y = float(loc.group(2))
 
 
-    return [ego_linear_speed, offroad_dist, is_wrong_lane, is_run_red_light]
+    return [ego_linear_speed, offroad_dist, is_wrong_lane, is_run_red_light], (x, y), object_type, status
 
 
 
@@ -968,11 +941,13 @@ def main():
     ind = arguments.ind
 
     run_parallelization = True
-    save = True
+    save = False
     save_path = 'ga_intermediate.pkl'
     episode_max_time = 10000
-    n_gen = 3
-    pop_size = 70
+    n_gen = 6
+    pop_size = 30
+    # ['nsga2', 'random']
+    algorithm_name = 'random'
 
 
     scheduler_port = 8788
@@ -982,7 +957,7 @@ def main():
         scheduler_port = 8785
         dashboard_address = 8786
         ports = [2000, 2003, 2006, 2009]
-        # ports = [2003, 2006]
+
 
 
 
@@ -1008,12 +983,13 @@ def main():
             algorithm = NSGA2(pop_size=pop_size,
                           sampling=MySampling(),
                           crossover=SimulatedBinaryCrossover(eta=20, prob=0.6),
-                          mutation=PolynomialMutation(prob=3/problem.n_var, eta=20))
+                          mutation=PolynomialMutation(prob=3/problem.n_var, eta=20),
+                          eliminate_duplicates=MyDuplicateElimination()
+                          )
         elif algorithm_name == 'random':
-            pop_size = 1000
-            algorithm = NSGA2(pop_size=pop_size,
-                          sampling=MySampling(),
-                          mutation=PolynomialMutation(prob=3/problem.n_var, eta=20))
+            algorithm = RandomAlgorithm(pop_size=pop_size,
+                                        sampling=MySampling(),
+                                        eliminate_duplicates=MyDuplicateElimination())
 
 
 
@@ -1033,7 +1009,30 @@ def main():
     print("Function value: %s" % res.F)
     print("Constraint violation: %s" % res.CV)
 
-    np.savez(problem.bug_folder+'/'+'res'+'_'+str(ind), res=res, algorithm_name=algorithm_name, time_bug_num_list=problem.time_bug_num_list)
+    # for drawing hv
+    # create the performance indicator object with reference point
+    metric = Hypervolume(ref_point=np.array([1.0, 1.0, 1.0, 1.0]))
+    # collect the population in each generation
+    pop_each_gen = [a.pop for a in res.history]
+    # receive the population in each generation
+    obj_and_feasible_each_gen = [pop[pop.get("feasible")[:,0]].get("F") for pop in pop_each_gen]
+    # calculate for each generation the HV metric
+    hv = [metric.calc(f) for f in obj_and_feasible_each_gen]
+    # function evaluations at each snapshot
+    n_evals = np.array([a.evaluator.n_eval for a in res.history])
+
+
+    # for drawing f
+    val = [e.pop.get("F").min() for e in res.history]
+
+
+
+
+    with open(os.path.join(problem.bug_folder, 'res_'+str(ind)+'.pkl'), 'wb') as f_out:
+        pickle.dump({'val':val, 'n_evals':n_evals, 'hv':hv, 'time_bug_num_list':problem.time_bug_num_list}, f_out)
+        print('-'*100, 'pickled')
+
+
 
     if save:
         with open(save_path, 'wb') as f_out:

@@ -14,3 +14,4 @@ detectors/saved_models/*
 __pycache__/*
 bugs/*
 dask-worker-space/*
+plots/*
