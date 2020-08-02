@@ -1,7 +1,5 @@
 '''
 TBD:
-* fix random algorithm that always restart servers
-* test a couple of more scenes
 * save nsga2 and random separately
 * maybe customize mutation and crossover (in particular, deal with real and int separately)
 * remove some very small static objects from the options (collision with them should not be considered as bug)
