@@ -80,6 +80,18 @@ then run the agent in a separate window.
 ./run_agent.sh
 ```
 
+## Check out maps and coordinates
+Check out the coordinates of each path by spinning up a CARLA server
+
+```
+./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
+```
+and running
+```
+python inspect_routes.py
+```
+Also see the corresponding birdview layout [here](https://carla.readthedocs.io/en/latest/core_map/) for direction and traffic lights information.
+
 ## Fuzzing
 Spin up a CARLA server
 
@@ -97,12 +109,29 @@ then run the agent in a separate window.
 ```
 sudo -E <absolute_path_to_python> ga_fuzzing.py
 ```
+In order to visualize the running simulations, one need to do the following steps:
 
+1.In ga_fuzzing.py, for the line
+```
+os.environ['HAS_DISPLAY'] = '0'
+```
+replace `'0'` with `'1'`.
+
+2.In fuzzing.py, for the line
+```
+cmd_list = shlex.split('sudo -E -u zhongzzy9  CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES='+str(gpu)+' DISPLAY= sh /home/zhongzzy9/Documents/self-driving-car/carla_0994_no_rss/CarlaUE4.sh -opengl -carla-rpc-port='+str(args.port)+' -carla-streaming-port=0')
+```
+remove `DISPLAY=`.
 ## Analyze results of Genetic Fuzzing
 ```
 python analyze_ga_results.py
 ```
 
+## Demo Routes
+Town01-Scenario12-left-00
+
+Town03-Scenario12-front-00
+
 
 # Reference
-This repo is modified from [here](https://github.com/bradyz/2020_CARLA_challenge)
+This repo is built on top of [here](https://github.com/bradyz/2020_CARLA_challenge) and [here](https://github.com/msu-coinlab/pymoo)

@@ -144,10 +144,10 @@ from dask.distributed import Client, LocalCluster
 
 rng = np.random.default_rng(20)
 bug_root_folder = 'bugs'
-town_name = 'Town03'
+town_name = 'Town01'
 scenario = 'Scenario12'
-direction = 'right'
-route = 1
+direction = 'left'
+route = 0
 
 route_str = str(route)
 if route < 10:
@@ -944,10 +944,10 @@ def main():
     save = False
     save_path = 'ga_intermediate.pkl'
     episode_max_time = 10000
-    n_gen = 6
-    pop_size = 30
+    n_gen = 10
+    pop_size = 100
     # ['nsga2', 'random']
-    algorithm_name = 'random'
+    algorithm_name = 'nsga2'
 
 
     scheduler_port = 8788

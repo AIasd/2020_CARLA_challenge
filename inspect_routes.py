@@ -1052,25 +1052,25 @@ def game_loop(args):
         waypoints = world.map.get_topology()
         x_list = []
         y_list = []
-        loc_list = []
         for wp, c in waypoints:
             x = wp.transform.location.x
             y = wp.transform.location.y
-            z = wp.transform.location.z
-            pitch = wp.transform.rotation.pitch
-            yaw = wp.transform.rotation.yaw
-            roll = wp.transform.rotation.roll
-            loc = (x, y, z, pitch, yaw, roll)
-            loc_list.append(loc)
             x_list.append(x)
             y_list.append(y)
 
+        all_waypoints = world.map.get_spawn_points()
+        all_x_list = []
+        all_y_list = []
+        for t in all_waypoints:
+            x = t.location.x
+            y = t.location.y
+            all_x_list.append(x)
+            all_y_list.append(y)
+
         import matplotlib.pyplot as plt
-        loc_list = sorted(loc_list, key=lambda loc:loc[0])
-        # for loc in loc_list:
-        #     print('<waypoint pitch="{}" roll="{}" x="{}" y="{}" yaw="{}" z="{}" />'.format(loc[3], loc[5], loc[0], loc[1], loc[4], loc[2]))
         plt.gca().invert_yaxis()
-        plt.scatter(x_list, y_list, linewidths=0.5)
+        plt.scatter(x_list, y_list, s=2, c='red')
+        plt.scatter(all_x_list, all_y_list, s=1, c='blue')
         plt.show()
 
 
