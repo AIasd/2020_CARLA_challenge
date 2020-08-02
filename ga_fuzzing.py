@@ -403,7 +403,7 @@ class MyProblem(Problem):
                 submit_and_run_jobs(0, len(self.ports), True, job_results)
 
                 if X.shape[0] > len(self.ports):
-                    submit_and_run_jobs(len(self.ports), X.shape[0], True, job_results)
+                    submit_and_run_jobs(len(self.ports), X.shape[0], False, job_results)
 
 
         else:
