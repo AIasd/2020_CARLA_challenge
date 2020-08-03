@@ -101,14 +101,16 @@ if __name__ == '__main__':
     # nsga2
     # folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town03/Scenario12/right/01/2020_08_01_01_59_32'
     # bug_res_path = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town03/Scenario12/right/01/2020_08_01_01_59_32/res_0.pkl'
-    # total_num = 1000
-    # pop_size = 100
+    folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town01/Scenario12/left/00/2020_08_02_00_47_04'
+    bug_res_path = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town01/Scenario12/left/00/2020_08_02_00_47_04/res_0.pkl'
+    total_num = 1000
+    pop_size = 100
 
     # random
-    folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town03/Scenario12/right/01/2020_08_01_15_16_26'
-    bug_res_path = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town03/Scenario12/right/01/2020_08_01_15_16_26/res_0.pkl'
-    total_num = 180
-    pop_size = 30
+    # folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town03/Scenario12/right/01/2020_08_01_15_16_26'
+    # bug_res_path = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town03/Scenario12/right/01/2020_08_01_15_16_26/res_0.pkl'
+    # total_num = 180
+    # pop_size = 30
 
     save_folder = 'plots'
     if not os.path.exists(save_folder):

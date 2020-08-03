@@ -1,8 +1,10 @@
 '''
 TBD:
-* save nsga2 and random separately
-* maybe customize mutation and crossover (in particular, deal with real and int separately)
+* need to improve diversity of bugs
+* maybe not allowed to generate static objects directly on routes
+* better way for determining and eliminating duplicates
 * remove some very small static objects from the options (collision with them should not be considered as bug)
+* evolutionary MCMC
 
 
 * check diversity of generated scenes
@@ -135,6 +137,7 @@ import copy
 from pymoo.factory import get_termination
 from pymoo.model.termination import Termination
 from pymoo.util.termination.default import MultiObjectiveDefaultTermination, SingleObjectiveDefaultTermination
+from pymoo.util.termination.max_time import TimeBasedTermination
 
 from dask.distributed import Client, LocalCluster
 
@@ -151,7 +154,11 @@ route_str = str(route)
 if route < 10:
     route_str = '0'+route_str
 
-folder_names = [bug_root_folder, town_name, scenario, direction, route_str]
+# ['nsga2', 'random']
+algorithm_name = 'nsga2'
+
+
+folder_names = [bug_root_folder, algorithm_name, town_name, scenario, direction, route_str]
 bug_parent_folder = make_hierarchical_dir(folder_names)
 
 
@@ -376,9 +383,11 @@ class MyProblem(Problem):
 
 
             time_elapsed = time.time() - self.start_time
+            print('\n'*10)
             print('+'*100)
             print(self.counter, time_elapsed, self.num_of_bugs)
             print('+'*100)
+            print('\n'*10)
 
 
             # record time elapsed and bug numbers
@@ -390,12 +399,12 @@ class MyProblem(Problem):
         job_results = []
 
         if self.run_parallelization:
-            with LocalCluster(scheduler_port=self.scheduler_port, dashboard_address=self.dashboard_address, n_workers=len(self.ports), threads_per_worker=1) as cluster, Client(cluster) as client:
+            with LocalCluster(scheduler_port=self.scheduler_port, dashboard_address=self.dashboard_address, n_workers=len(self.ports), threads_per_worker=1) as cluster, Client(cluster, connection_limit=8192) as client:
                 workers = []
                 for k in client.has_what():
                     workers.append(k[len('tcp://'):])
 
-                assert X.shape[0] >= len(self.ports)
+                assert X.shape[0] >= len(self.ports), print(X)
 
 
                 submit_and_run_jobs(0, len(self.ports), True, job_results)
@@ -839,10 +848,19 @@ class MyMutation(Mutation):
 
 
 
-class MyDuplicateElimination(ElementwiseDuplicateElimination):
-    # TBD: should support cases that we only consider distances on the real variables
+class SimpleDuplicateElimination(ElementwiseDuplicateElimination):
+    def __init__(self, mask, xu, xl, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.mask = np.array(mask)
+        self.xu = np.array(xu)
+        self.xl = np.array(xl)
+        self.cmp = lambda a, b: self.is_equal(a, b)
     def is_equal(self, a, b):
-        return np.linalg.norm(a.X - b.X, 1) < 0.001 * a.X.shape[0]
+        int_inds = self.mask == 'int'
+        real_inds = self.mask == 'real'
+        int_diff = np.sum(np.abs(a.X[int_inds] - b.X[int_inds])) == 0
+        real_diff = np.sum(np.abs(a.X[real_inds] - b.X[real_inds]) - 0.05 * np.abs(self.xu[real_inds] - self.xl[real_inds])) == 0
+        return int_diff and real_diff
 
 
 
@@ -942,10 +960,10 @@ def main():
     save = False
     save_path = 'ga_intermediate.pkl'
     episode_max_time = 10000
-    n_gen = 10
-    pop_size = 100
-    # ['nsga2', 'random']
-    algorithm_name = 'nsga2'
+    n_gen = 5
+    pop_size = 20
+    max_running_time = 3600
+
 
 
     scheduler_port = 8788
@@ -954,6 +972,7 @@ def main():
     if run_parallelization:
         scheduler_port = 8785
         dashboard_address = 8786
+        # ports = [2000]
         ports = [2000, 2003, 2006, 2009]
 
 
@@ -975,19 +994,37 @@ def main():
         problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time)
 
 
+        from pymoo.operators.mixed_variable_operator import MixedVariableMutation, MixedVariableCrossover
+        from pymoo.factory import get_crossover, get_mutation
+
+
+
+
+
+        # deal with real and int separately
+        crossover = MixedVariableCrossover(problem.mask, {
+            "real": get_crossover("real_sbx", prob=0.6, eta=20),
+            "int": get_crossover("int_sbx", prob=0.6, eta=20)
+        })
+
+        mutation = MixedVariableMutation(problem.mask, {
+            "real": get_mutation("real_pm", eta=20.0, prob=1/problem.n_var),
+            "int": get_mutation("int_pm", eta=20.0, prob=1/problem.n_var)
+        })
+
+
         # TBD: customize mutation and crossover to better fit our problem. e.g.
         # might deal with int and real separately
         if algorithm_name == 'nsga2':
             algorithm = NSGA2(pop_size=pop_size,
                           sampling=MySampling(),
-                          crossover=SimulatedBinaryCrossover(eta=20, prob=0.6),
-                          mutation=PolynomialMutation(prob=3/problem.n_var, eta=20),
-                          eliminate_duplicates=MyDuplicateElimination()
-                          )
+                          crossover=crossover,
+                          mutation=mutation,
+                          eliminate_duplicates=SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl))
         elif algorithm_name == 'random':
             algorithm = RandomAlgorithm(pop_size=pop_size,
                                         sampling=MySampling(),
-                                        eliminate_duplicates=MyDuplicateElimination())
+                                        eliminate_duplicates=SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl))
 
 
 
@@ -995,7 +1032,7 @@ def main():
     res = customized_minimize(problem,
                    algorithm,
                    resume_run,
-                   ('n_gen', n_gen),
+                   termination=('time', max_running_time), # ('n_gen', n_gen)
                    seed=0,
                    verbose=True,
                    save_history=True)
