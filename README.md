@@ -111,17 +111,12 @@ sudo -E <absolute_path_to_python> ga_fuzzing.py
 ```
 In order to visualize the running simulations, one need to do the following steps:
 
-1.In ga_fuzzing.py, for the line
+In ga_fuzzing.py, for the line
 ```
 os.environ['HAS_DISPLAY'] = '0'
 ```
 replace `'0'` with `'1'`.
 
-2.In fuzzing.py, for the line
-```
-cmd_list = shlex.split('sudo -E -u zhongzzy9  CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES='+str(gpu)+' DISPLAY= sh /home/zhongzzy9/Documents/self-driving-car/carla_0994_no_rss/CarlaUE4.sh -opengl -carla-rpc-port='+str(args.port)+' -carla-streaming-port=0')
-```
-remove `DISPLAY=`.
 ## Analyze results of Genetic Fuzzing
 ```
 python analyze_ga_results.py

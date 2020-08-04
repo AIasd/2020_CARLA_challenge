@@ -1,5 +1,6 @@
 '''
 TBD:
+* the birdview window currently does not appear even when os.environ['HAS_DISPLAY'] = '1'
 * need to improve diversity of bugs
 * maybe not allowed to generate static objects directly on routes
 * better way for determining and eliminating duplicates
@@ -85,7 +86,7 @@ sys.path.append('.')
 sys.path.append('leaderboard')
 sys.path.append('leaderboard/team_code')
 sys.path.append('scenario_runner')
-os.environ['HAS_DISPLAY'] = '0'
+os.environ['HAS_DISPLAY'] = '1'
 
 
 from pymoo.model.problem import Problem
@@ -457,7 +458,7 @@ def run_simulation(customized_data, launch_server, episode_max_time):
 
 
     # ['lbc', 'auto_pilot', 'pid_agent']
-    ego_car_model = 'lbc'
+    ego_car_model = 'auto_pilot'
 
     if ego_car_model == 'lbc':
         arguments.agent='scenario_runner/team_code/image_agent.py'
@@ -960,8 +961,8 @@ def main():
     save = False
     save_path = 'ga_intermediate.pkl'
     episode_max_time = 10000
-    n_gen = 5
-    pop_size = 20
+    n_gen = 10
+    pop_size = 100
     max_running_time = 3600
 
 
@@ -973,7 +974,7 @@ def main():
         scheduler_port = 8785
         dashboard_address = 8786
         # ports = [2000]
-        ports = [2000, 2003, 2006, 2009]
+        ports = [2000, 2003]
 
 
 
