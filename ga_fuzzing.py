@@ -86,7 +86,7 @@ sys.path.append('.')
 sys.path.append('leaderboard')
 sys.path.append('leaderboard/team_code')
 sys.path.append('scenario_runner')
-os.environ['HAS_DISPLAY'] = '1'
+os.environ['HAS_DISPLAY'] = '0'
 
 
 from pymoo.model.problem import Problem
@@ -157,7 +157,8 @@ if route < 10:
 
 # ['nsga2', 'random']
 algorithm_name = 'nsga2'
-
+# ['lbc', 'auto_pilot', 'pid_agent']
+ego_car_model = 'lbc'
 
 folder_names = [bug_root_folder, algorithm_name, town_name, scenario, direction, route_str]
 bug_parent_folder = make_hierarchical_dir(folder_names)
@@ -457,8 +458,7 @@ def run_simulation(customized_data, launch_server, episode_max_time):
 
 
 
-    # ['lbc', 'auto_pilot', 'pid_agent']
-    ego_car_model = 'auto_pilot'
+
 
     if ego_car_model == 'lbc':
         arguments.agent='scenario_runner/team_code/image_agent.py'
@@ -961,9 +961,9 @@ def main():
     save = False
     save_path = 'ga_intermediate.pkl'
     episode_max_time = 10000
-    n_gen = 10
+    n_gen = 500
     pop_size = 100
-    max_running_time = 3600
+    max_running_time = 3600*24
 
 
 
@@ -973,7 +973,7 @@ def main():
     if run_parallelization:
         scheduler_port = 8785
         dashboard_address = 8786
-        # ports = [2000]
+        # ports = [2000, 2003, 2006, 2009]
         ports = [2000, 2003]
 
 
