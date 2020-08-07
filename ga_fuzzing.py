@@ -225,14 +225,14 @@ run_parallelization = True
 save = False
 save_path = 'ga_intermediate.pkl'
 episode_max_time = 10000
-n_gen = 16
+n_gen = 20
 pop_size = 100
 max_running_time = 3600*24
 # [ego_linear_speed, offroad_d, wronglane_d, dev_dist]
-objective_weights = np.array([-1/7, 10000, 1, -100])
+objective_weights = np.array([-1/7, 100000, 1, -100])
 
 # ['generations', 'max_time']
-termination_condition = 'generations'
+termination_condition = 'max_time'
 
 scheduler_port = 8788
 dashboard_address = 8789
@@ -268,6 +268,10 @@ class MyProblem(Problem):
 
         self.counter = 0
         self.num_of_bugs = 0
+        self.num_of_collisions = 0
+        self.num_of_offroad = 0
+        self.num_of_wronglane = 0
+
         self.start_time = time.time()
         self.time_elapsed = 0
         self.time_bug_num_list = []
@@ -400,6 +404,7 @@ class MyProblem(Problem):
 
 
 
+
         def fun(x, launch_server, counter):
 
             x[:-1] = np.clip(x[:-1], np.array(xl), np.array(xu))
@@ -415,15 +420,11 @@ class MyProblem(Problem):
             # [ego_linear_speed, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light]
 
 
-
             F = np.array(objectives[:4]) * objective_weights
 
 
-
-
-
-            if np.sum(F) < 0:
-                bug = {'counter':counter, 'x':x, 'ego_linear_speed':objectives[0], 'offroad_d':objectives[1], 'wronglane_d':objectives[2], 'dev_dist':objectives[3], 'offroad_dist':objectives[4], 'is_wrong_lane':objectives[5], 'is_run_red_light':objectives[6], 'loc':loc, 'object_type':object_type, 'info': info}
+            if objectives[0] > 0 or objectives[4] or objectives[5]:
+                bug = {'counter':counter, 'x':x, 'ego_linear_speed':objectives[0], 'offroad_d':objectives[1], 'wronglane_d':objectives[2], 'dev_dist':objectives[3], 'is_offroad':objectives[4], 'is_wrong_lane':objectives[5], 'is_run_red_light':objectives[6], 'loc':loc, 'object_type':object_type, 'info': info}
                 cur_folder = bug_folder+'/'+str(counter)
                 if not os.path.exists(cur_folder):
                     os.mkdir(cur_folder)
@@ -432,7 +433,6 @@ class MyProblem(Problem):
                 try:
                     new_path = os.path.join(cur_folder, 'data')
                     shutil.copytree(save_path, new_path)
-                    os.system('chmod 777 '+new_path)
                 except:
                     print('fail to copy from', save_path)
 
@@ -462,7 +462,13 @@ class MyProblem(Problem):
                 job_results.append(F)
 
                 # record bug
-                if np.sum(F) < 0:
+                if objectives[0] > 0 or objectives[4] or objectives[5]:
+                    if objectives[0] > 0:
+                        self.num_of_collisions += 1
+                    elif objectives[4]:
+                        self.num_of_offroad += 1
+                    elif objectives[5]:
+                        self.num_of_wronglane += 1
                     self.num_of_bugs += 1
 
 
@@ -498,13 +504,21 @@ class MyProblem(Problem):
                 if X.shape[0] > len(self.ports):
                     submit_and_run_jobs(len(self.ports), X.shape[0], False, job_results)
 
+
                 time_elapsed = time.time() - self.start_time
                 print('\n'*10)
                 print('+'*100)
                 mean_objectives_this_generation = np.mean(np.array(self.objectives_list[-X.shape[0]:]), axis=0)
-                print(self.counter, time_elapsed, self.num_of_bugs, mean_objectives_this_generation)
+
+                print(self.counter, time_elapsed, self.num_of_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane, mean_objectives_this_generation)
+
+                mean_objectives_across_generations_path = os.path.join(self.bug_folder, 'mean_objectives_across_generations.txt')
+                with open(mean_objectives_across_generations_path, 'a') as f_out:
+                    f_out.write(','.join([str(x) for x in [self.counter, time_elapsed, self.num_of_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane]])+', ['+','.join([str(x) for x in mean_objectives_this_generation])+']\n')
+
                 print('+'*100)
                 print('\n'*10)
+                os.system('sudo -R chmod 777 '+self.bug_folder)
 
 
         else:
@@ -519,7 +533,7 @@ class MyProblem(Problem):
                 job_results.append(F)
 
                 # record bug
-                if np.sum(F) < 0:
+                if objectives[0] > 0 or objectives[4] or objectives[5]:
                     self.num_of_bugs += 1
 
 
