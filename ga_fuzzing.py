@@ -35,8 +35,10 @@ AttributeError: 'NoneType' object has no attribute 'x'
 * nsga2-dt
 * retraining (fix bug)
 
+* decision tree feature importance analysis and bug diversity analysis
 * seed selection (add constraints to input space) to search for particular pre-crash scene bugs
 
+* continuous objective of wronglane/offroad when violation happens
 
 * record rgb_with_car for pid_controller and auto_pilot
 
@@ -223,7 +225,7 @@ run_parallelization = True
 save = False
 save_path = 'ga_intermediate.pkl'
 episode_max_time = 10000
-n_gen = 500
+n_gen = 16
 pop_size = 100
 max_running_time = 3600*24
 # [ego_linear_speed, offroad_d, wronglane_d, dev_dist]
@@ -456,6 +458,7 @@ class MyProblem(Problem):
             for i in range(len(jobs)):
                 job = jobs[i]
                 F, loc, object_type, info, objectives = job.result()
+                self.objectives_list.append(np.array(objectives))
                 job_results.append(F)
 
                 # record bug
@@ -463,17 +466,11 @@ class MyProblem(Problem):
                     self.num_of_bugs += 1
 
 
-            time_elapsed = time.time() - self.start_time
-            print('\n'*10)
-            print('+'*100)
-            print(self.counter, time_elapsed, self.num_of_bugs, objectives)
-            print('+'*100)
-            print('\n'*10)
 
 
             # record time elapsed and bug numbers
             self.time_bug_num_list.append((time_elapsed, self.num_of_bugs))
-            self.objectives_list.append(objectives)
+
 
 
 
@@ -491,8 +488,23 @@ class MyProblem(Problem):
 
                 submit_and_run_jobs(0, len(self.ports), True, job_results)
 
+                time_elapsed = time.time() - self.start_time
+                print('\n'*10)
+                print('+'*100)
+                print(self.counter, time_elapsed, self.num_of_bugs)
+                print('+'*100)
+                print('\n'*10)
+
                 if X.shape[0] > len(self.ports):
                     submit_and_run_jobs(len(self.ports), X.shape[0], False, job_results)
+
+                time_elapsed = time.time() - self.start_time
+                print('\n'*10)
+                print('+'*100)
+                mean_objectives_this_generation = np.mean(np.array(self.objectives_list[-X.shape[0]:]), axis=0)
+                print(self.counter, time_elapsed, self.num_of_bugs, mean_objectives_this_generation)
+                print('+'*100)
+                print('\n'*10)
 
 
         else:
