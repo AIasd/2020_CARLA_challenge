@@ -229,6 +229,8 @@ max_running_time = 3600*24
 # [ego_linear_speed, offroad_d, wronglane_d, dev_dist]
 objective_weights = np.array([-1/7, 10000, 1, -100])
 
+# ['generations', 'max_time']
+termination_condition == 'generations'
 
 scheduler_port = 8788
 dashboard_address = 8789
@@ -246,6 +248,8 @@ if run_parallelization:
 class MyProblem(Problem):
 
     def __init__(self, elementwise_evaluation, bug_parent_folder, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000):
+
+        self.objectives_list = []
 
         self.run_parallelization = run_parallelization
         self.scheduler_port = scheduler_port
@@ -469,6 +473,7 @@ class MyProblem(Problem):
 
             # record time elapsed and bug numbers
             self.time_bug_num_list.append((time_elapsed, self.num_of_bugs))
+            self.objectives_list.append(objectives)
 
 
 
@@ -1101,11 +1106,17 @@ def main():
 
 
 
+    if termination_condition == 'generations':
+        termination = ('n_gen', n_gen)
+    elif termination_condition == 'max_time':
+        termination = ('time', max_running_time)
+    else:
+        termination = ('n_gen', n_gen)
     # TypeError: can't pickle _asyncio.Task objects when save_history = True
     res = customized_minimize(problem,
                    algorithm,
                    resume_run,
-                   termination=('time', max_running_time), # ('n_gen', n_gen)
+                   termination=termination,
                    seed=0,
                    verbose=True,
                    save_history=True)
@@ -1137,7 +1148,7 @@ def main():
 
 
     with open(os.path.join(problem.bug_folder, 'res_'+str(ind)+'.pkl'), 'wb') as f_out:
-        pickle.dump({'val':val, 'n_evals':n_evals, 'hv':hv, 'time_bug_num_list':problem.time_bug_num_list}, f_out)
+        pickle.dump({'val':val, 'n_evals':n_evals, 'hv':hv, 'objectives_list':problem.objectives_list, 'time_bug_num_list':problem.time_bug_num_list}, f_out)
         print('-'*100, 'pickled')
 
 
