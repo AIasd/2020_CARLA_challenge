@@ -230,7 +230,7 @@ max_running_time = 3600*24
 objective_weights = np.array([-1/7, 10000, 1, -100])
 
 # ['generations', 'max_time']
-termination_condition == 'generations'
+termination_condition = 'generations'
 
 scheduler_port = 8788
 dashboard_address = 8789
@@ -238,8 +238,8 @@ ports = [2012]
 if run_parallelization:
     scheduler_port = 8785
     dashboard_address = 8786
-    # ports = [2000, 2003, 2006, 2009]
-    ports = [2000]
+    ports = [2000, 2003, 2006, 2009]
+    # ports = [2000]
 
 
 
