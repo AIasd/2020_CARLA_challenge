@@ -105,6 +105,7 @@ def specify_args():
     # addition
     parser.add_argument("--weather-index", type=int, default=0, help="see WEATHER for reference")
     parser.add_argument("--save-folder", type=str, default='/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data', help="Path to save simulation data")
+    parser.add_argument("--deviations-folder", type=str, default='', help="Path to the folder that saves deviations data")
 
 
     arguments = parser.parse_args()
@@ -134,6 +135,7 @@ class arguments_info:
         self.checkpoint = ''
         self.weather_index = 19
         self.save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized'
+        self.deviations_folder = ''
 
 
 
@@ -278,5 +280,9 @@ def exit_handler(ports):
             except:
                 continue
 
+def get_angle(x1, y1, x2, y2):
+    angle = np.arctan2(x1*y2-y1*x2, x1*x2+y1*y2)
+
+    return angle
 
 port_to_gpu = {2000:0, 2003:1, 2006:0, 2009:1, 2012:0, 2015:1}

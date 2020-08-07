@@ -127,6 +127,9 @@ Town01-Scenario12-left-00
 
 Town03-Scenario12-front-00
 
+Town05-Scenario12-front-00
+
+Town05-Scenario12-right-00
 
 # Reference
 This repo is built on top of [here](https://github.com/bradyz/2020_CARLA_challenge) and [here](https://github.com/msu-coinlab/pymoo)

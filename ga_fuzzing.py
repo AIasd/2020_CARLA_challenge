@@ -1,5 +1,45 @@
 '''
 TBD:
+
+* Traceback (most recent call last):
+srunner.scenariomanager.carla_data_provider.get_velocity: Actor(id=0, type=static.road) not found!
+Traceback (most recent call last):
+  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 315, in <lambda>
+Traceback (most recent call last):
+  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 315, in <lambda>
+  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 315, in <lambda>
+    self._collision_sensor.listen(lambda event: self._count_collisions(weakref.ref(self), event))
+  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 543, in _count_collisions
+    'x': actor_location.x,
+    self._collision_sensor.listen(lambda event: self._count_collisions(weakref.ref(self), event))
+    self._collision_sensor.listen(lambda event: self._count_collisions(weakref.ref(self), event))
+  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 543, in _count_collisions
+  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 543, in _count_collisions
+AttributeError: 'NoneType' object has no attribute 'x'
+    'x': actor_location.x,
+    'x': actor_location.x,
+AttributeError: 'NoneType' object has no attribute 'x'
+AttributeError: 'NoneType' object has no attribute 'x'
+ waiting for one data reading from sensors...
+Traceback (most recent call last):
+  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 315, in <lambda>
+    self._collision_sensor.listen(lambda event: self._count_collisions(weakref.ref(self), event))
+  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 543, in _count_collisions
+    'x': actor_location.x,
+AttributeError: 'NoneType' object has no attribute 'x'
+
+
+* reimplement dt
+* finish background section with plot of modules, define pid
+* off road violation since changing weight does not work we can try changing seed
+* nsga2-dt
+* retraining (fix bug)
+
+* seed selection (add constraints to input space) to search for particular pre-crash scene bugs
+
+
+* record rgb_with_car for pid_controller and auto_pilot
+
 * the birdview window currently does not appear even when os.environ['HAS_DISPLAY'] = '1'
 * need to improve diversity of bugs
 * maybe not allowed to generate static objects directly on routes
@@ -86,7 +126,10 @@ sys.path.append('.')
 sys.path.append('leaderboard')
 sys.path.append('leaderboard/team_code')
 sys.path.append('scenario_runner')
-os.environ['HAS_DISPLAY'] = '0'
+sys.path.append('scenario_runner')
+sys.path.append('/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/carla_project/src')
+
+
 
 
 from pymoo.model.problem import Problem
@@ -146,9 +189,9 @@ from dask.distributed import Client, LocalCluster
 
 rng = np.random.default_rng(20)
 bug_root_folder = 'bugs'
-town_name = 'Town01'
+town_name = 'Town05'
 scenario = 'Scenario12'
-direction = 'left'
+direction = 'right'
 route = 0
 
 route_str = str(route)
@@ -159,9 +202,42 @@ if route < 10:
 algorithm_name = 'nsga2'
 # ['lbc', 'auto_pilot', 'pid_agent']
 ego_car_model = 'lbc'
+os.environ['HAS_DISPLAY'] = '0'
 
 folder_names = [bug_root_folder, algorithm_name, town_name, scenario, direction, route_str]
 bug_parent_folder = make_hierarchical_dir(folder_names)
+
+
+
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--resume-run', help='continue to run', default=False, action='store_true')
+parser.add_argument('--ind', help='ind ', default=0)
+arguments = parser.parse_args()
+
+resume_run = arguments.resume_run
+ind = arguments.ind
+
+run_parallelization = True
+save = False
+save_path = 'ga_intermediate.pkl'
+episode_max_time = 10000
+n_gen = 500
+pop_size = 100
+max_running_time = 3600*24
+# [ego_linear_speed, offroad_d, wronglane_d, dev_dist]
+objective_weights = np.array([-1/7, 10000, 1, -100])
+
+
+scheduler_port = 8788
+dashboard_address = 8789
+ports = [2012]
+if run_parallelization:
+    scheduler_port = 8785
+    dashboard_address = 8786
+    # ports = [2000, 2003, 2006, 2009]
+    ports = [2000]
 
 
 
@@ -192,7 +268,7 @@ class MyProblem(Problem):
 
         # Fixed hyper-parameters
         self.waypoints_num_limit = 5
-        self.max_num_of_static = 2
+        self.max_num_of_static = 0
         self.max_num_of_pedestrians = 2
         self.max_num_of_vehicles = 2
         self.num_of_weathers = len(WEATHERS)
@@ -220,7 +296,7 @@ class MyProblem(Problem):
         self.pedestrian_x_max = 20
         self.pedestrian_y_min = -20
         self.pedestrian_y_max = 20
-        self.pedestrian_trigger_distance_min = 0
+        self.pedestrian_trigger_distance_min = 2
         self.pedestrian_trigger_distance_max = 50
         self.pedestrian_speed_min = 0
         self.pedestrian_speed_max = 4
@@ -303,6 +379,8 @@ class MyProblem(Problem):
 
     def _evaluate(self, X, out, *args, **kwargs):
 
+
+
         waypoints_num_limit = self.waypoints_num_limit
         max_num_of_static = self.max_num_of_static
         max_num_of_pedestrians = self.max_num_of_pedestrians
@@ -310,10 +388,15 @@ class MyProblem(Problem):
         episode_max_time = self.episode_max_time
         bug_folder = self.bug_folder
 
+        xl = self.xl
+        xu = self.xu
+
 
 
 
         def fun(x, launch_server, counter):
+
+            x[:-1] = np.clip(x[:-1], np.array(xl), np.array(xu))
 
             # x = denormalize_by_entry(self, x)
 
@@ -321,41 +404,34 @@ class MyProblem(Problem):
 
 
             # run simulation
-            objectives, loc, object_type, status, info, save_path = run_simulation(customized_data, launch_server, episode_max_time)
-            ego_linear_speed, offroad_dist, is_wrong_lane, is_run_red_light = objectives
-            # multi-objectives
-            # TBD: traffic light should be considered for model that supports traffic light
+            objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time)
 
-            # hack:
-            # TBD:
-            # balance the influence of each term
-            ego_speed_normalization_term = 7
+            # [ego_linear_speed, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light]
 
-            # since we are not sure about value of this term
-            if offroad_dist > 0:
-                offroad_dist = 1
 
-            # disable for now
-            is_run_red_light = 0
 
-            F = np.array([- ego_linear_speed / ego_speed_normalization_term, - offroad_dist, - is_wrong_lane, - is_run_red_light], dtype=np.float)
+            F = np.array(objectives[:4]) * objective_weights
+
+
 
 
 
             if np.sum(F) < 0:
-                bug = {'counter':counter, 'x':x, 'ego_linear_speed':-F[0], 'offroad_dist':-F[1], 'is_wrong_lane':-F[2], 'is_run_red_light':-F[3], 'loc':loc, 'object_type':object_type, 'status':status, 'info': info}
+                bug = {'counter':counter, 'x':x, 'ego_linear_speed':objectives[0], 'offroad_d':objectives[1], 'wronglane_d':objectives[2], 'dev_dist':objectives[3], 'offroad_dist':objectives[4], 'is_wrong_lane':objectives[5], 'is_run_red_light':objectives[6], 'loc':loc, 'object_type':object_type, 'info': info}
                 cur_folder = bug_folder+'/'+str(counter)
                 if not os.path.exists(cur_folder):
                     os.mkdir(cur_folder)
                 np.savez(cur_folder+'/'+'bug_info', bug=bug)
                 # copy data to another place
                 try:
-                    shutil.copytree(save_path, os.path.join(cur_folder, 'data'))
+                    new_path = os.path.join(cur_folder, 'data')
+                    shutil.copytree(save_path, new_path)
+                    os.system('chmod 777 '+new_path)
                 except:
                     print('fail to copy from', save_path)
 
 
-            return F, loc, object_type, status, info
+            return F, loc, object_type, info, objectives
 
 
 
@@ -375,8 +451,7 @@ class MyProblem(Problem):
 
             for i in range(len(jobs)):
                 job = jobs[i]
-                x = X[i]
-                F, loc, object_type, status, info = job.result()
+                F, loc, object_type, info, objectives = job.result()
                 job_results.append(F)
 
                 # record bug
@@ -387,7 +462,7 @@ class MyProblem(Problem):
             time_elapsed = time.time() - self.start_time
             print('\n'*10)
             print('+'*100)
-            print(self.counter, time_elapsed, self.num_of_bugs)
+            print(self.counter, time_elapsed, self.num_of_bugs, objectives)
             print('+'*100)
             print('\n'*10)
 
@@ -423,7 +498,7 @@ class MyProblem(Problem):
                 else:
                     launch_server = False
 
-                F, loc, object_type, status, info = fun(x, launch_server)
+                F, loc, object_type, info, objectives = fun(x, launch_server)
                 job_results.append(F)
 
                 # record bug
@@ -522,6 +597,9 @@ def run_simulation(customized_data, launch_server, episode_max_time):
 
     save_path = os.path.join(arguments.save_folder, 'route_'+route_str)
 
+    # TBD: for convenience
+    arguments.deviations_folder = save_path
+
 
     # extract waypoints along route
     import xml.etree.ElementTree as ET
@@ -571,20 +649,41 @@ def run_simulation(customized_data, launch_server, episode_max_time):
     finally:
         del leaderboard_evaluator
         # collect signals for estimating objectives
-        events_path = os.path.join(save_path, 'events.txt')
-        objectives, loc, object_type, status = estimate_objectives(events_path)
-        print('objectives :', objectives)
+
+
+        objectives, loc, object_type = estimate_objectives(save_path)
+
 
     info = [arguments.scenarios, town_name, scenario, direction, route, sample_factor, customized_data['center_transform'].location.x, customized_data['center_transform'].location.y]
 
-    return objectives, loc, object_type, status, info, save_path
+    return objectives, loc, object_type, info, save_path
 
 
 
 
-def estimate_objectives(events_path):
+def estimate_objectives(save_path):
+    events_path = os.path.join(save_path, 'events.txt')
+    deviations_path = os.path.join(save_path, 'deviations.txt')
+
+    offroad_d = 10000
+    wronglane_d = 10000
+    dev_dist = 0
+
+    with open(deviations_path, 'r') as f_in:
+        for line in f_in:
+            type, d = line.split(',')
+            d = float(d)
+            if type == 'offroad_d':
+                offroad_d = np.min([offroad_d, d])
+            elif type == 'wronglane_d':
+                wronglane_d = np.min([wronglane_d, d])
+            elif type == 'dev_dist':
+                dev_dist = np.max([dev_dist, d])
+
+
+
     ego_linear_speed = -1
-    offroad_dist = 0
+    is_offroad = 0
     is_wrong_lane = 0
     is_run_red_light = 0
 
@@ -603,6 +702,7 @@ def estimate_objectives(events_path):
 
     infractions = events['_checkpoint']['records'][0]['infractions']
     status = events['_checkpoint']['records'][0]['status']
+
     for infraction_type in infraction_types:
         for infraction in infractions[infraction_type]:
             if 'collisions' in infraction_type:
@@ -621,6 +721,7 @@ def estimate_objectives(events_path):
                     x = float(loc.group(1))
                     y = float(loc.group(2))
                     offroad_dist = float(loc.group(4))
+                    is_offroad = 1
             else:
                 if infraction_type == 'wrong_lane':
                     is_wrong_lane = 1
@@ -632,7 +733,7 @@ def estimate_objectives(events_path):
                     y = float(loc.group(2))
 
 
-    return [ego_linear_speed, offroad_dist, is_wrong_lane, is_run_red_light], (x, y), object_type, status
+    return [ego_linear_speed, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light], (x, y), object_type
 
 
 
@@ -947,35 +1048,6 @@ def customized_minimize(problem,
 
 
 def main():
-
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--resume-run', help='continue to run', default=False, action='store_true')
-    parser.add_argument('--ind', help='ind ', default=0)
-    arguments = parser.parse_args()
-
-    resume_run = arguments.resume_run
-    ind = arguments.ind
-
-    run_parallelization = True
-    save = False
-    save_path = 'ga_intermediate.pkl'
-    episode_max_time = 10000
-    n_gen = 500
-    pop_size = 100
-    max_running_time = 3600*24
-
-
-
-    scheduler_port = 8788
-    dashboard_address = 8789
-    ports = [2012]
-    if run_parallelization:
-        scheduler_port = 8785
-        dashboard_address = 8786
-        # ports = [2000, 2003, 2006, 2009]
-        ports = [2000, 2003]
-
 
 
 

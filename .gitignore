@@ -15,3 +15,5 @@ __pycache__/*
 bugs/*
 dask-worker-space/*
 plots/*
+checkpoints/*
+wandb/*
