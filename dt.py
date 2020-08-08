@@ -43,7 +43,7 @@ def main():
     # [5, 7]
     outer_iterations = 3
     # 5
-    n_gen = 5
+    n_gen = 2
     #
     pop_size = 4
 
