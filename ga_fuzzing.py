@@ -151,6 +151,7 @@ from pymoo.model.sampling import Sampling
 from pymoo.model.crossover import Crossover
 from pymoo.model.mutation import Mutation
 from pymoo.model.duplicate import ElementwiseDuplicateElimination
+from pymoo.model.population import Population
 
 from pymoo.algorithms.nsga2 import NSGA2
 from pymoo.algorithms.random import RandomAlgorithm
@@ -164,7 +165,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors
 
-from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info
+from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region
 
 import numpy as np
 import carla
@@ -198,7 +199,8 @@ from pymoo.util.termination.default import MultiObjectiveDefaultTermination, Sin
 from pymoo.util.termination.max_time import TimeBasedTermination
 
 from dask.distributed import Client, LocalCluster
-from dt import is_critical_region
+
+
 
 
 rng = np.random.default_rng(20)
@@ -212,21 +214,15 @@ route_str = str(route)
 if route < 10:
     route_str = '0'+route_str
 
+
 # ['nsga2', 'random']
 algorithm_name = 'nsga2'
 # ['lbc', 'auto_pilot', 'pid_agent']
 ego_car_model = 'lbc'
 os.environ['HAS_DISPLAY'] = '0'
-
 # This is used to control how this program use GPU
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-
-folder_names = [bug_root_folder, algorithm_name, town_name, scenario, direction, route_str]
-bug_parent_folder = make_hierarchical_dir(folder_names)
-
-
-
 
 
 parser = argparse.ArgumentParser()
@@ -241,23 +237,25 @@ run_parallelization = True
 save = False
 save_path = 'ga_intermediate.pkl'
 episode_max_time = 10000
-n_gen = 20
-pop_size = 100
+global_n_gen = 20
+global_pop_size = 100
 max_running_time = 3600*24
 # [ego_linear_speed, offroad_d, wronglane_d, dev_dist]
 objective_weights = np.array([-1/7, 1, 100000, -1])
 
 # ['generations', 'max_time']
-termination_condition = 'max_time'
+global_termination_condition = 'max_time'
 
-scheduler_port = 8788
-dashboard_address = 8789
-ports = [2012]
+global_scheduler_port = 8788
+global_dashboard_address = 8789
+global_ports = [2000]
 if run_parallelization:
-    scheduler_port = 8785
-    dashboard_address = 8786
-    ports = [2003, 2009]
-    # ports = [2000]
+    global_scheduler_port = 8785
+    global_dashboard_address = 8786
+    global_ports = [2003, 2009]
+
+
+
 
 
 
@@ -265,8 +263,9 @@ if run_parallelization:
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, dt=False, estimator=None, critical_unique_leaves=None):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None):
 
+        self.call_from_dt = call_from_dt
         self.dt = dt
         self.estimator = estimator
         self.critical_unique_leaves = critical_unique_leaves
@@ -419,6 +418,7 @@ class MyProblem(Problem):
         max_num_of_pedestrians = self.max_num_of_pedestrians
         max_num_of_vehicles = self.max_num_of_vehicles
         episode_max_time = self.episode_max_time
+        call_from_dt = self.call_from_dt
         bug_folder = self.bug_folder
 
         xl = self.xl
@@ -434,42 +434,44 @@ class MyProblem(Problem):
 
 
         def fun(x, launch_server, counter):
-            if dt and is_critical_region(x, estimator, critical_unique_leaves):
+            if dt and not is_critical_region(x, estimator, critical_unique_leaves):
                 objectives = [-1, 10000, 10000, 0, 0, 0, 0]
                 F = np.array(objectives[:4]) * objective_weights
                 return F, None, None, None, objectives
 
-            x[:-1] = np.clip(x[:-1], np.array(xl), np.array(xu))
+            else:
 
-            # x = denormalize_by_entry(self, x)
+                x[:-1] = np.clip(x[:-1], np.array(xl), np.array(xu))
 
-            customized_data = convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_num_of_pedestrians, max_num_of_vehicles, static_types, pedestrian_types, vehicle_types, vehicle_colors)
+                # x = denormalize_by_entry(self, x)
 
-
-            # run simulation
-            objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time)
-
-            # [ego_linear_speed, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light]
+                customized_data = convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_num_of_pedestrians, max_num_of_vehicles, static_types, pedestrian_types, vehicle_types, vehicle_colors)
 
 
-            F = np.array(objectives[:4]) * objective_weights
+                # run simulation
+                objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt)
+
+                # [ego_linear_speed, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light]
 
 
-            if objectives[0] > 0 or objectives[4] or objectives[5]:
-                bug = {'counter':counter, 'x':x, 'ego_linear_speed':objectives[0], 'offroad_d':objectives[1], 'wronglane_d':objectives[2], 'dev_dist':objectives[3], 'is_offroad':objectives[4], 'is_wrong_lane':objectives[5], 'is_run_red_light':objectives[6], 'loc':loc, 'object_type':object_type, 'info': info}
-                cur_folder = bug_folder+'/'+str(counter)
-                if not os.path.exists(cur_folder):
-                    os.mkdir(cur_folder)
-                np.savez(cur_folder+'/'+'bug_info', bug=bug)
-                # copy data to another place
-                try:
-                    new_path = os.path.join(cur_folder, 'data')
-                    shutil.copytree(save_path, new_path)
-                except:
-                    print('fail to copy from', save_path)
+                F = np.array(objectives[:4]) * objective_weights
 
 
-            return F, loc, object_type, info, objectives
+                if objectives[0] > 0 or objectives[4] or objectives[5]:
+                    bug = {'counter':counter, 'x':x, 'ego_linear_speed':objectives[0], 'offroad_d':objectives[1], 'wronglane_d':objectives[2], 'dev_dist':objectives[3], 'is_offroad':objectives[4], 'is_wrong_lane':objectives[5], 'is_run_red_light':objectives[6], 'loc':loc, 'object_type':object_type, 'info': info}
+                    cur_folder = bug_folder+'/'+str(counter)
+                    if not os.path.exists(cur_folder):
+                        os.mkdir(cur_folder)
+                    np.savez(cur_folder+'/'+'bug_info', bug=bug)
+                    # copy data to another place
+                    try:
+                        new_path = os.path.join(cur_folder, 'data')
+                        shutil.copytree(save_path, new_path)
+                    except:
+                        print('fail to copy from', save_path)
+
+
+                return F, loc, object_type, info, objectives
 
 
 
@@ -594,7 +596,7 @@ class MyProblem(Problem):
 
 
 
-def run_simulation(customized_data, launch_server, episode_max_time):
+def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt):
     arguments = arguments_info()
     arguments.port = customized_data['port']
     arguments.debug = 1
@@ -624,6 +626,9 @@ def run_simulation(customized_data, launch_server, episode_max_time):
     if not os.path.exists(os.environ['SAVE_FOLDER']):
         os.mkdir(os.environ['SAVE_FOLDER'])
     os.environ['SAVE_FOLDER'] += '/'+str(int(arguments.port))
+    if not os.path.exists(os.environ['SAVE_FOLDER']):
+        os.mkdir(os.environ['SAVE_FOLDER'])
+    os.environ['SAVE_FOLDER'] += '/'+str(call_from_dt)
     if not os.path.exists(os.environ['SAVE_FOLDER']):
         os.mkdir(os.environ['SAVE_FOLDER'])
 
@@ -975,8 +980,7 @@ class NSGA2_DT(NSGA2):
 
 
             if self.survival:
-                pop = self.survival.do(self.problem, pop, len(pop), algorithm=self,
-                                       n_min_infeas_survive=self.min_infeas_pop_size)
+                pop = self.survival.do(self.problem, pop, len(pop), algorithm=self, n_min_infeas_survive=self.min_infeas_pop_size)
 
             self.pop, self.off = pop, pop
         else:
@@ -1084,12 +1088,32 @@ def customized_minimize(problem,
     return res
 
 
-def run_ga(dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, generations=None):
+def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, n_gen_from_dt=0, pop_size_from_dt=0):
 
+    if call_from_dt:
+        termination_condition = 'generations'
+        n_gen = n_gen_from_dt
+        scheduler_port = 8791
+        dashboard_address = 8792
+        ports = [2021, 2027]
+        pop_size = pop_size_from_dt
+    else:
+        termination_condition = global_termination_condition
+        n_gen = global_n_gen
+        scheduler_port = global_scheduler_port
+        dashboard_address = global_dashboard_address
+        ports = global_ports
+        pop_size = global_pop_size
 
 
     # close simulator(s)
     atexit.register(exit_handler, ports)
+
+
+
+
+    folder_names = [bug_root_folder, str(call_from_dt), algorithm_name, town_name, scenario, direction, route_str]
+    bug_parent_folder = make_hierarchical_dir(folder_names)
 
 
 
@@ -1101,7 +1125,7 @@ def run_ga(dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None
         algorithm.launch_cluster = True
         problem = algorithm.problem
     else:
-        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves)
+        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves)
 
 
         from pymoo.operators.mixed_variable_operator import MixedVariableMutation, MixedVariableCrossover
@@ -1193,7 +1217,7 @@ def run_ga(dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None
 
 
 
-    return np.concatenate(problem.x_list), np.concatenate(problem.y_list), np.concatenate(problem.F_list)
+    return np.concatenate(problem.x_list), np.concatenate(problem.y_list), np.concatenate(problem.F_list), np.concatenate(problem.objectives_list)
 
 if __name__ == '__main__':
     run_ga()

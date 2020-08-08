@@ -284,3 +284,9 @@ def get_angle(x1, y1, x2, y2):
     angle = np.arctan2(x1*y2-y1*x2, x1*x2+y1*y2)
 
     return angle
+
+
+# check if x is in critical regions of the tree
+def is_critical_region(x, estimator, critical_unique_leaves):
+    leave_id = estimator.apply(x)
+    return leave_id in critical_unique_leaves

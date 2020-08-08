@@ -1,9 +1,13 @@
+'''
+sudo -E /home/zhongzzy9/anaconda3/envs/carla99/bin/python dt.py
+
+'''
+
 import os
-from sklearn.datasets import load_iris
 from sklearn import tree
 import graphviz
 import numpy as np
-
+from ga_fuzzing import run_ga
 
 
 
@@ -32,37 +36,43 @@ def filter_critical_regions(X, y):
 
     return estimator, inds
 
-def is_critical_region(X, estimator, critical_unique_leaves):
-    leave_id = estimator.apply(x)
-    return leave_id in critical_unique_leaves
+
 
 
 def main():
     # [5, 7]
     outer_iterations = 3
     # 5
-    generations = 5
+    n_gen = 5
+    #
+    pop_size = 4
 
     X_filtered = None
     F_filtered = None
     X = None
     y = None
     F = None
+    objectives = None
     estimator = None
     critical_unique_leaves = None
 
     for i in range(outer_iterations):
-        X_new, y_new, F_new = run_ga(True, X_filtered, F_filtered, estimator, critical_unique_leaves, generations)
+        dt = True
+        if i == 0:
+            dt = False
+        X_new, y_new, F_new, objectives_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size)
         run_ga(dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None)
 
         if i == 0:
             X = X_new
             y = y_new
             F = F_new
+            objectives = objectives_new
         else:
             X = np.concatenate([X, X_new])
             y = np.concatenate([y, y_new])
             F = np.concatenate([F, F_new])
+            objectives = np.concatenate([objectives, objectives_new])
 
 
 
@@ -71,7 +81,7 @@ def main():
         F_filtered = F[inds]
         print(np.sum(y))
 
-    return estimator, X, y, F
+    return X, y, F, objectives
 
 def visualization(estimator):
     tree.plot_tree(estimator)
@@ -80,5 +90,13 @@ def visualization(estimator):
     graph.render("tree")
 
 if __name__ == '__main__':
-    estimator, X, y, F = main()
-    visualization(estimator)
+    X, y, F, objectives = main()
+    np.savez('dt', X=X, y=y, F=F, objectives=objectives)
+
+
+    # d = np.load('dt.npz')
+    # X = d['X']
+    # y = d['y']
+    # estimator = tree.DecisionTreeClassifier(min_samples_split=int(0.1*X.shape[0]), min_impurity_decrease=0.01)
+    # estimator = estimator.fit(X, y)
+    # visualization(estimator)
