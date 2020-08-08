@@ -122,6 +122,22 @@ replace `'0'` with `'1'`.
 python analyze_ga_results.py
 ```
 
+
+## Retrain model from scratch
+The retraining code only supports single-GPU training.
+Download dataset [here](https://drive.google.com/file/d/1dwt9_EvXB1a6ihlMVMyYx0Bw0mN27SLy/view).
+
+Stage 1 (~23 hrs on 2080Ti):
+```
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir path/to/data
+```
+
+Stage 2:
+```
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model --dataset_dir path/to/data
+```
+
+
 ## Demo Routes
 Town01-Scenario12-left-00
 

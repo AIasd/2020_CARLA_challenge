@@ -284,5 +284,3 @@ def get_angle(x1, y1, x2, y2):
     angle = np.arctan2(x1*y2-y1*x2, x1*x2+y1*y2)
 
     return angle
-
-port_to_gpu = {2000:0, 2003:1, 2006:0, 2009:1, 2012:0, 2015:1}

@@ -1,5 +1,13 @@
 '''
 TBD:
+* finish background section with plot of modules, define pid
+* off road violation since changing weight does not work we can try changing seed
+* debug nsga2-dt
+* emcmc
+* clustering+tsne(need to label different bugs first), bug category over generation plot
+* retraining
+
+
 
 * Traceback (most recent call last):
 srunner.scenariomanager.carla_data_provider.get_velocity: Actor(id=0, type=static.road) not found!
@@ -29,11 +37,9 @@ Traceback (most recent call last):
 AttributeError: 'NoneType' object has no attribute 'x'
 
 
-* reimplement dt
-* finish background section with plot of modules, define pid
-* off road violation since changing weight does not work we can try changing seed
-* nsga2-dt
-* retraining (fix bug)
+
+
+
 
 * decision tree feature importance analysis and bug diversity analysis
 * seed selection (add constraints to input space) to search for particular pre-crash scene bugs
@@ -107,6 +113,12 @@ su zhongzzy9
 
 Run genertic algorithm for fuzzing:
 sudo -E /home/zhongzzy9/anaconda3/envs/carla99/bin/python ga_fuzzing.py
+
+Retrain model from scratch:
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir '/home/zhongzzy9/Documents/self-driving-car/LBC_data/CARLA_challenge_autopilot'
+
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir '../LBC_data/CARLA_challenge_autopilot'
+
 '''
 
 # hack: increase the maximum number of files to open to avoid too many files open error due to leakage.
@@ -186,14 +198,14 @@ from pymoo.util.termination.default import MultiObjectiveDefaultTermination, Sin
 from pymoo.util.termination.max_time import TimeBasedTermination
 
 from dask.distributed import Client, LocalCluster
-
+from dt import is_critical_region
 
 
 rng = np.random.default_rng(20)
 bug_root_folder = 'bugs'
-town_name = 'Town05'
+town_name = 'Town03'
 scenario = 'Scenario12'
-direction = 'right'
+direction = 'front'
 route = 0
 
 route_str = str(route)
@@ -205,6 +217,10 @@ algorithm_name = 'nsga2'
 # ['lbc', 'auto_pilot', 'pid_agent']
 ego_car_model = 'lbc'
 os.environ['HAS_DISPLAY'] = '0'
+
+# This is used to control how this program use GPU
+# '0,1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 folder_names = [bug_root_folder, algorithm_name, town_name, scenario, direction, route_str]
 bug_parent_folder = make_hierarchical_dir(folder_names)
@@ -229,7 +245,7 @@ n_gen = 20
 pop_size = 100
 max_running_time = 3600*24
 # [ego_linear_speed, offroad_d, wronglane_d, dev_dist]
-objective_weights = np.array([-1/7, 100000, 1, -100])
+objective_weights = np.array([-1/7, 1, 100000, -1])
 
 # ['generations', 'max_time']
 termination_condition = 'max_time'
@@ -240,7 +256,7 @@ ports = [2012]
 if run_parallelization:
     scheduler_port = 8785
     dashboard_address = 8786
-    ports = [2000, 2003, 2006, 2009]
+    ports = [2003, 2009]
     # ports = [2000]
 
 
@@ -249,9 +265,16 @@ if run_parallelization:
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, dt=False, estimator=None, critical_unique_leaves=None):
+
+        self.dt = dt
+        self.estimator = estimator
+        self.critical_unique_leaves = critical_unique_leaves
 
         self.objectives_list = []
+        self.x_list = []
+        self.y_list = []
+        self.F_list = []
 
         self.run_parallelization = run_parallelization
         self.scheduler_port = scheduler_port
@@ -401,11 +424,20 @@ class MyProblem(Problem):
         xl = self.xl
         xu = self.xu
 
+        dt = self.dt
+        estimator = self.estimator
+        critical_unique_leaves = self.critical_unique_leaves
+
+
 
 
 
 
         def fun(x, launch_server, counter):
+            if dt and is_critical_region(x, estimator, critical_unique_leaves):
+                objectives = [-1, 10000, 10000, 0, 0, 0, 0]
+                F = np.array(objectives[:4]) * objective_weights
+                return F, None, None, None, objectives
 
             x[:-1] = np.clip(x[:-1], np.array(xl), np.array(xu))
 
@@ -458,8 +490,8 @@ class MyProblem(Problem):
             for i in range(len(jobs)):
                 job = jobs[i]
                 F, loc, object_type, info, objectives = job.result()
-                self.objectives_list.append(np.array(objectives))
-                job_results.append(F)
+
+
 
                 # record bug
                 if objectives[0] > 0 or objectives[4] or objectives[5]:
@@ -470,6 +502,13 @@ class MyProblem(Problem):
                     elif objectives[5]:
                         self.num_of_wronglane += 1
                     self.num_of_bugs += 1
+                    self.y_list.append(1)
+                else:
+                    self.y_list.append(0)
+                self.x_list.append(x)
+                self.F_list.append(F)
+                self.objectives_list.append(np.array(objectives))
+                job_results.append(F)
 
 
 
@@ -911,73 +950,40 @@ def denormalize_by_entry(problem, X):
 
 
 
-class MyCrossover(Crossover):
-    def __init__(self):
 
-        # define the crossover: number of parents and number of offsprings
-        self.crossover_rate = 0.6
-        super().__init__(2, 2, self.crossover_rate)
-
-
-    def _do(self, problem, X, **kwargs):
-
-        # The input of has the following shape (n_parents, n_matings, n_var)
-        _, n_matings, n_var = X.shape
-
-        # The output owith the shape (n_offsprings, n_matings, n_var)
-        # Because there the number of parents and offsprings are equal it keeps the shape of X
-        Y = np.full_like(X, None, dtype=np.object)
-
-        # for each mating provided
-        for k in range(n_matings):
-
-            # get the first and the second parent
-            a, b = X[0, k, 0], X[1, k, 0]
-
-            # prepare the offsprings
-            off_a = ["_"] * problem.n_characters
-            off_b = ["_"] * problem.n_characters
-
-            for i in range(problem.n_characters):
-                if rng.random() < 0.5:
-                    off_a[i] = a[i]
-                    off_b[i] = b[i]
-                else:
-                    off_a[i] = b[i]
-                    off_b[i] = a[i]
-
-            # join the character list and set the output
-            Y[0, k, 0], Y[1, k, 0] = "".join(off_a), "".join(off_b)
-
-        return Y
+class NSGA2_DT(NSGA2):
+    def __init__(self, dt=False, X=None, F=None, **kwargs):
+        self.dt = dt
+        self.X = X
+        self.F = F
 
 
 
-class MyMutation(Mutation):
-    def __init__(self):
-        super().__init__()
+        super().__init__(**kwargs)
 
 
-    def _do(self, problem, X, **kwargs):
-        self.mutation_rate = 1 / problem.n_var
-        # for each individual
-        for i in range(len(X)):
-            x = X[i]
+    def _initialize(self):
+        if self.dt:
+            pop = Population(0, individual=self.individual)
+            pop = pop.new("X", self.X.tolist())
+            for i in range(len(pop)):
+                pop[i].set('F', F[i])
+            pop.set("n_gen", self.n_gen)
+
+            self.evaluator.eval(self.problem, pop, algorithm=self)
 
 
-            # with a probabilty of 40% - change the order of characters
-            if r < 0.4:
-                perm = rng.permutation(problem.n_characters)
-                X[i, 0] = "".join(np.array([e for e in X[i, 0]])[perm])
 
-            # also with a probabilty of 40% - change a character randomly
-            elif r < 0.8:
-                prob = 1 / problem.n_characters
-                mut = [c if rng.random() > prob
-                       else rng.choice(problem.ALPHABET) for c in X[i, 0]]
-                X[i, 0] = "".join(mut)
+            if self.survival:
+                pop = self.survival.do(self.problem, pop, len(pop), algorithm=self,
+                                       n_min_infeas_survive=self.min_infeas_pop_size)
 
-        return X
+            self.pop, self.off = pop, pop
+        else:
+            super()._initialize()
+
+
+
 
 
 
@@ -1078,7 +1084,7 @@ def customized_minimize(problem,
     return res
 
 
-def main():
+def run_ga(dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, generations=None):
 
 
 
@@ -1095,7 +1101,7 @@ def main():
         algorithm.launch_cluster = True
         problem = algorithm.problem
     else:
-        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time)
+        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves)
 
 
         from pymoo.operators.mixed_variable_operator import MixedVariableMutation, MixedVariableCrossover
@@ -1120,7 +1126,8 @@ def main():
         # TBD: customize mutation and crossover to better fit our problem. e.g.
         # might deal with int and real separately
         if algorithm_name == 'nsga2':
-            algorithm = NSGA2(pop_size=pop_size,
+            algorithm = NSGA2_DT(dt=dt, X=X, F=F,
+                          pop_size=pop_size,
                           sampling=MySampling(),
                           crossover=crossover,
                           mutation=mutation,
@@ -1145,7 +1152,7 @@ def main():
                    termination=termination,
                    seed=0,
                    verbose=True,
-                   save_history=True)
+                   save_history=False)
 
     print('We have found', problem.num_of_bugs, 'bugs in total.')
 
@@ -1186,7 +1193,7 @@ def main():
 
 
 
-
+    return np.concatenate(problem.x_list), np.concatenate(problem.y_list), np.concatenate(problem.F_list)
 
 if __name__ == '__main__':
-    main()
+    run_ga()
