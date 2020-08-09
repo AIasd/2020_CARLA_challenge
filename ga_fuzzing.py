@@ -1,13 +1,15 @@
 '''
 TBD:
-
+* estimate bug diversity via tree diversity
 * fix stage2 model training
 * debug nsga2-dt (make sure decision tree code is correct)
 * introduction writing
 
 * emcmc
 * clustering+tsne(need to label different bugs first), bug category over generation plot
-* retraining
+
+
+* specific scenario by adding constraints to input parameters
 
 
 
@@ -245,7 +247,8 @@ global_n_gen = 20
 global_pop_size = 100
 max_running_time = 3600*24
 # [ego_linear_speed, offroad_d, wronglane_d, dev_dist]
-objective_weights = np.array([-1/7, 1, 100000, -1])
+# objective_weights = np.array([-1/7, 1, 100000, -1])
+objective_weights = np.array([-1/7, 1/3, 1/3, -1])
 
 # ['generations', 'max_time']
 global_termination_condition = 'max_time'
@@ -510,6 +513,7 @@ class MyProblem(Problem):
                         for k,v in collision_types.items():
                             if object_type in v:
                                 bug_str = k
+                        bug_str = 'layout_collision'
                     elif objectives[4]:
                         self.num_of_offroad += 1
                         bug_str = 'offroad'
@@ -526,7 +530,7 @@ class MyProblem(Problem):
                 else:
                     self.y_list.append(0)
                 # we don't want to store port number
-                self.x_list.append(x[:-1])
+                self.x_list.append(X[i])
                 self.F_list.append(F)
                 self.objectives_list.append(np.array(objectives))
                 job_results.append(F)
