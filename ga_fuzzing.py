@@ -516,6 +516,8 @@ class MyProblem(Problem):
                     elif objectives[5]:
                         self.num_of_wronglane += 1
                         bug_str = 'wronglane'
+                    else:
+                        bug_str = 'unknown'
                     with open(mean_objectives_across_generations_path, 'a') as f_out:
                         f_out.write(str(i)+','+bug_str+'\n')
 
