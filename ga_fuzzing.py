@@ -1,8 +1,10 @@
 '''
 TBD:
-* finish background section with plot of modules, define pid
-* off road violation since changing weight does not work we can try changing seed
-* debug nsga2-dt
+
+* fix stage2 model training
+* debug nsga2-dt (make sure decision tree code is correct)
+* introduction writing
+
 * emcmc
 * clustering+tsne(need to label different bugs first), bug category over generation plot
 * retraining
@@ -114,10 +116,11 @@ su zhongzzy9
 Run genertic algorithm for fuzzing:
 sudo -E /home/zhongzzy9/anaconda3/envs/carla99/bin/python ga_fuzzing.py
 
-Retrain model from scratch:
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir '/home/zhongzzy9/Documents/self-driving-car/LBC_data/CARLA_challenge_autopilot'
+Retrain model from scratch (stage 1):
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir '/home/zhongzzy9/Documents/self-driving-car/LBC_data/CARLA_challenge_autopilot' --max_epochs 25
 
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir '../LBC_data/CARLA_challenge_autopilot'
+Retrain model from scratch (stage 2):
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir '../LBC_data/CARLA_challenge_autopilot' --teacher_path '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/checkpoints/32176d62026a4063a2de10e92ebdb03c/wandb/run-20200807_173829-32176d62026a4063a2de10e92ebdb03c/epoch=16.ckpt' --max_epochs 25
 
 '''
 
@@ -163,7 +166,7 @@ from pymoo.performance_indicator.hv import Hypervolume
 
 import matplotlib.pyplot as plt
 
-from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors
+from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
 from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region
 
@@ -197,6 +200,7 @@ from pymoo.factory import get_termination
 from pymoo.model.termination import Termination
 from pymoo.util.termination.default import MultiObjectiveDefaultTermination, SingleObjectiveDefaultTermination
 from pymoo.util.termination.max_time import TimeBasedTermination
+from pymoo.model.individual import Individual
 
 from dask.distributed import Client, LocalCluster
 
@@ -205,9 +209,9 @@ from dask.distributed import Client, LocalCluster
 
 rng = np.random.default_rng(20)
 bug_root_folder = 'bugs'
-town_name = 'Town03'
+town_name = 'Town05'
 scenario = 'Scenario12'
-direction = 'front'
+direction = 'right'
 route = 0
 
 route_str = str(route)
@@ -296,7 +300,8 @@ class MyProblem(Problem):
 
         self.start_time = time.time()
         self.time_elapsed = 0
-        self.time_bug_num_list = []
+        self.time_list = []
+        self.bug_num_list = []
 
         # Fixed hyper-parameters
         self.waypoints_num_limit = 5
@@ -428,6 +433,8 @@ class MyProblem(Problem):
         estimator = self.estimator
         critical_unique_leaves = self.critical_unique_leaves
 
+        mean_objectives_across_generations_path = os.path.join(self.bug_folder, 'mean_objectives_across_generations.txt')
+
 
 
 
@@ -499,15 +506,25 @@ class MyProblem(Problem):
                 if objectives[0] > 0 or objectives[4] or objectives[5]:
                     if objectives[0] > 0:
                         self.num_of_collisions += 1
+                        collision_types = {'pedestrian_collision':pedestrian_types, 'car_collision':car_types, 'motercycle_collision':motorcycle_types, 'cyclist_collision':cyclist_types, 'static_collision':static_types}
+                        for k,v in collision_types.items():
+                            if object_type in v:
+                                bug_str = k
                     elif objectives[4]:
                         self.num_of_offroad += 1
+                        bug_str = 'offroad'
                     elif objectives[5]:
                         self.num_of_wronglane += 1
+                        bug_str = 'wronglane'
+                    with open(mean_objectives_across_generations_path, 'a') as f_out:
+                        f_out.write(str(i)+','+bug_str+'\n')
+
                     self.num_of_bugs += 1
                     self.y_list.append(1)
                 else:
                     self.y_list.append(0)
-                self.x_list.append(x)
+                # we don't want to store port number
+                self.x_list.append(x[:-1])
                 self.F_list.append(F)
                 self.objectives_list.append(np.array(objectives))
                 job_results.append(F)
@@ -516,7 +533,8 @@ class MyProblem(Problem):
 
 
             # record time elapsed and bug numbers
-            self.time_bug_num_list.append((time_elapsed, self.num_of_bugs))
+            self.time_list.append(time_elapsed)
+            self.bug_num_list.append(self.num_of_bugs)
 
 
 
@@ -553,13 +571,12 @@ class MyProblem(Problem):
 
                 print(self.counter, time_elapsed, self.num_of_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane, mean_objectives_this_generation)
 
-                mean_objectives_across_generations_path = os.path.join(self.bug_folder, 'mean_objectives_across_generations.txt')
                 with open(mean_objectives_across_generations_path, 'a') as f_out:
-                    f_out.write(','.join([str(x) for x in [self.counter, time_elapsed, self.num_of_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane]])+', ['+','.join([str(x) for x in mean_objectives_this_generation])+']\n')
+                    f_out.write(','.join([str(x) for x in [self.counter, time_elapsed, self.num_of_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane]]+[str(x) for x in mean_objectives_this_generation])+'\n')
 
                 print('+'*100)
                 print('\n'*10)
-                os.system('sudo -R chmod 777 '+self.bug_folder)
+                os.system('sudo chmod -R 777 '+self.bug_folder)
 
 
         else:
@@ -580,7 +597,8 @@ class MyProblem(Problem):
 
                 # record specs for bugs
                 time_elapsed = time.time() - self.start_time
-                self.time_bug_num_list.append((time_elapsed, self.num_of_bugs))
+                self.time_list.append(time_elapsed)
+                self.bug_num_list.append(self.num_of_bugs)
 
                 print('+'*100)
                 print(self.counter, time_elapsed, self.num_of_bugs)
@@ -969,11 +987,10 @@ class NSGA2_DT(NSGA2):
 
     def _initialize(self):
         if self.dt:
-            pop = Population(0, individual=self.individual)
-            pop = pop.new("X", self.X.tolist())
-            for i in range(len(pop)):
-                pop[i].set('F', F[i])
-            pop.set("n_gen", self.n_gen)
+            X_list = list(self.X)
+            F_list = list(self.F)
+            pop = Population(len(X_list), individual=Individual())
+            pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen)
 
             self.evaluator.eval(self.problem, pop, algorithm=self)
 
@@ -1106,8 +1123,9 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         pop_size = global_pop_size
 
 
-    # close simulator(s)
-    atexit.register(exit_handler, ports)
+
+
+
 
 
 
@@ -1169,6 +1187,11 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         termination = ('time', max_running_time)
     else:
         termination = ('n_gen', n_gen)
+
+
+    # close simulator(s)
+    atexit.register(exit_handler, ports, problem.bug_folder)
+
     # TypeError: can't pickle _asyncio.Task objects when save_history = True
     res = customized_minimize(problem,
                    algorithm,
@@ -1194,18 +1217,19 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     obj_and_feasible_each_gen = [pop[pop.get("feasible")[:,0]].get("F") for pop in pop_each_gen]
     # calculate for each generation the HV metric
     hv = [metric.calc(f) for f in obj_and_feasible_each_gen]
-    # function evaluations at each snapshot
-    n_evals = np.array([a.evaluator.n_eval for a in res.history])
 
 
-    # for drawing f
-    val = [e.pop.get("F").min() for e in res.history]
 
+    print(problem.x_list, problem.y_list, problem.F_list, problem.objectives_list)
 
+    X = np.stack(problem.x_list)
+    y = np.array(problem.y_list)
+    F = np.stack(problem.F_list)
+    objectives = np.stack(problem.objectives_list)
 
 
     with open(os.path.join(problem.bug_folder, 'res_'+str(ind)+'.pkl'), 'wb') as f_out:
-        pickle.dump({'val':val, 'n_evals':n_evals, 'hv':hv, 'objectives_list':problem.objectives_list, 'time_bug_num_list':problem.time_bug_num_list}, f_out)
+        pickle.dump({'X':X, 'y':y, 'F':F, 'objectives':objectives, 'n_gen':n_gen, 'pop_size':pop_size, 'hv':hv, 'time_list':problem.time_list, 'bug_num_list':problem.bug_num_list}, f_out)
         print('-'*100, 'pickled')
 
 
@@ -1216,8 +1240,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
             print('-'*100, 'pickled')
 
 
-
-    return np.concatenate(problem.x_list), np.concatenate(problem.y_list), np.concatenate(problem.F_list), np.concatenate(problem.objectives_list)
+    return X, y, F, objectives
 
 if __name__ == '__main__':
     run_ga()

@@ -134,7 +134,7 @@ CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir path/
 
 Stage 2:
 ```
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model --dataset_dir path/to/data
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model --dataset_dir path/to/data --teacher_path path/to/model/from/stage1
 ```
 
 

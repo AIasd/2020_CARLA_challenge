@@ -7,34 +7,49 @@ import os
 from sklearn import tree
 import graphviz
 import numpy as np
+import pickle
 from ga_fuzzing import run_ga
 
 
 
+
 def filter_critical_regions(X, y):
-    estimator = tree.DecisionTreeClassifier(min_samples_split=int(0.1*X.shape[0]), min_impurity_decrease=0.01)
+    print('\n'*20)
+    print('+'*100, 'filter_critical_regions', '+'*100)
+
+    min_samples_split = np.max([int(0.1*X.shape[0]), 2])
+    estimator = tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0.01, random_state=0)
+    print(X.shape, y.shape, X, y)
     estimator = estimator.fit(X, y)
 
-    leave_isd = estimator.apply(X)
-    print(leave_ids, type(leave_ids))
+    leave_ids = estimator.apply(X)
+    print('leave_ids', leave_ids)
 
-    unique_leaves = np.unique(leave_ids)
-    unique_leaves_bug_num = np.zeros(unique_leaves.shape[0])
-    unique_leaves_normal_num = np.zeros(unique_leaves.shape[0])
+    unique_leave_ids = np.unique(leave_ids)
+    unique_leaves_bug_num = np.zeros(unique_leave_ids.shape[0])
+    unique_leaves_normal_num = np.zeros(unique_leave_ids.shape[0])
 
-    for j, leave in enumerate(unique_leaves):
+    for j, unique_leave_id in enumerate(unique_leave_ids):
         for i, leave_id in enumerate(leave_ids):
-            if leave_id == leave:
+            if leave_id == unique_leave_id:
                 if y[i] == 0:
                     unique_leaves_normal_num[j] += 1
                 else:
                     unique_leaves_bug_num[j] += 1
-    critical_unique_leaves = unique_leaves[unique_leaves_bug_num > unique_leaves_normal_num]
+
+    for i, unique_leave_i in enumerate(unique_leave_ids):
+        print('unique_leaves', unique_leave_i, unique_leaves_bug_num[i],  unique_leaves_normal_num[i])
+
+    critical_unique_leaves = unique_leave_ids[unique_leaves_bug_num > unique_leaves_normal_num]
+
+    print('critical_unique_leaves', critical_unique_leaves)
 
 
     inds = np.array([leave_id in critical_unique_leaves for leave_id in leave_ids])
+    print('\n'*20)
 
     return estimator, inds
+
 
 
 
@@ -43,9 +58,9 @@ def main():
     # [5, 7]
     outer_iterations = 3
     # 5
-    n_gen = 2
-    #
-    pop_size = 4
+    n_gen = 5
+    # 100
+    pop_size = 100
 
     X_filtered = None
     F_filtered = None
@@ -58,10 +73,9 @@ def main():
 
     for i in range(outer_iterations):
         dt = True
-        if i == 0:
+        if i == 0 or np.sum(y)==0:
             dt = False
         X_new, y_new, F_new, objectives_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size)
-        run_ga(dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None)
 
         if i == 0:
             X = X_new

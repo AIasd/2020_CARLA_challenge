@@ -17,3 +17,4 @@ dask-worker-space/*
 plots/*
 checkpoints/*
 wandb/*
+*.png

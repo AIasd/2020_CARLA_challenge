@@ -268,7 +268,7 @@ def is_port_in_use(port):
         return s.connect_ex(('localhost', port)) == 0
 
 
-def exit_handler(ports):
+def exit_handler(ports, bug_folder):
     for port in ports:
         while is_port_in_use(port):
             try:
@@ -279,6 +279,7 @@ def exit_handler(ports):
                             proc.send_signal(SIGTERM)
             except:
                 continue
+    os.system('sudo chmod -R 777 '+bug_folder)
 
 def get_angle(x1, y1, x2, y2):
     angle = np.arctan2(x1*y2-y1*x2, x1*x2+y1*y2)
