@@ -10,7 +10,7 @@ import numpy as np
 import pickle
 from ga_fuzzing import run_ga
 from datetime import datetime
-
+from customized_utils import make_hierarchical_dir
 
 
 def filter_critical_regions(X, y):
@@ -55,12 +55,18 @@ def filter_critical_regions(X, y):
 
 
 def main():
+    town_name = 'Town03'
+    scenario = 'Scenario12'
+    direction = 'front'
+    route = 0
+    scenario_type = 'default'
+
     # [5, 7]
     outer_iterations = 3
     # 5
-    n_gen = 2
+    n_gen = 3
     # 100
-    pop_size = 20
+    pop_size = 50
 
     X_filtered = None
     F_filtered = None
@@ -81,7 +87,7 @@ def main():
         dt = True
         if i == 0 or np.sum(y)==0:
             dt = False
-        X_new, y_new, F_new, objectives_new, time_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str, i)
+        X_new, y_new, F_new, objectives_new, time_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str, i, town_name, scenario, direction, route, scenario_type)
 
         if i == 0:
             X = X_new
@@ -103,6 +109,17 @@ def main():
         F_filtered = F[inds]
         print(np.sum(y))
 
+
+    # Save data
+    dt_save_folder = 'dt_data'
+    if not os.path.exists(dt_save_folder):
+        os.mkdir(dt_save_folder)
+    dt_save_file = '_'.join([town_name, scenario, direction, route, scenario_type])
+
+    np.savez(os.path.join(dt_save_folder, dt_save_file), X=X, y=y, F=F, objectives=objectives, time=time)
+    print('dt data saved')
+
+
     return X, y, F, objectives, time
 
 def visualization(estimator):
@@ -113,11 +130,6 @@ def visualization(estimator):
 
 if __name__ == '__main__':
     X, y, F, objectives, time = main()
-
-
-    save_path = []
-    np.savez('dt', X=X, y=y, F=F, objectives=objectives, time=time)
-    print('dt data saved')
 
 
     # d = np.load('dt.npz')

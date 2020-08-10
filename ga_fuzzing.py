@@ -1,16 +1,16 @@
 '''
 TBD:
-* fix error
-* test dt
-* test specific scenario / better interface
 
-* make distributions customizable
+* test dt
+* test specific scenario (center_transform need to be implemented)
+
+* avoid spawning of objects on route (a variable to control)
 
 * save intermediate results to avoid crash
 
 * fix unknown collision object
 
-
+* analyze visualization across generations
 
 
 * estimate bug diversity via tree diversity
@@ -157,7 +157,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions, customize_parameters_bounds
+from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions, customize_parameters, customized_bounds_and_distributions
 
 import numpy as np
 import carla
@@ -199,14 +199,14 @@ from dask.distributed import Client, LocalCluster
 
 rng = np.random.default_rng(20)
 bug_root_folder = 'bugs'
-town_name = 'Town05'
-scenario = 'Scenario12'
-direction = 'right'
-route = 0
+global_town_name = 'Town03'
+global_scenario = 'Scenario12'
+global_direction = 'front'
+global_route = 0
 
-route_str = str(route)
-if route < 10:
-    route_str = '0'+route_str
+# ['default', 'leading_car_braking']
+global_scenario_type = 'default'
+
 
 
 # ['nsga2', 'random']
@@ -267,7 +267,7 @@ for customizing weather choices, static_types, pedestrian_types, vehicle_types, 
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, customized_parameters_bounds={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, town_name, scenario, direction, route_str, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, customized_parameters_bounds={}, customized_parameters_distributions={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0):
 
         self.call_from_dt = call_from_dt
         self.dt = dt
@@ -294,6 +294,12 @@ class MyProblem(Problem):
         self.bug_folder = bug_parent_folder + time_str
         if not os.path.exists(self.bug_folder):
             os.mkdir(self.bug_folder)
+
+
+        self.town_name = town_name
+        self.scenario = scenario
+        self.direction = direction
+        self.route_str = route_str
 
         if self.dt:
             self.bug_folder += '/' + str(dt_iter)
@@ -437,8 +443,14 @@ class MyProblem(Problem):
         # n_var = 5+self.waypoints_num_limit*2+self.num_of_static_max*4+self.num_of_pedestrians_max*7+self.num_of_vehicles_max*(14+self.waypoints_num_limit*2)
 
 
-        fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels, distributions, n_var = setup_bounds_mask_labels_distributions()
-        customize_parameters_bounds(parameters_min_bounds, parameters_max_bounds, customized_parameters_bounds)
+        fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels, parameters_distributions, n_var = setup_bounds_mask_labels_distributions()
+
+
+        customize_parameters(parameters_min_bounds, customized_parameters_bounds)
+        customize_parameters(parameters_max_bounds, customized_parameters_bounds)
+        customize_parameters(parameters_distributions, customized_parameters_distributions)
+
+
 
 
 
@@ -454,7 +466,7 @@ class MyProblem(Problem):
 
         self.mask = mask
         self.labels = labels
-        self.distributions = distributions
+        self.parameters_distributions = parameters_distributions
 
 
 
@@ -486,12 +498,17 @@ class MyProblem(Problem):
         mean_objectives_across_generations_path = os.path.join(self.bug_folder, 'mean_objectives_across_generations.txt')
 
 
+        town_name = self.town_name
+        scenario = self.scenario
+        direction = self.direction
+        route_str = self.route_str
+
+
 
 
 
 
         def fun(x, launch_server, counter):
-            print('x[:-1].shape:', x[:-1].shape)
             if dt and not is_critical_region(x[:-1], estimator, critical_unique_leaves):
                 objectives = [-1, 10000, 10000, 0, 0, 0, 0]
                 F = np.array(objectives[:4]) * objective_weights
@@ -507,7 +524,7 @@ class MyProblem(Problem):
 
 
                 # run simulation
-                objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt)
+                objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str)
 
                 # [ego_linear_speed, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light]
 
@@ -668,7 +685,7 @@ class MyProblem(Problem):
 
 
 
-def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt):
+def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str):
     arguments = arguments_info()
     arguments.port = customized_data['port']
     arguments.debug = 1
@@ -948,13 +965,13 @@ class MySampling(Sampling):
         xl = problem.xl
         xu = problem.xu
         mask = problem.mask
-        distributions = problem.distributions
+        parameters_distributions = problem.parameters_distributions
 
         X = []
         print('n_samples', n_samples)
         for i in range(n_samples):
             x = []
-            for i, dist in enumerate(distributions):
+            for i, dist in enumerate(parameters_distributions):
                 typ = mask[i]
                 lower = xl[i]
                 upper = xu[i]
@@ -1188,7 +1205,7 @@ def customized_minimize(problem,
     return res
 
 
-def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, n_gen_from_dt=0, pop_size_from_dt=0, dt_time_str=None, dt_iter=None):
+def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, n_gen_from_dt=0, pop_size_from_dt=0, dt_time_str=None, dt_iter=None, town_name=None, scenario=None, direction=None, route=None, scenario_type='default'):
 
     if call_from_dt:
         termination_condition = 'generations'
@@ -1204,33 +1221,20 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         dashboard_address = global_dashboard_address
         ports = global_ports
         pop_size = global_pop_size
+        town_name = gloabl_town_name
+        scenario = global_scenario
+        direction = global_direction
+        route = global_route
+        scenario_type = global_scenario_type
 
 
+    route_str = str(route)
+    if route < 10:
+        route_str = '0'+route_str
 
 
-    customized_parameters_bounds = {}
-    # leading car decrease speed
-    customized_parameters_bounds = {
-        'num_of_vehicles_min': 1,
-        'num_of_vehicles_max': 2,
-
-        'vehicle_x_max_0': 0,
-        'vehicle_x_min_0': 0,
-        'vehicle_y_max_0': 10,
-        'vehicle_y_min_0': 3,
-
-        'vehicle_initial_speed_max_0': 6,
-        'vehicle_initial_speed_min_0': 3,
-        'vehicle_targeted_speed_max_0': 3,
-        'vehicle_targeted_speed_min_0': 0,
-        'vehicle_trigger_distance_max_0': 10,
-        'vehicle_trigger_distance_min_0': 5,
-
-        'vehicle_dist_to_travel_max_0': 50,
-        'vehicle_dist_to_travel_min_0': 10,
-        'vehicle_yaw_max_0': 270,
-        'vehicle_yaw_min_0': 270
-    }
+    # scenario_type = 'leading_car_braking'
+    customized_d = customized_bounds_and_distributions[scenario_type]
 
 
 
@@ -1249,7 +1253,8 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         algorithm.launch_cluster = True
         problem = algorithm.problem
     else:
-        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, customized_parameters_bounds=customized_parameters_bounds, call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, dt_time_str=dt_time_str, dt_iter=dt_iter)
+        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, customized_parameters_bounds=customized_d['customized_parameters_bounds'], customized_parameters_distributions=customized_d['customized_parameters_distributions'], call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, dt_time_str=dt_time_str, dt_iter=dt_iter)
+
 
 
         from pymoo.operators.mixed_variable_operator import MixedVariableMutation, MixedVariableCrossover

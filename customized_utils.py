@@ -330,17 +330,17 @@ def setup_bounds_mask_labels_distributions():
     waypoint_labels = ['perturbation_x', 'perturbation_y']
 
     static_general_min = [0, -20, -20, 0]
-    static_general_max = [fixed_hyperparameters['num_of_static_types'], 20, 20, 360]
+    static_general_max = [fixed_hyperparameters['num_of_static_types']-1, 20, 20, 360]
     static_mask = ['int'] + ['real']*3
     static_general_labels = ['num_of_static_types', 'static_x', 'static_y', 'static_yaw']
 
     pedestrian_general_min = [0, -20, -20, 0, 2, 0, 0]
-    pedestrian_general_max = [fixed_hyperparameters['num_of_pedestrian_types'], 20, 20, 360, 50, 4, 50]
+    pedestrian_general_max = [fixed_hyperparameters['num_of_pedestrian_types']-1, 20, 20, 360, 50, 4, 50]
     pedestrian_mask = ['int'] + ['real']*6
     pedestrian_general_labels = ['num_of_pedestrian_types', 'pedestrian_x', 'pedestrian_y', 'pedestrian_yaw', 'pedestrian_trigger_distance', 'pedestrian_speed', 'pedestrian_dist_to_travel']
 
     vehicle_general_min = [0, -20, -20, 0, 0, 0, 0, 0, -20, -20, 0, 0, 0, 0]
-    vehicle_general_max = [fixed_hyperparameters['num_of_vehicle_types'], 20, 20, 360, 15, 50, 15, 1, 20, 20, 1, 50, 360, fixed_hyperparameters['num_of_vehicle_colors']]
+    vehicle_general_max = [fixed_hyperparameters['num_of_vehicle_types']-1, 20, 20, 360, 15, 50, 15, 1, 20, 20, 1, 50, 360, fixed_hyperparameters['num_of_vehicle_colors']-1]
     vehicle_mask = ['int'] + ['real']*6 + ['int'] + ['real']*2 + ['int'] + ['real']*2 + ['int']
     vehicle_general_labels = ['num_of_vehicle_types', 'vehicle_x', 'vehicle_y', 'vehicle_yaw', 'vehicle_initial_speed', 'vehicle_trigger_distance', 'vehicle_targeted_speed', 'vehicle_waypoint_follower', 'vehicle_targeted_x', 'vehicle_targeted_y', 'vehicle_avoid_collision', 'vehicle_dist_to_travel', 'vehicle_targeted_yaw', 'num_of_vehicle_colors']
 
@@ -429,24 +429,60 @@ def setup_bounds_mask_labels_distributions():
                 parameters_min_bounds[k_min] = waypoint_min[q]
                 parameters_max_bounds[k_max] = waypoint_max[q]
 
-    distributions = OrderedDict()
+    parameters_distributions = OrderedDict()
     for label in labels:
         if 'perturbation' in label:
-            distributions[label] = ('normal', 0, 2)
+            parameters_distributions[label] = ('normal', 0, 2)
         else:
-            distributions[label] = ('uniform')
+            parameters_distributions[label] = ('uniform')
 
 
     n_var = 5+fixed_hyperparameters['waypoints_num_limit']*2+parameters_max_bounds['num_of_static_max']*4+parameters_max_bounds['num_of_pedestrians_max']*7+parameters_max_bounds['num_of_vehicles_max']*(14+fixed_hyperparameters['waypoints_num_limit']*2)
 
-    return fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels, distributions, n_var
+    return fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels, parameters_distributions, n_var
 
-# Customize parameters bounds
-def customize_parameters_bounds(parameters_min_bounds, parameters_max_bounds, customized_parameters_bounds):
-    for k, v in customized_parameters_bounds.items():
-        if k in parameters_min_bounds:
-            parameters_min_bounds[k] = v
-        elif k in parameters_max_bounds:
-            parameters_max_bounds[k] = v
+# Customize parameters
+def customize_parameters(parameters, customized_parameters):
+    for k, v in customized_parameters.items():
+        if k in parameters:
+            parameters[k] = v
         else:
-            print(k, 'is not defined in parameters bounds.')
+            print(k, 'is not defined in the parameters.')
+
+
+
+customized_bounds_and_distributions = {
+    'default': {'customized_parameters_bounds':{},
+    'customized_parameters_distributions':{}},
+
+    'leading_car_braking': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_vehicles_min': 1,
+        'num_of_vehicles_max': 2,
+
+        'vehicle_x_min_0': -0.5,
+        'vehicle_x_max_0': 0.5,
+        'vehicle_y_min_0': 3,
+        'vehicle_y_max_0': 10,
+
+        'vehicle_initial_speed_min_0': 3,
+        'vehicle_initial_speed_max_0': 6,
+        'vehicle_targeted_speed_min_0': 0,
+        'vehicle_targeted_speed_max_0': 3,
+        'vehicle_trigger_distance_min_0': 5,
+        'vehicle_trigger_distance_max_0': 10,
+
+        'vehicle_dist_to_travel_min_0': 10,
+        'vehicle_dist_to_travel_max_0': 50,
+        'vehicle_yaw_min_0': 270,
+        'vehicle_yaw_max_0': 270
+
+    },
+    'customized_parameters_distributions':{
+        'vehicle_x_0': ('normal', 0, 1),
+        'vehicle_y_0': ('normal', 6, 3)
+    }}
+
+
+}
