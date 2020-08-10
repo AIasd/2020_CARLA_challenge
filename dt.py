@@ -75,6 +75,7 @@ def main():
     F = None
     objectives = None
     time = None
+    bug_num = None
     estimator = None
     critical_unique_leaves = None
 
@@ -87,7 +88,7 @@ def main():
         dt = True
         if i == 0 or np.sum(y)==0:
             dt = False
-        X_new, y_new, F_new, objectives_new, time_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str, i, town_name, scenario, direction, route, scenario_type)
+        X_new, y_new, F_new, objectives_new, time_new, bug_num_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str, i, town_name, scenario, direction, route, scenario_type)
 
         if i == 0:
             X = X_new
@@ -95,13 +96,14 @@ def main():
             F = F_new
             objectives = objectives_new
             time = time_new
+            bug_num = bug_num_new
         else:
             X = np.concatenate([X, X_new])
             y = np.concatenate([y, y_new])
             F = np.concatenate([F, F_new])
             objectives = np.concatenate([objectives, objectives_new])
             time.extend(time_new)
-
+            bug_num.extend(bug_num_new)
 
 
         estimator, inds, critical_unique_leaves = filter_critical_regions(X, y)
@@ -114,13 +116,13 @@ def main():
     dt_save_folder = 'dt_data'
     if not os.path.exists(dt_save_folder):
         os.mkdir(dt_save_folder)
-    dt_save_file = '_'.join([town_name, scenario, direction, route, scenario_type])
+    dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type])
 
-    np.savez(os.path.join(dt_save_folder, dt_save_file), X=X, y=y, F=F, objectives=objectives, time=time)
+    np.savez(os.path.join(dt_save_folder, dt_save_file), X=X, y=y, F=F, objectives=objectives, time=time, bug_num=bug_num)
     print('dt data saved')
 
 
-    return X, y, F, objectives, time
+    return X, y, F, objectives, time, bug_num
 
 def visualization(estimator):
     tree.plot_tree(estimator)

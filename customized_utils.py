@@ -152,7 +152,7 @@ def add_transform(transform1, transform2):
     return create_transform(x, y, z, pitch, yaw, roll)
 
 
-def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_num_of_pedestrians, max_num_of_vehicles, static_types, pedestrian_types, vehicle_types, vehicle_colors):
+def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_num_of_pedestrians, max_num_of_vehicles, static_types, pedestrian_types, vehicle_types, vehicle_colors, customized_center_transforms):
 
     # parameters
     # global
@@ -249,7 +249,8 @@ def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_
     'using_customized_route_and_scenario': True,
     'ego_car_waypoints_perturbation': ego_car_waypoints_perturbation,
     'add_center': True,
-    'port': port}
+    'port': port,
+    'customized_center_transforms': customized_center_transforms}
 
 
     return customized_data
@@ -296,11 +297,12 @@ def is_critical_region(x, estimator, critical_unique_leaves):
     return leave_id in critical_unique_leaves
 
 
+def setup_bounds_mask_labels_distributions_stage1():
 
-
-
-# Set up default bounds, mask, labels, and distributions for a Problem object
-def setup_bounds_mask_labels_distributions():
+    parameters_min_bounds = OrderedDict()
+    parameters_max_bounds = OrderedDict()
+    mask = []
+    labels = []
 
     fixed_hyperparameters = {
         'num_of_weathers': len(WEATHERS),
@@ -312,17 +314,29 @@ def setup_bounds_mask_labels_distributions():
     }
 
 
-    parameters_min_bounds = OrderedDict()
-    parameters_max_bounds = OrderedDict()
-    mask = []
-    labels = []
-
-
     general_min = [0.2, 0, 0, 0, 0]
     general_max = [0.8, fixed_hyperparameters['num_of_weathers']-1, 2, 2, 2]
     general_mask = ['real', 'int', 'int', 'int', 'int']
     general_labels = ['friction', 'num_of_weathers', 'num_of_static', 'num_of_pedestrians', 'num_of_vehicles']
 
+
+
+    # general
+    mask.extend(general_mask)
+    for j in range(len(general_labels)):
+        general_label = general_labels[j]
+        k_min = '_'.join([general_label, 'min'])
+        k_max = '_'.join([general_label, 'max'])
+        k = '_'.join([general_label])
+
+        labels.append(k)
+        parameters_min_bounds[k_min] = general_min[j]
+        parameters_max_bounds[k_max] = general_max[j]
+
+    return fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels
+
+# Set up default bounds, mask, labels, and distributions for a Problem object
+def setup_bounds_mask_labels_distributions_stage2(fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels):
 
     waypoint_min = [-1.5, -1.5]
     waypoint_max = [1.5, 1.5]
@@ -345,17 +359,7 @@ def setup_bounds_mask_labels_distributions():
     vehicle_general_labels = ['num_of_vehicle_types', 'vehicle_x', 'vehicle_y', 'vehicle_yaw', 'vehicle_initial_speed', 'vehicle_trigger_distance', 'vehicle_targeted_speed', 'vehicle_waypoint_follower', 'vehicle_targeted_x', 'vehicle_targeted_y', 'vehicle_avoid_collision', 'vehicle_dist_to_travel', 'vehicle_targeted_yaw', 'num_of_vehicle_colors']
 
 
-    # general
-    mask.extend(general_mask)
-    for j in range(len(general_labels)):
-        general_label = general_labels[j]
-        k_min = '_'.join([general_label, 'min'])
-        k_max = '_'.join([general_label, 'max'])
-        k = '_'.join([general_label])
 
-        labels.append(k)
-        parameters_min_bounds[k_min] = general_min[j]
-        parameters_max_bounds[k_max] = general_max[j]
 
 
     # ego_car waypoint
@@ -449,11 +453,15 @@ def customize_parameters(parameters, customized_parameters):
         else:
             print(k, 'is not defined in the parameters.')
 
-
+'''
+customized non-default center transforms for actors
+['waypoint_ratio', 'absolute_location']
+'''
 
 customized_bounds_and_distributions = {
     'default': {'customized_parameters_bounds':{},
-    'customized_parameters_distributions':{}},
+    'customized_parameters_distributions':{},
+    'customized_center_transforms':{}},
 
     'leading_car_braking': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
@@ -463,25 +471,28 @@ customized_bounds_and_distributions = {
 
         'vehicle_x_min_0': -0.5,
         'vehicle_x_max_0': 0.5,
-        'vehicle_y_min_0': 3,
-        'vehicle_y_max_0': 10,
+        'vehicle_y_min_0': -4,
+        'vehicle_y_max_0': -15,
 
-        'vehicle_initial_speed_min_0': 3,
-        'vehicle_initial_speed_max_0': 6,
+        'vehicle_initial_speed_min_0': 2,
+        'vehicle_initial_speed_max_0': 5,
         'vehicle_targeted_speed_min_0': 0,
-        'vehicle_targeted_speed_max_0': 3,
+        'vehicle_targeted_speed_max_0': 2,
         'vehicle_trigger_distance_min_0': 5,
-        'vehicle_trigger_distance_max_0': 10,
+        'vehicle_trigger_distance_max_0': 12,
 
-        'vehicle_dist_to_travel_min_0': 10,
-        'vehicle_dist_to_travel_max_0': 50,
+        'vehicle_dist_to_travel_min_0': 5,
+        'vehicle_dist_to_travel_max_0': 30,
         'vehicle_yaw_min_0': 270,
         'vehicle_yaw_max_0': 270
 
     },
     'customized_parameters_distributions':{
-        'vehicle_x_0': ('normal', 0, 1),
-        'vehicle_y_0': ('normal', 6, 3)
+        'vehicle_x_0': ('normal', None, 1),
+        'vehicle_y_0': ('normal', None, 8)
+    },
+    'customized_center_transforms':{
+        'vehicle_center_transform_0': ('waypoint_ratio', 0)
     }}
 
 
