@@ -7,6 +7,8 @@ from dask.distributed import Client, LocalCluster
 from psutil import process_iter
 from signal import SIGTERM
 import socket
+from collections import OrderedDict
+from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
 def visualize_route(route):
     n = len(route)
@@ -292,3 +294,159 @@ def is_critical_region(x, estimator, critical_unique_leaves):
     leave_id = estimator.apply(x.reshape(1, -1))[0]
     print(leave_id, critical_unique_leaves)
     return leave_id in critical_unique_leaves
+
+
+
+
+
+# Set up default bounds, mask, labels, and distributions for a Problem object
+def setup_bounds_mask_labels_distributions():
+
+    fixed_hyperparameters = {
+        'num_of_weathers': len(WEATHERS),
+        'num_of_static_types': len(static_types),
+        'num_of_pedestrian_types': len(pedestrian_types),
+        'num_of_vehicle_types': len(vehicle_types),
+        'num_of_vehicle_colors': len(vehicle_colors),
+        'waypoints_num_limit': 5
+    }
+
+
+    parameters_min_bounds = OrderedDict()
+    parameters_max_bounds = OrderedDict()
+    mask = []
+    labels = []
+
+
+    general_min = [0.2, 0, 0, 0, 0]
+    general_max = [0.8, fixed_hyperparameters['num_of_weathers']-1, 2, 2, 2]
+    general_mask = ['real', 'int', 'int', 'int', 'int']
+    general_labels = ['friction', 'num_of_weathers', 'num_of_static', 'num_of_pedestrians', 'num_of_vehicles']
+
+
+    waypoint_min = [-1.5, -1.5]
+    waypoint_max = [1.5, 1.5]
+    waypoint_mask = ['real', 'real']
+    waypoint_labels = ['perturbation_x', 'perturbation_y']
+
+    static_general_min = [0, -20, -20, 0]
+    static_general_max = [fixed_hyperparameters['num_of_static_types'], 20, 20, 360]
+    static_mask = ['int'] + ['real']*3
+    static_general_labels = ['num_of_static_types', 'static_x', 'static_y', 'static_yaw']
+
+    pedestrian_general_min = [0, -20, -20, 0, 2, 0, 0]
+    pedestrian_general_max = [fixed_hyperparameters['num_of_pedestrian_types'], 20, 20, 360, 50, 4, 50]
+    pedestrian_mask = ['int'] + ['real']*6
+    pedestrian_general_labels = ['num_of_pedestrian_types', 'pedestrian_x', 'pedestrian_y', 'pedestrian_yaw', 'pedestrian_trigger_distance', 'pedestrian_speed', 'pedestrian_dist_to_travel']
+
+    vehicle_general_min = [0, -20, -20, 0, 0, 0, 0, 0, -20, -20, 0, 0, 0, 0]
+    vehicle_general_max = [fixed_hyperparameters['num_of_vehicle_types'], 20, 20, 360, 15, 50, 15, 1, 20, 20, 1, 50, 360, fixed_hyperparameters['num_of_vehicle_colors']]
+    vehicle_mask = ['int'] + ['real']*6 + ['int'] + ['real']*2 + ['int'] + ['real']*2 + ['int']
+    vehicle_general_labels = ['num_of_vehicle_types', 'vehicle_x', 'vehicle_y', 'vehicle_yaw', 'vehicle_initial_speed', 'vehicle_trigger_distance', 'vehicle_targeted_speed', 'vehicle_waypoint_follower', 'vehicle_targeted_x', 'vehicle_targeted_y', 'vehicle_avoid_collision', 'vehicle_dist_to_travel', 'vehicle_targeted_yaw', 'num_of_vehicle_colors']
+
+
+    # general
+    mask.extend(general_mask)
+    for j in range(len(general_labels)):
+        general_label = general_labels[j]
+        k_min = '_'.join([general_label, 'min'])
+        k_max = '_'.join([general_label, 'max'])
+        k = '_'.join([general_label])
+
+        labels.append(k)
+        parameters_min_bounds[k_min] = general_min[j]
+        parameters_max_bounds[k_max] = general_max[j]
+
+
+    # ego_car waypoint
+    for i in range(fixed_hyperparameters['waypoints_num_limit']):
+        mask.extend(waypoint_mask)
+
+        for j in range(len(waypoint_labels)):
+            waypoint_label = waypoint_labels[j]
+            k_min = '_'.join(['ego_car', waypoint_label, 'min', str(i)])
+            k_max = '_'.join(['ego_car', waypoint_label, 'max', str(i)])
+            k = '_'.join(['ego_car', waypoint_label, str(i)])
+
+            labels.append(k)
+            parameters_min_bounds[k_min] = waypoint_min[j]
+            parameters_max_bounds[k_max] = waypoint_max[j]
+
+
+    # static
+    for i in range(parameters_max_bounds['num_of_static_max']):
+        mask.extend(static_mask)
+
+        for j in range(len(static_general_labels)):
+            static_general_label = static_general_labels[j]
+            k_min = '_'.join([static_general_label, 'min', str(i)])
+            k_max = '_'.join([static_general_label, 'max', str(i)])
+            k = '_'.join([static_general_label, str(i)])
+
+            labels.append(k)
+            parameters_min_bounds[k_min] = static_general_min[j]
+            parameters_max_bounds[k_max] = static_general_max[j]
+
+
+    # pedestrians
+    for i in range(parameters_max_bounds['num_of_pedestrians_max']):
+        mask.extend(pedestrian_mask)
+
+        for j in range(len(pedestrian_general_labels)):
+            pedestrian_general_label = pedestrian_general_labels[j]
+            k_min = '_'.join([pedestrian_general_label, 'min', str(i)])
+            k_max = '_'.join([pedestrian_general_label, 'max', str(i)])
+            k = '_'.join([pedestrian_general_label, str(i)])
+
+            labels.append(k)
+            parameters_min_bounds[k_min] = pedestrian_general_min[j]
+            parameters_max_bounds[k_max] = pedestrian_general_max[j]
+
+    # vehicles
+    for i in range(parameters_max_bounds['num_of_vehicles_max']):
+        mask.extend(vehicle_mask)
+
+        for j in range(len(vehicle_general_labels)):
+            vehicle_general_label = vehicle_general_labels[j]
+            k_min = '_'.join([vehicle_general_label, 'min', str(i)])
+            k_max = '_'.join([vehicle_general_label, 'max', str(i)])
+            k = '_'.join([vehicle_general_label, str(i)])
+
+            labels.append(k)
+            parameters_min_bounds[k_min] = vehicle_general_min[j]
+            parameters_max_bounds[k_max] = vehicle_general_max[j]
+
+        for p in range(fixed_hyperparameters['waypoints_num_limit']):
+            mask.extend(waypoint_mask)
+
+            for q in range(len(waypoint_labels)):
+                waypoint_label = waypoint_labels[q]
+                k_min = '_'.join(['vehicle', str(i), waypoint_label, 'min', str(p)])
+                k_max = '_'.join(['vehicle', str(i), waypoint_label, 'max', str(p)])
+                k = '_'.join(['vehicle', str(i), waypoint_label, str(p)])
+
+                labels.append(k)
+                parameters_min_bounds[k_min] = waypoint_min[q]
+                parameters_max_bounds[k_max] = waypoint_max[q]
+
+    distributions = OrderedDict()
+    for label in labels:
+        if 'perturbation' in label:
+            distributions[label] = ('normal', 0, 2)
+        else:
+            distributions[label] = ('uniform')
+
+
+    n_var = 5+fixed_hyperparameters['waypoints_num_limit']*2+parameters_max_bounds['num_of_static_max']*4+parameters_max_bounds['num_of_pedestrians_max']*7+parameters_max_bounds['num_of_vehicles_max']*(14+fixed_hyperparameters['waypoints_num_limit']*2)
+
+    return fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels, distributions, n_var
+
+# Customize parameters bounds
+def customize_parameters_bounds(parameters_min_bounds, parameters_max_bounds, customized_parameters_bounds):
+    for k, v in customized_parameters_bounds.items():
+        if k in parameters_min_bounds:
+            parameters_min_bounds[k] = v
+        elif k in parameters_max_bounds:
+            parameters_max_bounds[k] = v
+        else:
+            print(k, 'is not defined in parameters bounds.')

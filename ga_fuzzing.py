@@ -1,11 +1,16 @@
 '''
 TBD:
+* fix error
+* test dt
+* test specific scenario / better interface
 
-* put data from the same dt into one folder
+* make distributions customizable
+
+* save intermediate results to avoid crash
 
 * fix unknown collision object
 
-* specific scenario by adding constraints to input parameters
+
 
 
 * estimate bug diversity via tree diversity
@@ -152,7 +157,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region
+from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions, customize_parameters_bounds
 
 import numpy as np
 import carla
@@ -252,170 +257,6 @@ if run_parallelization:
 for customizing weather choices, static_types, pedestrian_types, vehicle_types, and vehicle_colors, make changes to object_types.py
 
 
-fixed_hyperparameters = {
-'num_of_weathers': len(WEATHERS)
-'num_of_static_types': len(static_types)
-'num_of_pedestrian_types': len(pedestrian_types)
-'num_of_vehicle_types': len(vehicle_types)
-'num_of_vehicle_colors': len(vehicle_colors)
-}
-
-# leading car decrease speed
-customized_parameter_num_influencers_bounds = {
-    max_num_of_vehicles: 2,
-    min_num_of_vehicles: 1
-}
-
-customized_object_parameters_bounds = {
-    vehicle_x_max_0: 0,
-    vehicle_x_min_0: 0,
-    vehicle_y_max_0: 10,
-    vehicle_y_min_0: 3,
-
-    vehicle_initial_speed_max_0 = 6,
-    vehicle_initial_speed_min_0 = 3,
-    vehicle_targeted_speed_max_0 = 3,
-    vehicle_targeted_speed_min_0 = 0,
-    vehicle_trigger_distance_max_0 = 10,
-    vehicle_trigger_distance_min_0 = 5,
-
-    vehicle_dist_to_travel_max_0 = 50,
-    vehicle_dist_to_travel_min_0 = 10,
-    vehicle_yaw_max_0 = 270,
-    vehicle_yaw_min_0 = 270
-}
-
-
-
-
-
-
-parameter_num_influencers_bounds = {
-    waypoints_num_limit: 5
-    min_num_of_static: 0,
-    max_num_of_static: 0,
-    min_num_of_pedestrians: 2,
-    max_num_of_pedestrians: 2,
-    min_num_of_vehicles: 2,
-    max_num_of_vehicles: 2
-}
-
-
-
-object_parameters_bounds = {
-}
-
-
-
-
-
-xl = []
-xu = []
-mask = []
-labels = []
-
-
-waypoint_min = [-1.5, -1.5]
-waypoint_max = [1.5, 1.5]
-waypoint_mask = ['real', 'real']
-waypoint_labels = ['perturbation_x', 'perturbation_y']
-
-static_general_min = [0, -20, -20, 0]
-static_general_max = [fixed_hyperparameters['num_of_static_types'], 20, 20, 360]
-static_mask = ['int'] + ['real']*3
-static_general_labels = ['num_of_static_types', 'static_x', 'static_y', 'static_yaw']
-
-pedestrian_general_min = [0, -20, -20, 0, 2, 0, 0]
-pedestrian_general_max = [fixed_hyperparameters['num_of_pedestrian_types'], 20, 20, 360, 50, 4, 50]
-pedestrian_mask = ['int'] + ['real']*6
-pedestrian_general_labels = ['num_of_pedestrian_types', 'pedestrian_x', 'pedestrian_y', 'pedestrian_yaw', 'pedestrian_trigger_distance', 'pedestrian_speed', 'pedestrian_dist_to_travel']
-
-vehicle_general_min = [0, -20, -20, 0, 0, 0, 0, 0, -20, -20, 0, 0, 0, 0]
-vehicle_general_max = [fixed_hyperparameters['num_of_vehicle_types'], 20, 20, 360, 15, 50, 15, 1, 20, 20, 1, 50, 360, fixed_hyperparameters['num_of_vehicle_colors']]
-vehicle_mask = ['int'] + ['real']*6 + ['int'] + ['real']*2 + ['int'] + ['real']*2 + ['int']
-vehicle_general_labels = ['num_of_vehicle_types', 'vehicle_x', 'vehicle_y', 'vehicle_yaw', 'vehicle_initial_speed', 'vehicle_trigger_distance', 'vehicle_targeted_speed', 'waypoint_follower', 'vehicle_targeted_x', 'vehicle_targeted_y', 'vehicle_avoid_collision', 'vehicle_dist_to_travel', 'vehicle_yaw', 'num_of_vehicle_colors']
-
-# ego_car waypoint
-for i in range(parameter_num_influencers_bounds['waypoints_num_limit']):
-    xl.extend(waypoint_min)
-    xu.extend(waypoint_max)
-    mask.extend(waypoint_mask)
-
-    for j in range(len(waypoint_labels)):
-        waypoint_label = waypoint_labels[j]
-        k_min = '_'.join(['ego_car', waypoint_label, 'min', str(i)])
-        k_max = '_'.join(['ego_car', waypoint_label, 'max', str(i)])
-        k = '_'.join(['ego_car', waypoint_label, str(i)])
-
-        labels.append(k)
-        object_parameters_bounds[k_min] = waypoint_min[j]
-        object_parameters_bounds[k_max] = waypoint_max[j]
-
-
-# static
-for i in range(parameter_num_influencers_bounds['max_num_of_static']):
-    xl.extend(static_general_min)
-    xu.extend(static_general_max)
-    mask.extend(static_mask)
-
-    for j in range(len(static_general_labels)):
-        static_general_label = static_general_labels[j]
-        k_min = '_'.join([static_general_label, 'min', str(i)])
-        k_max = '_'.join([static_general_label, 'max', str(i)])
-        k = '_'.join([static_general_label, str(i)])
-
-        labels.append(k)
-        object_parameters_bounds[k_min] = static_general_min[j]
-        object_parameters_bounds[k_max] = static_general_max[j]
-
-
-# pedestrians
-for i in range(parameter_num_influencers_bounds['max_num_of_pedestrians']):
-    xl.extend(pedestrian_general_min)
-    xu.extend(pedestrian_general_max)
-    mask.extend(pedestrian_mask)
-
-    for j in range(len(pedestrian_general_labels)):
-        pedestrian_general_label = pedestrian_general_labels[j]
-        k_min = '_'.join([pedestrian_general_label, 'min', str(i)])
-        k_max = '_'.join([pedestrian_general_label, 'max', str(i)])
-        k = '_'.join([pedestrian_general_label, str(i)])
-
-        labels.append(k)
-        object_parameters_bounds[k_min] = pedestrian_general_min[j]
-        object_parameters_bounds[k_max] = pedestrian_general_max[j]
-
-# vehicles
-for i in range(self.max_num_of_vehicles):
-    xl.extend(vehicle_general_min)
-    xu.extend(vehicle_general_max)
-    mask.extend(vehicle_mask)
-
-    for j in range(len(vehicle_general_labels)):
-        vehicle_general_label = vehicle_general_labels[j]
-        k_min = '_'.join([vehicle_general_label, 'min', str(i)])
-        k_max = '_'.join([vehicle_general_label, 'max', str(i)])
-        k = '_'.join([vehicle_general_label, str(i)])
-
-        labels.append(k)
-        object_parameters_bounds[k_min] = vehicle_general_min[j]
-        object_parameters_bounds[k_max] = vehicle_general_max[j]
-
-
-    for p in range(parameter_num_influencers_bounds['waypoints_num_limit']):
-        xl.extend(waypoint_min)
-        xu.extend(waypoint_max)
-        mask.extend(waypoint_mask)
-
-        for q in range(len(waypoint_labels)):
-            waypoint_label = waypoint_labels[q]
-            k_min = '_'.join(['vehicle', str(i), waypoint_label, 'min', str(p)])
-            k_max = '_'.join(['vehicle', str(i), waypoint_label, 'max', str(p)])
-            k = '_'.join(['vehicle', str(i), waypoint_label, str(p)])
-
-            labels.append(k)
-            object_parameters_bounds[k_min] = waypoint_min[q]
-            object_parameters_bounds[k_max] = waypoint_max[q]
 
 
 
@@ -426,7 +267,7 @@ for i in range(self.max_num_of_vehicles):
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, customized_parameters_bounds={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0):
 
         self.call_from_dt = call_from_dt
         self.dt = dt
@@ -478,124 +319,146 @@ class MyProblem(Problem):
 
 
 
-        # Fixed hyper-parameters
-        self.num_of_weathers = len(WEATHERS)
-        self.num_of_static_types = len(static_types)
-        self.num_of_pedestrian_types = len(pedestrian_types)
-        self.num_of_vehicle_types = len(vehicle_types)
-        self.num_of_vehicle_colors = len(vehicle_colors)
-        self.waypoints_num_limit = 5
+        # # Fixed hyper-parameters
+        # self.num_of_weathers = len(WEATHERS)
+        # self.num_of_static_types = len(static_types)
+        # self.num_of_pedestrian_types = len(pedestrian_types)
+        # self.num_of_vehicle_types = len(vehicle_types)
+        # self.num_of_vehicle_colors = len(vehicle_colors)
+        # self.waypoints_num_limit = 5
+        #
+        #
+        #
+        #
+        # # hyperparameters
+        # self.num_of_static_max = 0
+        # self.min_num_of_static = 0
+        # self.num_of_pedestrians_max = 2
+        # self.min_num_of_pedestrians = 0
+        # self.num_of_vehicles_max = 2
+        # self.min_num_of_vehicles = 0
+        #
+        #
+        #
+        # # general
+        #
+        # self.min_friction = 0.2
+        # self.max_friction = 0.8
+        # self.perturbation_min = -1.5
+        # self.perturbation_max = 1.5
+        # self.yaw_min = 0
+        # self.yaw_max = 360
+        #
+        # # static
+        # self.static_x_min = -20
+        # self.static_x_max = 20
+        # self.static_y_min = -20
+        # self.static_y_max = 20
+        #
+        # # pedestrians
+        # self.pedestrian_x_min = -20
+        # self.pedestrian_x_max = 20
+        # self.pedestrian_y_min = -20
+        # self.pedestrian_y_max = 20
+        # self.pedestrian_trigger_distance_min = 2
+        # self.pedestrian_trigger_distance_max = 50
+        # self.pedestrian_speed_min = 0
+        # self.pedestrian_speed_max = 4
+        # self.pedestrian_dist_to_travel_min = 0
+        # self.pedestrian_dist_to_travel_max = 50
+        #
+        # # vehicles
+        # self.vehicle_x_min = -20
+        # self.vehicle_x_max = 20
+        # self.vehicle_y_min = -20
+        # self.vehicle_y_max = 20
+        # self.vehicle_initial_speed_min = 0
+        # self.vehicle_initial_speed_max = 15
+        # self.vehicle_trigger_distance_min = 0
+        # self.vehicle_trigger_distance_max = 50
+        # self.vehicle_targeted_speed_min = 0
+        # self.vehicle_targeted_speed_max = 15
+        # self.vehicle_targeted_x_min = -20
+        # self.vehicle_targeted_x_max = 20
+        # self.vehicle_targeted_y_min = -20
+        # self.vehicle_targeted_y_max = 20
+        # self.vehicle_dist_to_travel_min = 0
+        # self.vehicle_dist_to_travel_max = 50
+        #
+        #
+        #
+        # # construct xl and xu
+        # xl = [self.min_friction, 0, self.min_num_of_static,
+        # self.min_num_of_pedestrians,
+        # self.min_num_of_vehicles]
+        # xu = [self.max_friction,
+        # self.num_of_weathers-1,
+        # self.num_of_static_max,
+        # self.num_of_pedestrians_max,
+        # self.num_of_vehicles_max
+        # ]
+        # mask = ['real', 'int', 'int', 'int', 'int']
+        # labels = ['friction', 'num_of_weathers', 'num_of_static_max', 'num_of_pedestrians_max', 'num_of_vehicles_max']
+        # # ego-car
+        # for i in range(self.waypoints_num_limit):
+        #     xl.extend([self.perturbation_min]*2)
+        #     xu.extend([self.perturbation_max]*2)
+        #     mask.extend(['real']*2)
+        #     labels.extend(['perturbation_x_'+str(i), 'perturbation_y_'+str(i)])
+        # # static
+        # for i in range(self.num_of_static_max):
+        #     xl.extend([0, self.static_x_min, self.static_y_min, self.yaw_min])
+        #     xu.extend([self.num_of_static_types-1, self.static_x_max, self.static_y_max, self.yaw_max])
+        #     mask.extend(['int'] + ['real']*3)
+        #     labels.extend(['num_of_static_types_'+str(i), 'static_x_'+str(i), 'static_y_'+str(i), 'static_yaw_'+str(i)])
+        # # pedestrians
+        # for i in range(self.num_of_pedestrians_max):
+        #     xl.extend([0, self.pedestrian_x_min, self.pedestrian_y_min, self.yaw_min, self.pedestrian_trigger_distance_min, self.pedestrian_speed_min, self.pedestrian_dist_to_travel_min])
+        #     xu.extend([self.num_of_pedestrian_types-1, self.pedestrian_x_max, self.pedestrian_y_max, self.yaw_max, self.pedestrian_trigger_distance_max, self.pedestrian_speed_max, self.pedestrian_dist_to_travel_max])
+        #     mask.extend(['int'] + ['real']*6)
+        #     labels.extend(['num_of_pedestrian_types_'+str(i), 'pedestrian_x_'+str(i), 'pedestrian_y_'+str(i), 'pedestrian_yaw_'+str(i), 'pedestrian_trigger_distance_'+str(i), 'pedestrian_speed_'+str(i), 'pedestrian_dist_to_travel_'+str(i)])
+        # # vehicles
+        # for i in range(self.num_of_vehicles_max):
+        #     xl.extend([0, self.vehicle_x_min, self.vehicle_y_min, self.yaw_min, self.vehicle_initial_speed_min, self.vehicle_trigger_distance_min, self.vehicle_targeted_speed_min, 0, self.vehicle_targeted_x_min, self.vehicle_targeted_y_min, 0, self.vehicle_dist_to_travel_min, self.yaw_min, 0])
+        #
+        #     xu.extend([self.num_of_vehicle_types-1, self.vehicle_x_max, self.vehicle_y_max, self.yaw_max, self.vehicle_initial_speed_max, self.vehicle_trigger_distance_max, self.vehicle_targeted_speed_max, 1, self.vehicle_targeted_x_max, self.vehicle_targeted_y_max, 1, self.vehicle_dist_to_travel_max, self.yaw_max, self.num_of_vehicle_colors-1])
+        #     mask.extend(['int'] + ['real']*6 + ['int'] + ['real']*2 + ['int'] + ['real']*2 + ['int'])
+        #     labels.extend(['num_of_vehicle_types_'+str(i), 'vehicle_x_'+str(i), 'vehicle_y_'+str(i), 'yaw_'+str(i), 'vehicle_initial_speed_'+str(i), 'vehicle_trigger_distance_'+str(i), 'vehicle_targeted_speed_'+str(i), 'waypoint_follower_'+str(i), 'vehicle_targeted_x_'+str(i), 'vehicle_targeted_y_'+str(i), 'avoid_collision_'+str(i), 'vehicle_dist_to_travel_'+str(i), 'vehicle_yaw_'+str(i), 'num_of_vehicle_colors_'+str(i)])
+        #
+        #     for j in range(self.waypoints_num_limit):
+        #         xl.extend([self.perturbation_min]*2)
+        #         xu.extend([self.perturbation_max]*2)
+        #         mask.extend(['real']*2)
+        #         labels.extend(['perturbation_x_'+str(i)+'_'+str(j), 'perturbation_y_'+str(i)+'_'+str(j)])
+        #
+        # self.mask = mask
+        # self.labels = labels
+        #
+        # n_var = 5+self.waypoints_num_limit*2+self.num_of_static_max*4+self.num_of_pedestrians_max*7+self.num_of_vehicles_max*(14+self.waypoints_num_limit*2)
+
+
+        fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels, distributions, n_var = setup_bounds_mask_labels_distributions()
+        customize_parameters_bounds(parameters_min_bounds, parameters_max_bounds, customized_parameters_bounds)
 
 
 
-
-        # hyperparameters
-        self.max_num_of_static = 0
-        self.min_num_of_static = 0
-        self.max_num_of_pedestrians = 2
-        self.min_num_of_pedestrians = 0
-        self.max_num_of_vehicles = 2
-        self.min_num_of_vehicles = 0
+        for d in [fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds]:
+            for k, v in d.items():
+                assert not hasattr(self, k), k+'should not appear twice.'
+                setattr(self, k, v)
 
 
+        xl = [pair[1] for pair in parameters_min_bounds.items()]
+        xu = [pair[1] for pair in parameters_max_bounds.items()]
 
-        # general
-
-        self.min_friction = 0.2
-        self.max_friction = 0.8
-        self.perturbation_min = -1.5
-        self.perturbation_max = 1.5
-        self.yaw_min = 0
-        self.yaw_max = 360
-
-        # static
-        self.static_x_min = -20
-        self.static_x_max = 20
-        self.static_y_min = -20
-        self.static_y_max = 20
-
-        # pedestrians
-        self.pedestrian_x_min = -20
-        self.pedestrian_x_max = 20
-        self.pedestrian_y_min = -20
-        self.pedestrian_y_max = 20
-        self.pedestrian_trigger_distance_min = 2
-        self.pedestrian_trigger_distance_max = 50
-        self.pedestrian_speed_min = 0
-        self.pedestrian_speed_max = 4
-        self.pedestrian_dist_to_travel_min = 0
-        self.pedestrian_dist_to_travel_max = 50
-
-        # vehicles
-        self.vehicle_x_min = -20
-        self.vehicle_x_max = 20
-        self.vehicle_y_min = -20
-        self.vehicle_y_max = 20
-        self.vehicle_initial_speed_min = 0
-        self.vehicle_initial_speed_max = 15
-        self.vehicle_trigger_distance_min = 0
-        self.vehicle_trigger_distance_max = 50
-        self.vehicle_targeted_speed_min = 0
-        self.vehicle_targeted_speed_max = 15
-        self.vehicle_targeted_x_min = -20
-        self.vehicle_targeted_x_max = 20
-        self.vehicle_targeted_y_min = -20
-        self.vehicle_targeted_y_max = 20
-        self.vehicle_dist_to_travel_min = 0
-        self.vehicle_dist_to_travel_max = 50
-
-
-
-        # construct xl and xu
-        xl = [self.min_friction, 0, self.min_num_of_static,
-        self.min_num_of_pedestrians,
-        self.min_num_of_vehicles]
-        xu = [self.max_friction,
-        self.num_of_weathers-1,
-        self.max_num_of_static,
-        self.max_num_of_pedestrians,
-        self.max_num_of_vehicles
-        ]
-        mask = ['real', 'int', 'int', 'int', 'int']
-        labels = ['friction', 'num_of_weathers', 'max_num_of_static', 'max_num_of_pedestrians', 'max_num_of_vehicles']
-        # ego-car
-        for i in range(self.waypoints_num_limit):
-            xl.extend([self.perturbation_min]*2)
-            xu.extend([self.perturbation_max]*2)
-            mask.extend(['real']*2)
-            labels.extend(['perturbation_x_'+str(i), 'perturbation_y_'+str(i)])
-        # static
-        for i in range(self.max_num_of_static):
-            xl.extend([0, self.static_x_min, self.static_y_min, self.yaw_min])
-            xu.extend([self.num_of_static_types-1, self.static_x_max, self.static_y_max, self.yaw_max])
-            mask.extend(['int'] + ['real']*3)
-            labels.extend(['num_of_static_types_'+str(i), 'static_x_'+str(i), 'static_y_'+str(i), 'static_yaw_'+str(i)])
-        # pedestrians
-        for i in range(self.max_num_of_pedestrians):
-            xl.extend([0, self.pedestrian_x_min, self.pedestrian_y_min, self.yaw_min, self.pedestrian_trigger_distance_min, self.pedestrian_speed_min, self.pedestrian_dist_to_travel_min])
-            xu.extend([self.num_of_pedestrian_types-1, self.pedestrian_x_max, self.pedestrian_y_max, self.yaw_max, self.pedestrian_trigger_distance_max, self.pedestrian_speed_max, self.pedestrian_dist_to_travel_max])
-            mask.extend(['int'] + ['real']*6)
-            labels.extend(['num_of_pedestrian_types_'+str(i), 'pedestrian_x_'+str(i), 'pedestrian_y_'+str(i), 'pedestrian_yaw_'+str(i), 'pedestrian_trigger_distance_'+str(i), 'pedestrian_speed_'+str(i), 'pedestrian_dist_to_travel_'+str(i)])
-        # vehicles
-        for i in range(self.max_num_of_vehicles):
-            xl.extend([0, self.vehicle_x_min, self.vehicle_y_min, self.yaw_min, self.vehicle_initial_speed_min, self.vehicle_trigger_distance_min, self.vehicle_targeted_speed_min, 0, self.vehicle_targeted_x_min, self.vehicle_targeted_y_min, 0, self.vehicle_dist_to_travel_min, self.yaw_min, 0])
-
-            xu.extend([self.num_of_vehicle_types-1, self.vehicle_x_max, self.vehicle_y_max, self.yaw_max, self.vehicle_initial_speed_max, self.vehicle_trigger_distance_max, self.vehicle_targeted_speed_max, 1, self.vehicle_targeted_x_max, self.vehicle_targeted_y_max, 1, self.vehicle_dist_to_travel_max, self.yaw_max, self.num_of_vehicle_colors-1])
-            mask.extend(['int'] + ['real']*6 + ['int'] + ['real']*2 + ['int'] + ['real']*2 + ['int'])
-            labels.extend(['num_of_vehicle_types_'+str(i), 'vehicle_x_'+str(i), 'vehicle_y_'+str(i), 'yaw_'+str(i), 'vehicle_initial_speed_'+str(i), 'vehicle_trigger_distance_'+str(i), 'vehicle_targeted_speed_'+str(i), 'waypoint_follower_'+str(i), 'vehicle_targeted_x_'+str(i), 'vehicle_targeted_y_'+str(i), 'avoid_collision_'+str(i), 'vehicle_dist_to_travel_'+str(i), 'vehicle_yaw_'+str(i), 'num_of_vehicle_colors_'+str(i)])
-
-            for j in range(self.waypoints_num_limit):
-                xl.extend([self.perturbation_min]*2)
-                xu.extend([self.perturbation_max]*2)
-                mask.extend(['real']*2)
-                labels.extend(['perturbation_x_'+str(i)+'_'+str(j), 'perturbation_y_'+str(i)+'_'+str(j)])
-
-        n_var = 5+self.waypoints_num_limit*2+self.max_num_of_static*4+self.max_num_of_pedestrians*7+self.max_num_of_vehicles*(14+self.waypoints_num_limit*2)
 
         self.mask = mask
         self.labels = labels
+        self.distributions = distributions
 
-        super().__init__(n_var=n_var, n_obj=2, n_constr=0, xl=xl, xu=xu, elementwise_evaluation=elementwise_evaluation)
+
+
+        super().__init__(n_var=n_var, n_obj=4, n_constr=0, xl=xl, xu=xu, elementwise_evaluation=elementwise_evaluation)
 
 
 
@@ -604,12 +467,10 @@ class MyProblem(Problem):
 
     def _evaluate(self, X, out, *args, **kwargs):
 
-
-
         waypoints_num_limit = self.waypoints_num_limit
-        max_num_of_static = self.max_num_of_static
-        max_num_of_pedestrians = self.max_num_of_pedestrians
-        max_num_of_vehicles = self.max_num_of_vehicles
+        num_of_static_max = self.num_of_static_max
+        num_of_pedestrians_max = self.num_of_pedestrians_max
+        num_of_vehicles_max = self.num_of_vehicles_max
 
         episode_max_time = self.episode_max_time
         call_from_dt = self.call_from_dt
@@ -642,7 +503,7 @@ class MyProblem(Problem):
 
                 # x = denormalize_by_entry(self, x)
 
-                customized_data = convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_num_of_pedestrians, max_num_of_vehicles, static_types, pedestrian_types, vehicle_types, vehicle_colors)
+                customized_data = convert_x_to_customized_data(x, waypoints_num_limit, num_of_static_max, num_of_pedestrians_max, num_of_vehicles_max, static_types, pedestrian_types, vehicle_types, vehicle_colors)
 
 
                 # run simulation
@@ -1025,131 +886,149 @@ def estimate_objectives(save_path):
 
 
 class MySampling(Sampling):
+    '''
+    dimension correspondence
+
+    Define:
+    n1=problem.waypoints_num_limit
+    n2=problem.num_of_static_max
+    n3=problem.num_of_pedestrians_max
+    n4=problem.num_of_vehicles_max
+
+    global
+    0: friction, real, [0, 1].
+    1: weather_index, int, [0, problem.num_of_weathers].
+    2: num_of_static, int, [0, n2].
+    3: num_of_pedestrians, int, [0, n3].
+    4: num_of_vehicles, int, [0, n4].
+
+    ego-car
+    5 ~ 4+n1*2: waypoints perturbation [(dx_i, dy_i)] with length n1.
+    dx_i, dy_i, real, ~ [problem.perturbation_min, problem.perturbation_max].
+
+
+    static
+    5+n1*2 ~ 4+n1*2+n2*4: [(static_type_i, x w.r.t. center, y w.r.t. center, yaw)] with length n2.
+    static_type_i, int, [0, problem.num_of_static_types).
+    x_i, real, [problem.static_x_min, problem.static_x_max].
+    y_i, real, [problem.static_y_min, problem.static_y_max].
+    yaw_i, real, [problem.yaw_min, problem.yaw_max).
+
+    pedestrians
+    5+n1*2+n2*4 ~ 4+n1*2+n2*4+n3*7: [(pedestrian_type_i, x_i, y_i, yaw_i, trigger_distance_i, speed_i, dist_to_travel_i)] with length n3.
+    pedestrian_type_i, int, [0, problem.num_of_static_types)
+    x_i, real, [problem.pedestrian_x_min, problem.pedestrian_x_max].
+    y_i, real, [problem.pedestrian_y_min, problem.pedestrian_y_max].
+    yaw_i, real, [problem.yaw_min, problem.yaw_max).
+    trigger_distance_i, real, [problem.pedestrian_trigger_distance_min, problem.pedestrian_trigger_distance_max].
+    speed_i, real, [problem.pedestrian_speed_min, problem.pedestrian_speed_max].
+    dist_to_travel_i, real, [problem.pedestrian_dist_to_travel_min, problem.pedestrian_dist_to_travel_max].
+
+    vehicles
+    5+n1*2+n2*4+n3*7 ~ 4+n1*2+n2*4+n3*7+n4*(14+n1*2): [(vehicle_type_i, x_i, y_i, yaw_i, initial_speed_i, trigger_distance_i, targeted_speed_i, waypoint_follower_i, targeted_x_i, targeted_y_i, avoid_collision_i, dist_to_travel_i, target_yaw_i, color_i, [(dx_i, dy_i)] with length n1)] with length n4.
+    vehicle_type_i, int, [0, problem.num_of_vehicle_types)
+    x_i, real, [problem.vehicle_x_min, problem.vehicle_x_max].
+    y_i, real, [problem.vehicle_y_min, problem.vehicle_y_max].
+    yaw_i, real, [problem.yaw_min, problem.yaw_max).
+    initial_speed_i, real, [problem.vehicle_initial_speed_min, problem.vehicle_initial_speed_max].
+    trigger_distance_i, real, [problem.vehicle_trigger_distance_min, problem.vehicle_trigger_distance_max].
+    targeted_speed_i, real, [problem.vehicle_targeted_speed_min, problem.vehicle_targeted_speed_max].
+    waypoint_follower_i, boolean, [0, 1]
+    targeted_x_i, real, [problem.targeted_x_min, problem.targeted_x_max].
+    targeted_y_i, real, [problem.targeted_y_min, problem.targeted_y_max].
+    avoid_collision_i, boolean, [0, 1]
+    dist_to_travel_i, real, [problem.vehicle_dist_to_travel_min, problem.vehicle_dist_to_travel_max].
+    target_yaw_i, real, [problem.yaw_min, problem.yaw_max).
+    color_i, int, [0, problem.num_of_vehicle_colors).
+    dx_i, dy_i, real, ~ [problem.perturbation_min, problem.perturbation_max].
+
+
+    '''
     def _do(self, problem, n_samples, **kwargs):
+        xl = problem.xl
+        xu = problem.xu
+        mask = problem.mask
+        distributions = problem.distributions
+
         X = []
         print('n_samples', n_samples)
         for i in range(n_samples):
-            '''
-            dimension correspondence
-
-            Define:
-            n1=problem.waypoints_num_limit
-            n2=problem.max_num_of_static
-            n3=problem.max_num_of_pedestrians
-            n4=problem.max_num_of_vehicles
-
-            global
-            0: friction, real, [0, 1].
-            1: weather_index, int, [0, problem.num_of_weathers].
-            2: num_of_static, int, [0, n2].
-            3: num_of_pedestrians, int, [0, n3].
-            4: num_of_vehicles, int, [0, n4].
-
-            ego-car
-            5 ~ 4+n1*2: waypoints perturbation [(dx_i, dy_i)] with length n1.
-            dx_i, dy_i, real, ~ [problem.perturbation_min, problem.perturbation_max].
-
-
-            static
-            5+n1*2 ~ 4+n1*2+n2*4: [(static_type_i, x w.r.t. center, y w.r.t. center, yaw)] with length n2.
-            static_type_i, int, [0, problem.num_of_static_types).
-            x_i, real, [problem.static_x_min, problem.static_x_max].
-            y_i, real, [problem.static_y_min, problem.static_y_max].
-            yaw_i, real, [problem.yaw_min, problem.yaw_max).
-
-            pedestrians
-            5+n1*2+n2*4 ~ 4+n1*2+n2*4+n3*7: [(pedestrian_type_i, x_i, y_i, yaw_i, trigger_distance_i, speed_i, dist_to_travel_i)] with length n3.
-            pedestrian_type_i, int, [0, problem.num_of_static_types)
-            x_i, real, [problem.pedestrian_x_min, problem.pedestrian_x_max].
-            y_i, real, [problem.pedestrian_y_min, problem.pedestrian_y_max].
-            yaw_i, real, [problem.yaw_min, problem.yaw_max).
-            trigger_distance_i, real, [problem.pedestrian_trigger_distance_min, problem.pedestrian_trigger_distance_max].
-            speed_i, real, [problem.pedestrian_speed_min, problem.pedestrian_speed_max].
-            dist_to_travel_i, real, [problem.pedestrian_dist_to_travel_min, problem.pedestrian_dist_to_travel_max].
-
-            vehicles
-            5+n1*2+n2*4+n3*7 ~ 4+n1*2+n2*4+n3*7+n4*(14+n1*2): [(vehicle_type_i, x_i, y_i, yaw_i, initial_speed_i, trigger_distance_i, targeted_speed_i, waypoint_follower_i, targeted_x_i, targeted_y_i, avoid_collision_i, dist_to_travel_i, target_yaw_i, color_i, [(dx_i, dy_i)] with length n1)] with length n4.
-            vehicle_type_i, int, [0, problem.num_of_vehicle_types)
-            x_i, real, [problem.vehicle_x_min, problem.vehicle_x_max].
-            y_i, real, [problem.vehicle_y_min, problem.vehicle_y_max].
-            yaw_i, real, [problem.yaw_min, problem.yaw_max).
-            initial_speed_i, real, [problem.vehicle_initial_speed_min, problem.vehicle_initial_speed_max].
-            trigger_distance_i, real, [problem.vehicle_trigger_distance_min, problem.vehicle_trigger_distance_max].
-            targeted_speed_i, real, [problem.vehicle_targeted_speed_min, problem.vehicle_targeted_speed_max].
-            waypoint_follower_i, boolean, [0, 1]
-            targeted_x_i, real, [problem.targeted_x_min, problem.targeted_x_max].
-            targeted_y_i, real, [problem.targeted_y_min, problem.targeted_y_max].
-            avoid_collision_i, boolean, [0, 1]
-            dist_to_travel_i, real, [problem.vehicle_dist_to_travel_min, problem.vehicle_dist_to_travel_max].
-            target_yaw_i, real, [problem.yaw_min, problem.yaw_max).
-            color_i, int, [0, problem.num_of_vehicle_colors).
-            dx_i, dy_i, real, ~ [problem.perturbation_min, problem.perturbation_max].
-
-
-            '''
-
-
-
-            d = 4+problem.waypoints_num_limit*2+problem.max_num_of_static*4+problem.max_num_of_pedestrians*7+problem.max_num_of_vehicles*(12+problem.waypoints_num_limit*2)
-
             x = []
+            for i, dist in enumerate(distributions):
+                typ = mask[i]
+                lower = xl[i]
+                upper = xu[i]
 
-            # global
-            friction = rng.random()
-            weather_index = rng.integers(problem.num_of_weathers)
-            num_of_static = rng.integers(problem.min_num_of_static, problem.max_num_of_static+1)
-            num_of_pedestrians = rng.integers(problem.min_num_of_pedestrians, problem.max_num_of_pedestrians+1)
-            num_of_vehicles = rng.integers(problem.min_num_of_vehicles, problem.max_num_of_vehicles+1)
-            x.extend([friction, weather_index, num_of_static, num_of_pedestrians, num_of_vehicles])
+                if typ == 'int':
+                    val = rng.integers(lower, upper+1)
+                elif typ == 'real':
+                    if dist[0] == 'normal':
+                        val = np.clip(rng.normal(dist[1], dist[2], 1)[0], lower, upper)
+                    else: # default is uniform
+                        val = rand_real(rng, lower, upper)
+                x.append(val)
 
-            # ego car
-            for _ in range(problem.waypoints_num_limit):
-                dx = np.clip(rng.normal(0, 2, 1)[0], problem.perturbation_min, problem.perturbation_max)
-                dy = np.clip(rng.normal(0, 2, 1)[0], problem.perturbation_min, problem.perturbation_max)
-                x.extend([dx, dy])
-            # static
-            for i in range(problem.max_num_of_static):
-                static_type_i = rng.integers(problem.num_of_static_types)
-                static_x_i = rand_real(rng, problem.static_x_min, problem.static_x_max)
-                static_y_i = rand_real(rng, problem.static_y_min, problem.static_y_max)
-                static_yaw_i = rand_real(rng, problem.yaw_min, problem.yaw_max)
-                x.extend([static_type_i, static_x_i, static_y_i, static_yaw_i])
-            # pedestrians
-            for i in range(problem.max_num_of_pedestrians):
-                pedestrian_type_i = rng.integers(problem.num_of_pedestrian_types)
-                pedestrian_x_i = rand_real(rng, problem.pedestrian_x_min, problem.pedestrian_x_max)
-                pedestrian_y_i = rand_real(rng, problem.pedestrian_x_min, problem.pedestrian_x_max)
-                pedestrian_yaw_i = rand_real(rng, problem.yaw_min, problem.yaw_max)
-                pedestrian_trigger_distance_i = rand_real(rng, problem.pedestrian_trigger_distance_min, problem.pedestrian_trigger_distance_max)
-                speed_i = rand_real(rng, problem.pedestrian_speed_min, problem.pedestrian_speed_max)
-                dist_to_travel_i = rand_real(rng, problem.pedestrian_dist_to_travel_min, problem.pedestrian_dist_to_travel_max)
-                x.extend([pedestrian_type_i, pedestrian_x_i, pedestrian_y_i, pedestrian_yaw_i, pedestrian_trigger_distance_i, speed_i, dist_to_travel_i])
-            # vehicles
-            for i in range(problem.max_num_of_vehicles):
-                vehicle_type_i = rand_real(rng, 0, problem.num_of_vehicle_types)
-                vehicle_x_i = rand_real(rng, problem.vehicle_x_min, problem.vehicle_x_max)
-                vehicle_y_i = rand_real(rng, problem.vehicle_x_min, problem.vehicle_x_max)
-                vehicle_yaw_i = rand_real(rng, problem.yaw_min, problem.yaw_max)
-                vehicle_initial_speed_i = rand_real(rng, problem.vehicle_initial_speed_min, problem.vehicle_initial_speed_max)
-                vehicle_trigger_distance_i = rand_real(rng, problem.vehicle_trigger_distance_min, problem.vehicle_trigger_distance_max)
 
-                targeted_speed_i = rand_real(rng, problem.vehicle_targeted_speed_min, problem.vehicle_targeted_speed_max)
-                waypoint_follower_i = rng.integers(2)
-
-                vehicle_targeted_x_i = rand_real(rng, problem.vehicle_targeted_x_min, problem.vehicle_targeted_x_max)
-                vehicle_targeted_y_i = rand_real(rng, problem.vehicle_targeted_x_min, problem.vehicle_targeted_x_max)
-
-                vehicle_avoid_collision_i = rng.integers(2)
-                vehicle_dist_to_travel_i = rand_real(rng, problem.vehicle_dist_to_travel_min, problem.vehicle_dist_to_travel_max)
-                vehicle_target_yaw_i = rand_real(rng, problem.yaw_min, problem.yaw_max)
-                vehicle_color_i = rng.integers(0, problem.num_of_vehicle_colors)
-
-                x.extend([vehicle_type_i, vehicle_x_i, vehicle_y_i, vehicle_yaw_i, vehicle_initial_speed_i, vehicle_trigger_distance_i, targeted_speed_i, waypoint_follower_i, vehicle_targeted_x_i, vehicle_targeted_y_i, vehicle_avoid_collision_i, vehicle_dist_to_travel_i, vehicle_target_yaw_i, vehicle_color_i])
-
-                for _ in range(problem.waypoints_num_limit):
-                    dx = np.clip(rng.normal(0, 2, 1)[0], problem.perturbation_min, problem.perturbation_max)
-                    dy = np.clip(rng.normal(0, 2, 1)[0], problem.perturbation_min, problem.perturbation_max)
-                    x.extend([dx, dy])
+            # d = 4+problem.waypoints_num_limit*2+problem.num_of_static_max*4+problem.num_of_pedestrians_max*7+problem.num_of_vehicles_max*(12+problem.waypoints_num_limit*2)
+            #
+            # x = []
+            #
+            # # global
+            # friction = rng.random()
+            # weather_index = rng.integers(problem.num_of_weathers)
+            # num_of_static = rng.integers(problem.num_of_static_min, problem.num_of_static_max+1)
+            # num_of_pedestrians = rng.integers(problem.num_of_pedestrians_min, problem.num_of_pedestrians_max+1)
+            # num_of_vehicles = rng.integers(problem.num_of_vehicles_min, problem.num_of_vehicles_max+1)
+            # x.extend([friction, weather_index, num_of_static, num_of_pedestrians, num_of_vehicles])
+            #
+            # # ego car
+            # for _ in range(problem.waypoints_num_limit):
+            #     dx = np.clip(rng.normal(0, 2, 1)[0], problem.perturbation_min, problem.perturbation_max)
+            #     dy = np.clip(rng.normal(0, 2, 1)[0], problem.perturbation_min, problem.perturbation_max)
+            #     x.extend([dx, dy])
+            # # static
+            # for i in range(problem.num_of_static_max):
+            #     static_type_i = rng.integers(problem.num_of_static_types)
+            #     static_x_i = rand_real(rng, problem.static_x_min, problem.static_x_max)
+            #     static_y_i = rand_real(rng, problem.static_y_min, problem.static_y_max)
+            #     static_yaw_i = rand_real(rng, problem.static_yaw_min, problem.static_yaw_max)
+            #     x.extend([static_type_i, static_x_i, static_y_i, static_yaw_i])
+            # # pedestrians
+            # for i in range(problem.num_of_pedestrians_max):
+            #     pedestrian_type_i = rng.integers(problem.num_of_pedestrian_types)
+            #     pedestrian_x_i = rand_real(rng, problem.pedestrian_x_min, problem.pedestrian_x_max)
+            #     pedestrian_y_i = rand_real(rng, problem.pedestrian_x_min, problem.pedestrian_x_max)
+            #     pedestrian_yaw_i = rand_real(rng, problem.yaw_min, problem.yaw_max)
+            #     pedestrian_trigger_distance_i = rand_real(rng, problem.pedestrian_trigger_distance_min, problem.pedestrian_trigger_distance_max)
+            #     speed_i = rand_real(rng, problem.pedestrian_speed_min, problem.pedestrian_speed_max)
+            #     dist_to_travel_i = rand_real(rng, problem.pedestrian_dist_to_travel_min, problem.pedestrian_dist_to_travel_max)
+            #     x.extend([pedestrian_type_i, pedestrian_x_i, pedestrian_y_i, pedestrian_yaw_i, pedestrian_trigger_distance_i, speed_i, dist_to_travel_i])
+            # # vehicles
+            # for i in range(problem.num_of_vehicles_max):
+            #     vehicle_type_i = rand_real(rng, 0, problem.num_of_vehicle_types)
+            #     vehicle_x_i = rand_real(rng, problem.vehicle_x_min, problem.vehicle_x_max)
+            #     vehicle_y_i = rand_real(rng, problem.vehicle_x_min, problem.vehicle_x_max)
+            #     vehicle_yaw_i = rand_real(rng, problem.yaw_min, problem.yaw_max)
+            #     vehicle_initial_speed_i = rand_real(rng, problem.vehicle_initial_speed_min, problem.vehicle_initial_speed_max)
+            #     vehicle_trigger_distance_i = rand_real(rng, problem.vehicle_trigger_distance_min, problem.vehicle_trigger_distance_max)
+            #
+            #     targeted_speed_i = rand_real(rng, problem.vehicle_targeted_speed_min, problem.vehicle_targeted_speed_max)
+            #     waypoint_follower_i = rng.integers(2)
+            #
+            #     vehicle_targeted_x_i = rand_real(rng, problem.vehicle_targeted_x_min, problem.vehicle_targeted_x_max)
+            #     vehicle_targeted_y_i = rand_real(rng, problem.vehicle_targeted_x_min, problem.vehicle_targeted_x_max)
+            #
+            #     vehicle_avoid_collision_i = rng.integers(2)
+            #     vehicle_dist_to_travel_i = rand_real(rng, problem.vehicle_dist_to_travel_min, problem.vehicle_dist_to_travel_max)
+            #     vehicle_target_yaw_i = rand_real(rng, problem.yaw_min, problem.yaw_max)
+            #     vehicle_color_i = rng.integers(0, problem.num_of_vehicle_colors)
+            #
+            #     x.extend([vehicle_type_i, vehicle_x_i, vehicle_y_i, vehicle_yaw_i, vehicle_initial_speed_i, vehicle_trigger_distance_i, targeted_speed_i, waypoint_follower_i, vehicle_targeted_x_i, vehicle_targeted_y_i, vehicle_avoid_collision_i, vehicle_dist_to_travel_i, vehicle_target_yaw_i, vehicle_color_i])
+            #
+            #     for _ in range(problem.waypoints_num_limit):
+            #         dx = np.clip(rng.normal(0, 2, 1)[0], problem.perturbation_min, problem.perturbation_max)
+            #         dy = np.clip(rng.normal(0, 2, 1)[0], problem.perturbation_min, problem.perturbation_max)
+            #         x.extend([dx, dy])
             x = np.array(x).astype(float)
             X.append(x)
         X = np.stack(X)
@@ -1157,13 +1036,13 @@ class MySampling(Sampling):
 
         return X
 
-def normalize_by_entry(problem, X):
-    for i in np.where((problem.xu - problem.xl) == 0)[0]:
-        print(i, problem.labels[i])
-    return (X - problem.xl) / (problem.xu - problem.xl)
-
-def denormalize_by_entry(problem, X):
-    return X * (problem.xu - problem.xl) + problem.xl
+# def normalize_by_entry(problem, X):
+#     for i in np.where((problem.xu - problem.xl) == 0)[0]:
+#         print(i, problem.labels[i])
+#     return (X - problem.xl) / (problem.xu - problem.xl)
+#
+# def denormalize_by_entry(problem, X):
+#     return X * (problem.xu - problem.xl) + problem.xl
 
 
 
@@ -1329,6 +1208,29 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
 
 
+    customized_parameters_bounds = {}
+    # leading car decrease speed
+    customized_parameters_bounds = {
+        'num_of_vehicles_min': 1,
+        'num_of_vehicles_max': 2,
+
+        'vehicle_x_max_0': 0,
+        'vehicle_x_min_0': 0,
+        'vehicle_y_max_0': 10,
+        'vehicle_y_min_0': 3,
+
+        'vehicle_initial_speed_max_0': 6,
+        'vehicle_initial_speed_min_0': 3,
+        'vehicle_targeted_speed_max_0': 3,
+        'vehicle_targeted_speed_min_0': 0,
+        'vehicle_trigger_distance_max_0': 10,
+        'vehicle_trigger_distance_min_0': 5,
+
+        'vehicle_dist_to_travel_max_0': 50,
+        'vehicle_dist_to_travel_min_0': 10,
+        'vehicle_yaw_max_0': 270,
+        'vehicle_yaw_min_0': 270
+    }
 
 
 
@@ -1347,7 +1249,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         algorithm.launch_cluster = True
         problem = algorithm.problem
     else:
-        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, dt_time_str=dt_time_str, dt_iter=dt_iter)
+        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, customized_parameters_bounds=customized_parameters_bounds, call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, dt_time_str=dt_time_str, dt_iter=dt_iter)
 
 
         from pymoo.operators.mixed_variable_operator import MixedVariableMutation, MixedVariableCrossover

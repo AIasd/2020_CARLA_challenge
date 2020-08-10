@@ -9,7 +9,7 @@ import graphviz
 import numpy as np
 import pickle
 from ga_fuzzing import run_ga
-import datetime
+from datetime import datetime
 
 
 
