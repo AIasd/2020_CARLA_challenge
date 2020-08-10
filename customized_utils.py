@@ -275,7 +275,7 @@ def exit_handler(ports, bug_folder):
                 for proc in process_iter():
                     for conns in proc.connections(kind='inet'):
                         if conns.laddr.port == port:
-                            print('-'*100, 'kill server at port', port)
+                            print('-'*20, 'kill server at port', port)
                             proc.send_signal(SIGTERM)
             except:
                 continue
@@ -289,5 +289,6 @@ def get_angle(x1, y1, x2, y2):
 
 # check if x is in critical regions of the tree
 def is_critical_region(x, estimator, critical_unique_leaves):
-    leave_id = estimator.apply(x)
+    leave_id = estimator.apply(x.reshape(1, -1))[0]
+    print(leave_id, critical_unique_leaves)
     return leave_id in critical_unique_leaves

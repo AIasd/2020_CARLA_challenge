@@ -9,7 +9,7 @@ import graphviz
 import numpy as np
 import pickle
 from ga_fuzzing import run_ga
-
+import datetime
 
 
 
@@ -40,7 +40,7 @@ def filter_critical_regions(X, y):
     for i, unique_leave_i in enumerate(unique_leave_ids):
         print('unique_leaves', unique_leave_i, unique_leaves_bug_num[i],  unique_leaves_normal_num[i])
 
-    critical_unique_leaves = unique_leave_ids[unique_leaves_bug_num > unique_leaves_normal_num]
+    critical_unique_leaves = unique_leave_ids[unique_leaves_bug_num >= unique_leaves_normal_num]
 
     print('critical_unique_leaves', critical_unique_leaves)
 
@@ -48,7 +48,7 @@ def filter_critical_regions(X, y):
     inds = np.array([leave_id in critical_unique_leaves for leave_id in leave_ids])
     print('\n'*20)
 
-    return estimator, inds
+    return estimator, inds, critical_unique_leaves
 
 
 
@@ -58,9 +58,9 @@ def main():
     # [5, 7]
     outer_iterations = 3
     # 5
-    n_gen = 5
+    n_gen = 2
     # 100
-    pop_size = 100
+    pop_size = 20
 
     X_filtered = None
     F_filtered = None
@@ -68,34 +68,42 @@ def main():
     y = None
     F = None
     objectives = None
+    time = None
     estimator = None
     critical_unique_leaves = None
+
+
+    now = datetime.now()
+    dt_time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
+
 
     for i in range(outer_iterations):
         dt = True
         if i == 0 or np.sum(y)==0:
             dt = False
-        X_new, y_new, F_new, objectives_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size)
+        X_new, y_new, F_new, objectives_new, time_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str, i)
 
         if i == 0:
             X = X_new
             y = y_new
             F = F_new
             objectives = objectives_new
+            time = time_new
         else:
             X = np.concatenate([X, X_new])
             y = np.concatenate([y, y_new])
             F = np.concatenate([F, F_new])
             objectives = np.concatenate([objectives, objectives_new])
+            time.extend(time_new)
 
 
 
-        estimator, inds = filter_critical_regions(X, y)
+        estimator, inds, critical_unique_leaves = filter_critical_regions(X, y)
         X_filtered = X[inds]
         F_filtered = F[inds]
         print(np.sum(y))
 
-    return X, y, F, objectives
+    return X, y, F, objectives, time
 
 def visualization(estimator):
     tree.plot_tree(estimator)
@@ -104,8 +112,12 @@ def visualization(estimator):
     graph.render("tree")
 
 if __name__ == '__main__':
-    X, y, F, objectives = main()
-    np.savez('dt', X=X, y=y, F=F, objectives=objectives)
+    X, y, F, objectives, time = main()
+
+
+    save_path = []
+    np.savez('dt', X=X, y=y, F=F, objectives=objectives, time=time)
+    print('dt data saved')
 
 
     # d = np.load('dt.npz')

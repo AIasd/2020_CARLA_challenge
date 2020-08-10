@@ -1,46 +1,28 @@
 '''
 TBD:
+
+* put data from the same dt into one folder
+
+* fix unknown collision object
+
+* specific scenario by adding constraints to input parameters
+
+
 * estimate bug diversity via tree diversity
 * fix stage2 model training
-* debug nsga2-dt (make sure decision tree code is correct)
+* debug nsga2-dt
 * introduction writing
 
 * emcmc
 * clustering+tsne(need to label different bugs first), bug category over generation plot
 
 
-* specific scenario by adding constraints to input parameters
 
 
-
-* Traceback (most recent call last):
-srunner.scenariomanager.carla_data_provider.get_velocity: Actor(id=0, type=static.road) not found!
-Traceback (most recent call last):
-  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 315, in <lambda>
-Traceback (most recent call last):
-  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 315, in <lambda>
-  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 315, in <lambda>
-    self._collision_sensor.listen(lambda event: self._count_collisions(weakref.ref(self), event))
-  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 543, in _count_collisions
-    'x': actor_location.x,
-    self._collision_sensor.listen(lambda event: self._count_collisions(weakref.ref(self), event))
-    self._collision_sensor.listen(lambda event: self._count_collisions(weakref.ref(self), event))
-  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 543, in _count_collisions
-  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 543, in _count_collisions
-AttributeError: 'NoneType' object has no attribute 'x'
-    'x': actor_location.x,
-    'x': actor_location.x,
-AttributeError: 'NoneType' object has no attribute 'x'
-AttributeError: 'NoneType' object has no attribute 'x'
- waiting for one data reading from sensors...
-Traceback (most recent call last):
-  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 315, in <lambda>
-    self._collision_sensor.listen(lambda event: self._count_collisions(weakref.ref(self), event))
-  File "scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py", line 543, in _count_collisions
-    'x': actor_location.x,
-AttributeError: 'NoneType' object has no attribute 'x'
+* reproduce a bug
 
 
+* limit generation of objects in a certain area
 
 
 
@@ -203,6 +185,7 @@ from pymoo.model.termination import Termination
 from pymoo.util.termination.default import MultiObjectiveDefaultTermination, SingleObjectiveDefaultTermination
 from pymoo.util.termination.max_time import TimeBasedTermination
 from pymoo.model.individual import Individual
+from pymoo.model.repair import Repair
 
 from dask.distributed import Client, LocalCluster
 
@@ -265,12 +248,185 @@ if run_parallelization:
 
 
 
+'''
+for customizing weather choices, static_types, pedestrian_types, vehicle_types, and vehicle_colors, make changes to object_types.py
+
+
+fixed_hyperparameters = {
+'num_of_weathers': len(WEATHERS)
+'num_of_static_types': len(static_types)
+'num_of_pedestrian_types': len(pedestrian_types)
+'num_of_vehicle_types': len(vehicle_types)
+'num_of_vehicle_colors': len(vehicle_colors)
+}
+
+# leading car decrease speed
+customized_parameter_num_influencers_bounds = {
+    max_num_of_vehicles: 2,
+    min_num_of_vehicles: 1
+}
+
+customized_object_parameters_bounds = {
+    vehicle_x_max_0: 0,
+    vehicle_x_min_0: 0,
+    vehicle_y_max_0: 10,
+    vehicle_y_min_0: 3,
+
+    vehicle_initial_speed_max_0 = 6,
+    vehicle_initial_speed_min_0 = 3,
+    vehicle_targeted_speed_max_0 = 3,
+    vehicle_targeted_speed_min_0 = 0,
+    vehicle_trigger_distance_max_0 = 10,
+    vehicle_trigger_distance_min_0 = 5,
+
+    vehicle_dist_to_travel_max_0 = 50,
+    vehicle_dist_to_travel_min_0 = 10,
+    vehicle_yaw_max_0 = 270,
+    vehicle_yaw_min_0 = 270
+}
+
+
+
+
+
+
+parameter_num_influencers_bounds = {
+    waypoints_num_limit: 5
+    min_num_of_static: 0,
+    max_num_of_static: 0,
+    min_num_of_pedestrians: 2,
+    max_num_of_pedestrians: 2,
+    min_num_of_vehicles: 2,
+    max_num_of_vehicles: 2
+}
+
+
+
+object_parameters_bounds = {
+}
+
+
+
+
+
+xl = []
+xu = []
+mask = []
+labels = []
+
+
+waypoint_min = [-1.5, -1.5]
+waypoint_max = [1.5, 1.5]
+waypoint_mask = ['real', 'real']
+waypoint_labels = ['perturbation_x', 'perturbation_y']
+
+static_general_min = [0, -20, -20, 0]
+static_general_max = [fixed_hyperparameters['num_of_static_types'], 20, 20, 360]
+static_mask = ['int'] + ['real']*3
+static_general_labels = ['num_of_static_types', 'static_x', 'static_y', 'static_yaw']
+
+pedestrian_general_min = [0, -20, -20, 0, 2, 0, 0]
+pedestrian_general_max = [fixed_hyperparameters['num_of_pedestrian_types'], 20, 20, 360, 50, 4, 50]
+pedestrian_mask = ['int'] + ['real']*6
+pedestrian_general_labels = ['num_of_pedestrian_types', 'pedestrian_x', 'pedestrian_y', 'pedestrian_yaw', 'pedestrian_trigger_distance', 'pedestrian_speed', 'pedestrian_dist_to_travel']
+
+vehicle_general_min = [0, -20, -20, 0, 0, 0, 0, 0, -20, -20, 0, 0, 0, 0]
+vehicle_general_max = [fixed_hyperparameters['num_of_vehicle_types'], 20, 20, 360, 15, 50, 15, 1, 20, 20, 1, 50, 360, fixed_hyperparameters['num_of_vehicle_colors']]
+vehicle_mask = ['int'] + ['real']*6 + ['int'] + ['real']*2 + ['int'] + ['real']*2 + ['int']
+vehicle_general_labels = ['num_of_vehicle_types', 'vehicle_x', 'vehicle_y', 'vehicle_yaw', 'vehicle_initial_speed', 'vehicle_trigger_distance', 'vehicle_targeted_speed', 'waypoint_follower', 'vehicle_targeted_x', 'vehicle_targeted_y', 'vehicle_avoid_collision', 'vehicle_dist_to_travel', 'vehicle_yaw', 'num_of_vehicle_colors']
+
+# ego_car waypoint
+for i in range(parameter_num_influencers_bounds['waypoints_num_limit']):
+    xl.extend(waypoint_min)
+    xu.extend(waypoint_max)
+    mask.extend(waypoint_mask)
+
+    for j in range(len(waypoint_labels)):
+        waypoint_label = waypoint_labels[j]
+        k_min = '_'.join(['ego_car', waypoint_label, 'min', str(i)])
+        k_max = '_'.join(['ego_car', waypoint_label, 'max', str(i)])
+        k = '_'.join(['ego_car', waypoint_label, str(i)])
+
+        labels.append(k)
+        object_parameters_bounds[k_min] = waypoint_min[j]
+        object_parameters_bounds[k_max] = waypoint_max[j]
+
+
+# static
+for i in range(parameter_num_influencers_bounds['max_num_of_static']):
+    xl.extend(static_general_min)
+    xu.extend(static_general_max)
+    mask.extend(static_mask)
+
+    for j in range(len(static_general_labels)):
+        static_general_label = static_general_labels[j]
+        k_min = '_'.join([static_general_label, 'min', str(i)])
+        k_max = '_'.join([static_general_label, 'max', str(i)])
+        k = '_'.join([static_general_label, str(i)])
+
+        labels.append(k)
+        object_parameters_bounds[k_min] = static_general_min[j]
+        object_parameters_bounds[k_max] = static_general_max[j]
+
+
+# pedestrians
+for i in range(parameter_num_influencers_bounds['max_num_of_pedestrians']):
+    xl.extend(pedestrian_general_min)
+    xu.extend(pedestrian_general_max)
+    mask.extend(pedestrian_mask)
+
+    for j in range(len(pedestrian_general_labels)):
+        pedestrian_general_label = pedestrian_general_labels[j]
+        k_min = '_'.join([pedestrian_general_label, 'min', str(i)])
+        k_max = '_'.join([pedestrian_general_label, 'max', str(i)])
+        k = '_'.join([pedestrian_general_label, str(i)])
+
+        labels.append(k)
+        object_parameters_bounds[k_min] = pedestrian_general_min[j]
+        object_parameters_bounds[k_max] = pedestrian_general_max[j]
+
+# vehicles
+for i in range(self.max_num_of_vehicles):
+    xl.extend(vehicle_general_min)
+    xu.extend(vehicle_general_max)
+    mask.extend(vehicle_mask)
+
+    for j in range(len(vehicle_general_labels)):
+        vehicle_general_label = vehicle_general_labels[j]
+        k_min = '_'.join([vehicle_general_label, 'min', str(i)])
+        k_max = '_'.join([vehicle_general_label, 'max', str(i)])
+        k = '_'.join([vehicle_general_label, str(i)])
+
+        labels.append(k)
+        object_parameters_bounds[k_min] = vehicle_general_min[j]
+        object_parameters_bounds[k_max] = vehicle_general_max[j]
+
+
+    for p in range(parameter_num_influencers_bounds['waypoints_num_limit']):
+        xl.extend(waypoint_min)
+        xu.extend(waypoint_max)
+        mask.extend(waypoint_mask)
+
+        for q in range(len(waypoint_labels)):
+            waypoint_label = waypoint_labels[q]
+            k_min = '_'.join(['vehicle', str(i), waypoint_label, 'min', str(p)])
+            k_max = '_'.join(['vehicle', str(i), waypoint_label, 'max', str(p)])
+            k = '_'.join(['vehicle', str(i), waypoint_label, str(p)])
+
+            labels.append(k)
+            object_parameters_bounds[k_min] = waypoint_min[q]
+            object_parameters_bounds[k_max] = waypoint_max[q]
+
+
+
+
+'''
 
 
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0):
 
         self.call_from_dt = call_from_dt
         self.dt = dt
@@ -289,10 +445,19 @@ class MyProblem(Problem):
         self.episode_max_time = episode_max_time
 
 
-        now = datetime.now()
-        self.bug_folder = bug_parent_folder + now.strftime("%Y_%m_%d_%H_%M_%S")
+        if self.dt:
+            time_str = dt_time_str
+        else:
+            now = datetime.now()
+            time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
+        self.bug_folder = bug_parent_folder + time_str
         if not os.path.exists(self.bug_folder):
             os.mkdir(self.bug_folder)
+
+        if self.dt:
+            self.bug_folder += '/' + str(dt_iter)
+            if not os.path.exists(self.bug_folder):
+                os.mkdir(self.bug_folder)
 
 
         self.counter = 0
@@ -306,18 +471,36 @@ class MyProblem(Problem):
         self.time_list = []
         self.bug_num_list = []
 
+
+
+
+
+
+
+
         # Fixed hyper-parameters
-        self.waypoints_num_limit = 5
-        self.max_num_of_static = 0
-        self.max_num_of_pedestrians = 2
-        self.max_num_of_vehicles = 2
         self.num_of_weathers = len(WEATHERS)
         self.num_of_static_types = len(static_types)
         self.num_of_pedestrian_types = len(pedestrian_types)
         self.num_of_vehicle_types = len(vehicle_types)
         self.num_of_vehicle_colors = len(vehicle_colors)
+        self.waypoints_num_limit = 5
+
+
+
+
+        # hyperparameters
+        self.max_num_of_static = 0
+        self.min_num_of_static = 0
+        self.max_num_of_pedestrians = 2
+        self.min_num_of_pedestrians = 0
+        self.max_num_of_vehicles = 2
+        self.min_num_of_vehicles = 0
+
+
 
         # general
+
         self.min_friction = 0.2
         self.max_friction = 0.8
         self.perturbation_min = -1.5
@@ -364,7 +547,9 @@ class MyProblem(Problem):
 
 
         # construct xl and xu
-        xl = [self.min_friction, 0, 0, 0, 0]
+        xl = [self.min_friction, 0, self.min_num_of_static,
+        self.min_num_of_pedestrians,
+        self.min_num_of_vehicles]
         xu = [self.max_friction,
         self.num_of_weathers-1,
         self.max_num_of_static,
@@ -384,20 +569,20 @@ class MyProblem(Problem):
             xl.extend([0, self.static_x_min, self.static_y_min, self.yaw_min])
             xu.extend([self.num_of_static_types-1, self.static_x_max, self.static_y_max, self.yaw_max])
             mask.extend(['int'] + ['real']*3)
-            labels.extend(['num_of_static_types_'+str(i), 'static_x_'+str(i), 'static_y_'+str(i), 'yaw_'+str(i)])
+            labels.extend(['num_of_static_types_'+str(i), 'static_x_'+str(i), 'static_y_'+str(i), 'static_yaw_'+str(i)])
         # pedestrians
         for i in range(self.max_num_of_pedestrians):
             xl.extend([0, self.pedestrian_x_min, self.pedestrian_y_min, self.yaw_min, self.pedestrian_trigger_distance_min, self.pedestrian_speed_min, self.pedestrian_dist_to_travel_min])
             xu.extend([self.num_of_pedestrian_types-1, self.pedestrian_x_max, self.pedestrian_y_max, self.yaw_max, self.pedestrian_trigger_distance_max, self.pedestrian_speed_max, self.pedestrian_dist_to_travel_max])
             mask.extend(['int'] + ['real']*6)
-            labels.extend(['num_of_pedestrian_types_'+str(i), 'pedestrian_x_'+str(i), 'pedestrian_y_'+str(i), 'yaw_'+str(i), 'pedestrian_trigger_distance_'+str(i), 'pedestrian_speed_'+str(i), 'pedestrian_dist_to_travel_'+str(i)])
+            labels.extend(['num_of_pedestrian_types_'+str(i), 'pedestrian_x_'+str(i), 'pedestrian_y_'+str(i), 'pedestrian_yaw_'+str(i), 'pedestrian_trigger_distance_'+str(i), 'pedestrian_speed_'+str(i), 'pedestrian_dist_to_travel_'+str(i)])
         # vehicles
         for i in range(self.max_num_of_vehicles):
             xl.extend([0, self.vehicle_x_min, self.vehicle_y_min, self.yaw_min, self.vehicle_initial_speed_min, self.vehicle_trigger_distance_min, self.vehicle_targeted_speed_min, 0, self.vehicle_targeted_x_min, self.vehicle_targeted_y_min, 0, self.vehicle_dist_to_travel_min, self.yaw_min, 0])
 
             xu.extend([self.num_of_vehicle_types-1, self.vehicle_x_max, self.vehicle_y_max, self.yaw_max, self.vehicle_initial_speed_max, self.vehicle_trigger_distance_max, self.vehicle_targeted_speed_max, 1, self.vehicle_targeted_x_max, self.vehicle_targeted_y_max, 1, self.vehicle_dist_to_travel_max, self.yaw_max, self.num_of_vehicle_colors-1])
             mask.extend(['int'] + ['real']*6 + ['int'] + ['real']*2 + ['int'] + ['real']*2 + ['int'])
-            labels.extend(['num_of_vehicle_types_'+str(i), 'vehicle_x_'+str(i), 'vehicle_y_'+str(i), 'yaw_'+str(i), 'vehicle_initial_speed_'+str(i), 'vehicle_trigger_distance_'+str(i), 'vehicle_targeted_speed_'+str(i), 'waypoint_follower_'+str(i), 'vehicle_targeted_x_'+str(i), 'vehicle_targeted_y_'+str(i), 'avoid_collision_'+str(i), 'vehicle_dist_to_travel_'+str(i), 'yaw_'+str(i), 'num_of_vehicle_colors_'+str(i)])
+            labels.extend(['num_of_vehicle_types_'+str(i), 'vehicle_x_'+str(i), 'vehicle_y_'+str(i), 'yaw_'+str(i), 'vehicle_initial_speed_'+str(i), 'vehicle_trigger_distance_'+str(i), 'vehicle_targeted_speed_'+str(i), 'waypoint_follower_'+str(i), 'vehicle_targeted_x_'+str(i), 'vehicle_targeted_y_'+str(i), 'avoid_collision_'+str(i), 'vehicle_dist_to_travel_'+str(i), 'vehicle_yaw_'+str(i), 'num_of_vehicle_colors_'+str(i)])
 
             for j in range(self.waypoints_num_limit):
                 xl.extend([self.perturbation_min]*2)
@@ -425,6 +610,7 @@ class MyProblem(Problem):
         max_num_of_static = self.max_num_of_static
         max_num_of_pedestrians = self.max_num_of_pedestrians
         max_num_of_vehicles = self.max_num_of_vehicles
+
         episode_max_time = self.episode_max_time
         call_from_dt = self.call_from_dt
         bug_folder = self.bug_folder
@@ -444,14 +630,15 @@ class MyProblem(Problem):
 
 
         def fun(x, launch_server, counter):
-            if dt and not is_critical_region(x, estimator, critical_unique_leaves):
+            print('x[:-1].shape:', x[:-1].shape)
+            if dt and not is_critical_region(x[:-1], estimator, critical_unique_leaves):
                 objectives = [-1, 10000, 10000, 0, 0, 0, 0]
                 F = np.array(objectives[:4]) * objective_weights
                 return F, None, None, None, objectives
 
             else:
 
-                x[:-1] = np.clip(x[:-1], np.array(xl), np.array(xu))
+                # x[:-1] = np.clip(x[:-1], np.array(xl), np.array(xu))
 
                 # x = denormalize_by_entry(self, x)
 
@@ -806,6 +993,7 @@ def estimate_objectives(save_path):
         for infraction in infractions[infraction_type]:
             if 'collisions' in infraction_type:
                 typ = re.search('.*with type=(.*) and.*', infraction)
+                print(infraction, typ)
                 if typ:
                     object_type = typ.group(1)
                 loc = re.search('.*x=(.*), y=(.*), z=(.*), ego_linear_speed=(.*), other_actor_linear_speed=(.*)\)', infraction)
@@ -909,9 +1097,9 @@ class MySampling(Sampling):
             # global
             friction = rng.random()
             weather_index = rng.integers(problem.num_of_weathers)
-            num_of_static = rng.integers(problem.max_num_of_static+1)
-            num_of_pedestrians = rng.integers(problem.max_num_of_pedestrians+1)
-            num_of_vehicles = rng.integers(problem.max_num_of_vehicles+1)
+            num_of_static = rng.integers(problem.min_num_of_static, problem.max_num_of_static+1)
+            num_of_pedestrians = rng.integers(problem.min_num_of_pedestrians, problem.max_num_of_pedestrians+1)
+            num_of_vehicles = rng.integers(problem.min_num_of_vehicles, problem.max_num_of_vehicles+1)
             x.extend([friction, weather_index, num_of_static, num_of_pedestrians, num_of_vehicles])
 
             # ego car
@@ -986,21 +1174,20 @@ class NSGA2_DT(NSGA2):
         self.X = X
         self.F = F
 
-
-
         super().__init__(**kwargs)
 
 
     def _initialize(self):
         if self.dt:
             X_list = list(self.X)
+            if len(X_list) == 0:
+                print('No critical leaves!!! Start from random sampling!!!')
+                super()._initialize()
             F_list = list(self.F)
             pop = Population(len(X_list), individual=Individual())
-            pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen)
+            pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen, "CV", [0 for _ in range(len(X_list))], "feasible", [[True] for _ in range(len(X_list))])
 
             self.evaluator.eval(self.problem, pop, algorithm=self)
-
-
 
             if self.survival:
                 pop = self.survival.do(self.problem, pop, len(pop), algorithm=self, n_min_infeas_survive=self.min_infeas_pop_size)
@@ -1012,6 +1199,17 @@ class NSGA2_DT(NSGA2):
 
 
 
+
+
+class ClipRepair(Repair):
+    """
+    A dummy class which can be used to simply do no repair.
+    """
+
+    def do(self, problem, pop, **kwargs):
+        for i in range(len(pop)):
+            pop[i].X = np.clip(pop[i].X, np.array(problem.xl), np.array(problem.xu))
+        return pop
 
 
 class SimpleDuplicateElimination(ElementwiseDuplicateElimination):
@@ -1111,7 +1309,7 @@ def customized_minimize(problem,
     return res
 
 
-def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, n_gen_from_dt=0, pop_size_from_dt=0):
+def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, n_gen_from_dt=0, pop_size_from_dt=0, dt_time_str=None, dt_iter=None):
 
     if call_from_dt:
         termination_condition = 'generations'
@@ -1149,7 +1347,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         algorithm.launch_cluster = True
         problem = algorithm.problem
     else:
-        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves)
+        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, dt_time_str=dt_time_str, dt_iter=dt_iter)
 
 
         from pymoo.operators.mixed_variable_operator import MixedVariableMutation, MixedVariableCrossover
@@ -1179,11 +1377,13 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                           sampling=MySampling(),
                           crossover=crossover,
                           mutation=mutation,
-                          eliminate_duplicates=SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl))
+                          eliminate_duplicates=SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl),
+                          repair=ClipRepair())
         elif algorithm_name == 'random':
             algorithm = RandomAlgorithm(pop_size=pop_size,
                                         sampling=MySampling(),
-                                        eliminate_duplicates=SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl))
+                                        eliminate_duplicates=SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl),
+                                        repair=ClipRepair())
 
 
 
@@ -1210,9 +1410,9 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     print('We have found', problem.num_of_bugs, 'bugs in total.')
 
 
-    print("Best solution found: %s" % res.X)
-    print("Function value: %s" % res.F)
-    print("Constraint violation: %s" % res.CV)
+    # print("Best solution found: %s" % res.X)
+    # print("Function value: %s" % res.F)
+    # print("Constraint violation: %s" % res.CV)
 
     # for drawing hv
     # create the performance indicator object with reference point
@@ -1226,16 +1426,17 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
 
 
-    print(problem.x_list, problem.y_list, problem.F_list, problem.objectives_list)
+    # print(problem.x_list, problem.y_list, problem.F_list, problem.objectives_list)
 
     X = np.stack(problem.x_list)
     y = np.array(problem.y_list)
     F = np.stack(problem.F_list)
     objectives = np.stack(problem.objectives_list)
+    time_list = problem.time_list
 
 
     with open(os.path.join(problem.bug_folder, 'res_'+str(ind)+'.pkl'), 'wb') as f_out:
-        pickle.dump({'X':X, 'y':y, 'F':F, 'objectives':objectives, 'n_gen':n_gen, 'pop_size':pop_size, 'hv':hv, 'time_list':problem.time_list, 'bug_num_list':problem.bug_num_list}, f_out)
+        pickle.dump({'X':X, 'y':y, 'F':F, 'objectives':objectives, 'n_gen':n_gen, 'pop_size':pop_size, 'hv':hv, 'time_list':time_list, 'bug_num_list':problem.bug_num_list}, f_out)
         print('-'*100, 'pickled')
 
 
@@ -1246,7 +1447,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
             print('-'*100, 'pickled')
 
 
-    return X, y, F, objectives
+    return X, y, F, objectives, time_list
 
 if __name__ == '__main__':
     run_ga()

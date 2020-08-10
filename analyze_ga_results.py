@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter
 from sklearn.manifold import TSNE
-
+from dt import filter_critical_regions
 
 
 
@@ -163,8 +163,9 @@ def analyze_data(pickle_path):
         y = d['y']
         F = d['F']
         objectives = d['objectives']
-        for x in list(X):
-            print(x)
+        print(np.sum(X[10,:]-X[11,:]))
+        filter_critical_regions(X, y)
+        # TBD: tree diversity
 
 
 # plot two tsne plots for bugs VS normal and data points across generations
@@ -231,8 +232,8 @@ if __name__ == '__main__':
     # draw_performance(bug_res_path, save_folder)
 
 
-    # path = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/True/nsga2/Town05/Scenario12/right/00/2020_08_08_21_36_51/res_0.pkl'
-    # analyze_data(path)
+    path = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/True/nsga2/Town05/Scenario12/right/00/2020_08_08_21_36_51/res_0.pkl'
+    analyze_data(path)
     # apply_tsne(path, 5, 20)
 
 
@@ -240,4 +241,4 @@ if __name__ == '__main__':
     # list_bug_categories_with_numbers('/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/False/nsga2/Town03/Scenario12/front/00/2020_08_08_16_17_53')
 
 
-    plot_each_bug_num_and_objective_num_over_generations('/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/True/nsga2/Town05/Scenario12/right/00/2020_08_08_21_36_51/mean_objectives_across_generations.txt')
+    # plot_each_bug_num_and_objective_num_over_generations('/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/True/nsga2/Town05/Scenario12/right/00/2020_08_08_21_36_51/mean_objectives_across_generations.txt')
