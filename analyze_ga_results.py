@@ -208,6 +208,20 @@ def apply_tsne(pickle_path, n_gen, pop_size):
     plt.savefig('tsne')
 
 
+def compare_with_dt(file):
+    d = np.load(file, allow_pickle=True)
+    print(np.sum(d['y']), len(d['y']))
+    from dt import filter_critical_regions
+    filter_critical_regions(d['X'], d['y'])
+    # for i in range(d['X'].shape[0]):
+    #     for j in range(i+1, d['X'].shape[0]):
+    #         if np.abs(np.sum(d['X'][i] - d['X'][j])) < 0.00001:
+    #             print(i, j, 'repeat')
+
+    # print(d['X'][0])
+    # print(d['X'][1])
+    # print(np.sum(d['X'][0] - d['X'][1]))
+
 if __name__ == '__main__':
     # nsga2
     # folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town03/Scenario12/right/01/2020_08_01_01_59_32'
@@ -232,8 +246,10 @@ if __name__ == '__main__':
     # draw_performance(bug_res_path, save_folder)
 
 
-    path = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/True/nsga2/Town05/Scenario12/right/00/2020_08_08_21_36_51/res_0.pkl'
-    analyze_data(path)
+
+
+    # path = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/True/nsga2/Town05/Scenario12/right/00/2020_08_08_21_36_51/res_0.pkl'
+    # analyze_data(path)
     # apply_tsne(path, 5, 20)
 
 
@@ -242,3 +258,7 @@ if __name__ == '__main__':
 
 
     # plot_each_bug_num_and_objective_num_over_generations('/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/True/nsga2/Town05/Scenario12/right/00/2020_08_08_21_36_51/mean_objectives_across_generations.txt')
+
+
+    # compare_with_dt('dt_data/Town03_Scenario12_front_0_default_1st.npz')
+    compare_with_dt('dt_data/Town03_Scenario12_front_0_default_2020_08_11_02_22_41.npz')

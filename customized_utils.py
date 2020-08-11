@@ -257,6 +257,13 @@ def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_
 
 
 
+def interpret_x_using_labels(x, labels):
+    assert len(x) == len(labels)
+    for i in range(len(x)):
+        print(labels[i], x[i])
+
+
+
 def make_hierarchical_dir(folder_names):
     cur_folder_name = ''
     for i in range(len(folder_names)):
@@ -453,6 +460,9 @@ def customize_parameters(parameters, customized_parameters):
         else:
             # print(k, 'is not defined in the parameters.')
             pass
+
+
+
 
 '''
 customized non-default center transforms for actors

@@ -1,7 +1,8 @@
 '''
 TBD:
-* test specific scenario
-* test dt (multi obj and single obj) and baseline
+* fix repeating seed
+* analyze dt results(visualization, show leaves results)
+* debug dt (analyze dt results), test dt (multi obj and single obj) and baseline, and compare results
 
 * reproduce a bug
 * retraining
@@ -12,8 +13,6 @@ TBD:
 * avoid spawning of objects on route (a variable to control)
 
 * save intermediate results to avoid crash
-
-* fix unknown collision object
 
 * max time for running dt
 
@@ -205,8 +204,8 @@ from dask.distributed import Client, LocalCluster
 
 
 
-
-rng = np.random.default_rng(20)
+random_seeds = [0, 10, 20]
+rng = np.random.default_rng(random_seeds[0])
 bug_root_folder = 'bugs'
 global_town_name = 'Town03'
 global_scenario = 'Scenario12'
@@ -504,6 +503,7 @@ class MyProblem(Problem):
 
         xl = self.xl
         xu = self.xu
+        labels = self.labels
 
         dt = self.dt
         estimator = self.estimator
@@ -549,12 +549,12 @@ class MyProblem(Problem):
                 if objectives[0] > 0 or objectives[4] or objectives[5]:
                     info = {**info, 'x':x, 'waypoints_num_limit':waypoints_num_limit, 'num_of_static_max':num_of_static_max, 'num_of_pedestrians_max':num_of_pedestrians_max, 'num_of_vehicles_max':num_of_vehicles_max, 'customized_center_transforms':customized_center_transforms}
 
-                    bug_info = {'counter':counter, 'x':x, 'objectives':objectives,  'loc':loc, 'object_type':object_type, 'info': info}
+                    bug_info = {'counter':counter, 'x':x, 'objectives':objectives,  'loc':loc, 'object_type':object_type, 'labels':labels, 'info': info}
                     cur_folder = bug_folder+'/'+str(counter)
                     if not os.path.exists(cur_folder):
                         os.mkdir(cur_folder)
                     with open(cur_folder+'/'+'bug_info.pickle', 'wb') as f_out:
-                        pickle.dump(f_out, bug_info)
+                        pickle.dump(bug_info, f_out)
                     # copy data to another place
                     try:
                         new_path = os.path.join(cur_folder, 'data')
@@ -589,15 +589,15 @@ class MyProblem(Problem):
 
                 # record bug
                 if objectives[0] > 0 or objectives[4] or objectives[5]:
+                    bug_str = None
                     if objectives[0] > 0:
                         self.num_of_collisions += 1
                         collision_types = {'pedestrian_collision':pedestrian_types, 'car_collision':car_types, 'motercycle_collision':motorcycle_types, 'cyclist_collision':cyclist_types, 'static_collision':static_types}
                         for k,v in collision_types.items():
-                            print(type(object_type), object_type)
-                            print(v)
                             if object_type in v:
                                 bug_str = k
-                        bug_str = 'unknown_collision'+'_'+object_type
+                        if not bug_str:
+                            bug_str = 'unknown_collision'+'_'+object_type
                     elif objectives[4]:
                         self.num_of_offroad += 1
                         bug_str = 'offroad'
@@ -640,7 +640,7 @@ class MyProblem(Problem):
 
                 assert X.shape[0] >= len(self.ports), print(X)
 
-
+                rng = np.random.default_rng(random_seeds[1])
                 submit_and_run_jobs(0, len(self.ports), True, job_results)
 
                 time_elapsed = time.time() - self.start_time
@@ -651,6 +651,7 @@ class MyProblem(Problem):
                 print('\n'*10)
 
                 if X.shape[0] > len(self.ports):
+                    rng = np.random.default_rng(random_seeds[2])
                     submit_and_run_jobs(len(self.ports), X.shape[0], False, job_results)
 
 
@@ -1376,6 +1377,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     objectives = np.stack(problem.objectives_list)
     time_list = problem.time_list
     bug_num_list = problem.bug_num_list
+    labels = problem.labels
 
 
     with open(os.path.join(problem.bug_folder, 'res_'+str(ind)+'.pkl'), 'wb') as f_out:
@@ -1392,7 +1394,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     non_dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, dt_time_str])
 
     pth = os.path.join(non_dt_save_folder, non_dt_save_file)
-    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time_list, bug_num=bug_num_list)
+    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time_list, bug_num=bug_num_list, labels=labels)
     print('non_dt npz saved')
 
 
@@ -1402,7 +1404,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
             print('-'*100, 'pickled')
 
 
-    return X, y, F, objectives, time_list, bug_num_list
+    return X, y, F, objectives, time_list, bug_num_list, labels
 
 if __name__ == '__main__':
     run_ga()

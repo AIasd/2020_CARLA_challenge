@@ -49,7 +49,7 @@ def rerun_simulation(pickle_filename, rerun_save_folder, ind):
     if not os.path.exists(cur_folder):
         os.mkdir(cur_folder)
     with open(cur_folder+'/'+'cur_info', 'wb') as f_out:
-        pickle.dump(f_out, bug)
+        pickle.dump(bug, f_out)
 
     # copy data to another place
     try:

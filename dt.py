@@ -77,6 +77,7 @@ def main():
     objectives = None
     time = None
     bug_num = None
+    labels = None
     estimator = None
     critical_unique_leaves = None
 
@@ -89,7 +90,9 @@ def main():
         dt = True
         if i == 0 or np.sum(y)==0:
             dt = False
-        X_new, y_new, F_new, objectives_new, time_new, bug_num_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str, i, town_name, scenario, direction, route, scenario_type, ego_car_model)
+        if i == 1:
+            n_gen += 1
+        X_new, y_new, F_new, objectives_new, time_new, bug_num_new, labels = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str, i, town_name, scenario, direction, route, scenario_type, ego_car_model)
 
         if i == 0:
             X = X_new
@@ -110,7 +113,7 @@ def main():
         estimator, inds, critical_unique_leaves = filter_critical_regions(X, y)
         X_filtered = X[inds]
         F_filtered = F[inds]
-        print(np.sum(y))
+        print(len(X_filtered), X.shape)
 
 
     # Save data
@@ -120,13 +123,13 @@ def main():
     dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, dt_time_str])
 
     pth = os.path.join(dt_save_folder, dt_save_file)
-    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time, bug_num=bug_num)
+    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time, bug_num=bug_num, labels=labels)
     print('dt data saved')
     os.system('chmod -R 777 '+dt_save_folder)
 
 
 
-    return X, y, F, objectives, time, bug_num
+    return X, y, F, objectives, time, bug_num, labels
 
 def visualization(estimator):
     tree.plot_tree(estimator)
@@ -135,7 +138,7 @@ def visualization(estimator):
     graph.render("tree")
 
 if __name__ == '__main__':
-    X, y, F, objectives, time, bug_num = main()
+    X, y, F, objectives, time, bug_num, labels = main()
 
 
     # d = np.load('dt.npz')
