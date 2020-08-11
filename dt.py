@@ -60,6 +60,7 @@ def main():
     direction = 'front'
     route = 0
     scenario_type = 'default'
+    ego_car_model = 'lbc'
 
     # [5, 7]
     outer_iterations = 3
@@ -88,7 +89,7 @@ def main():
         dt = True
         if i == 0 or np.sum(y)==0:
             dt = False
-        X_new, y_new, F_new, objectives_new, time_new, bug_num_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str, i, town_name, scenario, direction, route, scenario_type)
+        X_new, y_new, F_new, objectives_new, time_new, bug_num_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str, i, town_name, scenario, direction, route, scenario_type, ego_car_model)
 
         if i == 0:
             X = X_new
@@ -116,10 +117,13 @@ def main():
     dt_save_folder = 'dt_data'
     if not os.path.exists(dt_save_folder):
         os.mkdir(dt_save_folder)
-    dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type])
+    dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, dt_time_str])
 
-    np.savez(os.path.join(dt_save_folder, dt_save_file), X=X, y=y, F=F, objectives=objectives, time=time, bug_num=bug_num)
+    pth = os.path.join(dt_save_folder, dt_save_file)
+    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time, bug_num=bug_num)
     print('dt data saved')
+    os.system('chmod -R 777 '+dt_save_folder)
+
 
 
     return X, y, F, objectives, time, bug_num
@@ -131,7 +135,7 @@ def visualization(estimator):
     graph.render("tree")
 
 if __name__ == '__main__':
-    X, y, F, objectives, time = main()
+    X, y, F, objectives, time, bug_num = main()
 
 
     # d = np.load('dt.npz')

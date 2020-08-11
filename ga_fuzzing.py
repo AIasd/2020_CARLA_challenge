@@ -3,8 +3,9 @@ TBD:
 * test specific scenario
 * test dt (multi obj and single obj) and baseline
 
-* retraining
 * reproduce a bug
+* retraining
+
 
 
 
@@ -32,7 +33,7 @@ TBD:
 * stage 1 map model
 
 
-
+* maybe make the validity checking static before each simulation (this needs extra knowledge of the map)
 
 
 * limit generation of objects in a certain area
@@ -213,14 +214,14 @@ global_direction = 'front'
 global_route = 0
 
 # ['default', 'leading_car_braking']
-global_scenario_type = 'leading_car_braking'
+global_scenario_type = 'default'
 
 
 
 # ['nsga2', 'random']
 algorithm_name = 'nsga2'
 # ['lbc', 'auto_pilot', 'pid_agent']
-ego_car_model = 'lbc'
+global_ego_car_model = 'lbc'
 os.environ['HAS_DISPLAY'] = '0'
 # This is used to control how this program use GPU
 # '0,1'
@@ -275,7 +276,7 @@ for customizing weather choices, static_types, pedestrian_types, vehicle_types, 
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, town_name, scenario, direction, route_str, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, customized_parameters_bounds={}, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, town_name, scenario, direction, route_str, ego_car_model, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, customized_parameters_bounds={}, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0):
 
         self.call_from_dt = call_from_dt
         self.dt = dt
@@ -308,6 +309,7 @@ class MyProblem(Problem):
         self.scenario = scenario
         self.direction = direction
         self.route_str = route_str
+        self.ego_car_model = ego_car_model
 
         if self.dt:
             self.bug_folder += '/' + str(dt_iter)
@@ -514,6 +516,7 @@ class MyProblem(Problem):
         scenario = self.scenario
         direction = self.direction
         route_str = self.route_str
+        ego_car_model = self.ego_car_model
 
 
 
@@ -535,7 +538,7 @@ class MyProblem(Problem):
 
 
                 # run simulation
-                objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str)
+                objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, ego_car_model)
 
                 # [ego_linear_speed, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light]
 
@@ -544,11 +547,14 @@ class MyProblem(Problem):
 
 
                 if objectives[0] > 0 or objectives[4] or objectives[5]:
-                    bug = {'counter':counter, 'x':x, 'ego_linear_speed':objectives[0], 'offroad_d':objectives[1], 'wronglane_d':objectives[2], 'dev_dist':objectives[3], 'is_offroad':objectives[4], 'is_wrong_lane':objectives[5], 'is_run_red_light':objectives[6], 'loc':loc, 'object_type':object_type, 'info': info}
+                    info = {**info, 'x':x, 'waypoints_num_limit':waypoints_num_limit, 'num_of_static_max':num_of_static_max, 'num_of_pedestrians_max':num_of_pedestrians_max, 'num_of_vehicles_max':num_of_vehicles_max, 'customized_center_transforms':customized_center_transforms}
+
+                    bug_info = {'counter':counter, 'x':x, 'objectives':objectives,  'loc':loc, 'object_type':object_type, 'info': info}
                     cur_folder = bug_folder+'/'+str(counter)
                     if not os.path.exists(cur_folder):
                         os.mkdir(cur_folder)
-                    np.savez(cur_folder+'/'+'bug_info', bug=bug)
+                    with open(cur_folder+'/'+'bug_info.pickle', 'wb') as f_out:
+                        pickle.dump(f_out, bug_info)
                     # copy data to another place
                     try:
                         new_path = os.path.join(cur_folder, 'data')
@@ -587,6 +593,8 @@ class MyProblem(Problem):
                         self.num_of_collisions += 1
                         collision_types = {'pedestrian_collision':pedestrian_types, 'car_collision':car_types, 'motercycle_collision':motorcycle_types, 'cyclist_collision':cyclist_types, 'static_collision':static_types}
                         for k,v in collision_types.items():
+                            print(type(object_type), object_type)
+                            print(v)
                             if object_type in v:
                                 bug_str = k
                         bug_str = 'unknown_collision'+'_'+object_type
@@ -696,44 +704,41 @@ class MyProblem(Problem):
 
 
 
-def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str):
+def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, ego_car_model, rerun=False):
     arguments = arguments_info()
     arguments.port = customized_data['port']
     arguments.debug = 1
 
 
 
-
-
-
-
     if ego_car_model == 'lbc':
         arguments.agent='scenario_runner/team_code/image_agent.py'
         arguments.agent_config='/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/epoch=24.ckpt'
-        os.environ['SAVE_FOLDER'] = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized'
+        base_save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized'
     elif ego_car_model == 'auto_pilot':
         arguments.agent = 'leaderboard/team_code/auto_pilot.py'
         arguments.agent_config = ''
-        os.environ['SAVE_FOLDER'] = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_autopilot'
+        base_save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_autopilot'
     elif ego_car_model == 'pid_agent':
         arguments.agent = 'scenario_runner/team_code/pid_agent.py'
         arguments.agent_config = ''
-        os.environ['SAVE_FOLDER'] = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_pid_agent'
+        base_save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_pid_agent'
     elif ego_car_model == 'map_model':
         arguments.agent = 'scenario_runner/team_code/map_agent.py'
         arguments.agent_config = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage1_default_50_epoch=16.ckpt'
-        os.environ['SAVE_FOLDER'] = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_map_model'
+        base_save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_map_model'
+
+
+    if rerun:
+        os.environ['SAVE_FOLDER'] = make_hierarchical_dir([base_save_folder, '/rerun', str(int(arguments.port)), str(call_from_dt)])
+    else:
+        os.environ['SAVE_FOLDER'] = make_hierarchical_dir([base_save_folder, str(int(arguments.port)), str(call_from_dt)])
+
 
 
     arguments.scenarios = 'leaderboard/data/fuzzing_scenarios.json'
-    if not os.path.exists(os.environ['SAVE_FOLDER']):
-        os.mkdir(os.environ['SAVE_FOLDER'])
-    os.environ['SAVE_FOLDER'] += '/'+str(int(arguments.port))
-    if not os.path.exists(os.environ['SAVE_FOLDER']):
-        os.mkdir(os.environ['SAVE_FOLDER'])
-    os.environ['SAVE_FOLDER'] += '/'+str(call_from_dt)
-    if not os.path.exists(os.environ['SAVE_FOLDER']):
-        os.mkdir(os.environ['SAVE_FOLDER'])
+
+
 
 
     statistics_manager = StatisticsManager()
@@ -832,7 +837,16 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
         objectives, loc, object_type = estimate_objectives(save_path)
 
 
-    info = [arguments.scenarios, town_name, scenario, direction, route, sample_factor, customized_data['center_transform'].location.x, customized_data['center_transform'].location.y]
+
+
+    info = {'episode_max_time':episode_max_time,
+    'call_from_dt':call_from_dt,
+    'town_name':town_name,
+    'scenario':scenario,
+    'direction':direction,
+    'route_str':route_str,
+    'ego_car_model':ego_car_model}
+
 
     return objectives, loc, object_type, info, save_path
 
@@ -1224,7 +1238,7 @@ def customized_minimize(problem,
     return res
 
 
-def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, n_gen_from_dt=0, pop_size_from_dt=0, dt_time_str=None, dt_iter=None, town_name=None, scenario=None, direction=None, route=None, scenario_type='default'):
+def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, n_gen_from_dt=0, pop_size_from_dt=0, dt_time_str=None, dt_iter=None, town_name=None, scenario=None, direction=None, route=None, scenario_type='default', ego_car_model='lbc'):
 
     if call_from_dt:
         termination_condition = 'generations'
@@ -1245,6 +1259,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         direction = global_direction
         route = global_route
         scenario_type = global_scenario_type
+        ego_car_model = global_ego_car_model
 
 
     route_str = str(route)
@@ -1272,7 +1287,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         algorithm.launch_cluster = True
         problem = algorithm.problem
     else:
-        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, customized_parameters_bounds=customized_d['customized_parameters_bounds'], customized_parameters_distributions=customized_d['customized_parameters_distributions'], customized_center_transforms=customized_d['customized_center_transforms'],
+        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, ego_car_model=ego_car_model, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, customized_parameters_bounds=customized_d['customized_parameters_bounds'], customized_parameters_distributions=customized_d['customized_parameters_distributions'], customized_center_transforms=customized_d['customized_center_transforms'],
         call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, dt_time_str=dt_time_str, dt_iter=dt_iter)
 
 
@@ -1367,6 +1382,18 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         pickle.dump({'X':X, 'y':y, 'F':F, 'objectives':objectives, 'n_gen':n_gen, 'pop_size':pop_size, 'hv':hv, 'time_list':time_list, 'bug_num_list':problem.bug_num_list}, f_out)
         print('-'*100, 'pickled')
 
+
+    # save another data npz for easy comparison with dt results
+    non_dt_save_folder = 'non_dt_data'
+    if not os.path.exists(non_dt_save_folder):
+        os.mkdir(non_dt_save_folder)
+    now = datetime.now()
+    non_dt_time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
+    non_dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, dt_time_str])
+
+    pth = os.path.join(non_dt_save_folder, non_dt_save_file)
+    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time_list, bug_num=bug_num_list)
+    print('non_dt npz saved')
 
 
     if save:
