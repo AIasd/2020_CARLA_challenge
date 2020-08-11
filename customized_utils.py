@@ -451,7 +451,8 @@ def customize_parameters(parameters, customized_parameters):
         if k in parameters:
             parameters[k] = v
         else:
-            print(k, 'is not defined in the parameters.')
+            # print(k, 'is not defined in the parameters.')
+            pass
 
 '''
 customized non-default center transforms for actors

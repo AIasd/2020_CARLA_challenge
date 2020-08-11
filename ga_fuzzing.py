@@ -221,7 +221,7 @@ global_scenario_type = 'leading_car_braking'
 algorithm_name = 'nsga2'
 # ['lbc', 'auto_pilot', 'pid_agent']
 ego_car_model = 'lbc'
-os.environ['HAS_DISPLAY'] = '1'
+os.environ['HAS_DISPLAY'] = '0'
 # This is used to control how this program use GPU
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
@@ -1360,6 +1360,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     F = np.stack(problem.F_list)
     objectives = np.stack(problem.objectives_list)
     time_list = problem.time_list
+    bug_num_list = problem.bug_num_list
 
 
     with open(os.path.join(problem.bug_folder, 'res_'+str(ind)+'.pkl'), 'wb') as f_out:
