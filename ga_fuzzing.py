@@ -8,7 +8,8 @@ TBD:
 * retraining
 
 
-
+* uniqueness of bugs
+* hd image saving
 
 * avoid spawning of objects on route (a variable to control)
 
@@ -207,13 +208,14 @@ from dask.distributed import Client, LocalCluster
 random_seeds = [0, 10, 20]
 rng = np.random.default_rng(random_seeds[0])
 bug_root_folder = 'bugs'
+non_bug_root_folder = 'non_bugs'
 global_town_name = 'Town03'
 global_scenario = 'Scenario12'
 global_direction = 'front'
 global_route = 0
 
-# ['default', 'leading_car_braking']
-global_scenario_type = 'default'
+# ['default', 'leading_car_braking', 'vehicles_only']
+global_scenario_type = 'leading_car_braking'
 
 
 
@@ -263,19 +265,13 @@ if run_parallelization:
 
 '''
 for customizing weather choices, static_types, pedestrian_types, vehicle_types, and vehicle_colors, make changes to object_types.py
-
-
-
-
-
-
 '''
 
 
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, town_name, scenario, direction, route_str, ego_car_model, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, customized_parameters_bounds={}, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, ego_car_model, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, customized_parameters_bounds={}, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0):
 
         self.call_from_dt = call_from_dt
         self.dt = dt
@@ -300,6 +296,7 @@ class MyProblem(Problem):
             now = datetime.now()
             time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
         self.bug_folder = bug_parent_folder + time_str
+        self.non_bug_folder = non_bug_parent_folder + time_str
         if not os.path.exists(self.bug_folder):
             os.mkdir(self.bug_folder)
 
@@ -328,128 +325,6 @@ class MyProblem(Problem):
         self.bug_num_list = []
 
 
-
-
-
-
-
-
-        # # Fixed hyper-parameters
-        # self.num_of_weathers = len(WEATHERS)
-        # self.num_of_static_types = len(static_types)
-        # self.num_of_pedestrian_types = len(pedestrian_types)
-        # self.num_of_vehicle_types = len(vehicle_types)
-        # self.num_of_vehicle_colors = len(vehicle_colors)
-        # self.waypoints_num_limit = 5
-        #
-        #
-        #
-        #
-        # # hyperparameters
-        # self.num_of_static_max = 0
-        # self.min_num_of_static = 0
-        # self.num_of_pedestrians_max = 2
-        # self.min_num_of_pedestrians = 0
-        # self.num_of_vehicles_max = 2
-        # self.min_num_of_vehicles = 0
-        #
-        #
-        #
-        # # general
-        #
-        # self.min_friction = 0.2
-        # self.max_friction = 0.8
-        # self.perturbation_min = -1.5
-        # self.perturbation_max = 1.5
-        # self.yaw_min = 0
-        # self.yaw_max = 360
-        #
-        # # static
-        # self.static_x_min = -20
-        # self.static_x_max = 20
-        # self.static_y_min = -20
-        # self.static_y_max = 20
-        #
-        # # pedestrians
-        # self.pedestrian_x_min = -20
-        # self.pedestrian_x_max = 20
-        # self.pedestrian_y_min = -20
-        # self.pedestrian_y_max = 20
-        # self.pedestrian_trigger_distance_min = 2
-        # self.pedestrian_trigger_distance_max = 50
-        # self.pedestrian_speed_min = 0
-        # self.pedestrian_speed_max = 4
-        # self.pedestrian_dist_to_travel_min = 0
-        # self.pedestrian_dist_to_travel_max = 50
-        #
-        # # vehicles
-        # self.vehicle_x_min = -20
-        # self.vehicle_x_max = 20
-        # self.vehicle_y_min = -20
-        # self.vehicle_y_max = 20
-        # self.vehicle_initial_speed_min = 0
-        # self.vehicle_initial_speed_max = 15
-        # self.vehicle_trigger_distance_min = 0
-        # self.vehicle_trigger_distance_max = 50
-        # self.vehicle_targeted_speed_min = 0
-        # self.vehicle_targeted_speed_max = 15
-        # self.vehicle_targeted_x_min = -20
-        # self.vehicle_targeted_x_max = 20
-        # self.vehicle_targeted_y_min = -20
-        # self.vehicle_targeted_y_max = 20
-        # self.vehicle_dist_to_travel_min = 0
-        # self.vehicle_dist_to_travel_max = 50
-        #
-        #
-        #
-        # # construct xl and xu
-        # xl = [self.min_friction, 0, self.min_num_of_static,
-        # self.min_num_of_pedestrians,
-        # self.min_num_of_vehicles]
-        # xu = [self.max_friction,
-        # self.num_of_weathers-1,
-        # self.num_of_static_max,
-        # self.num_of_pedestrians_max,
-        # self.num_of_vehicles_max
-        # ]
-        # mask = ['real', 'int', 'int', 'int', 'int']
-        # labels = ['friction', 'num_of_weathers', 'num_of_static_max', 'num_of_pedestrians_max', 'num_of_vehicles_max']
-        # # ego-car
-        # for i in range(self.waypoints_num_limit):
-        #     xl.extend([self.perturbation_min]*2)
-        #     xu.extend([self.perturbation_max]*2)
-        #     mask.extend(['real']*2)
-        #     labels.extend(['perturbation_x_'+str(i), 'perturbation_y_'+str(i)])
-        # # static
-        # for i in range(self.num_of_static_max):
-        #     xl.extend([0, self.static_x_min, self.static_y_min, self.yaw_min])
-        #     xu.extend([self.num_of_static_types-1, self.static_x_max, self.static_y_max, self.yaw_max])
-        #     mask.extend(['int'] + ['real']*3)
-        #     labels.extend(['num_of_static_types_'+str(i), 'static_x_'+str(i), 'static_y_'+str(i), 'static_yaw_'+str(i)])
-        # # pedestrians
-        # for i in range(self.num_of_pedestrians_max):
-        #     xl.extend([0, self.pedestrian_x_min, self.pedestrian_y_min, self.yaw_min, self.pedestrian_trigger_distance_min, self.pedestrian_speed_min, self.pedestrian_dist_to_travel_min])
-        #     xu.extend([self.num_of_pedestrian_types-1, self.pedestrian_x_max, self.pedestrian_y_max, self.yaw_max, self.pedestrian_trigger_distance_max, self.pedestrian_speed_max, self.pedestrian_dist_to_travel_max])
-        #     mask.extend(['int'] + ['real']*6)
-        #     labels.extend(['num_of_pedestrian_types_'+str(i), 'pedestrian_x_'+str(i), 'pedestrian_y_'+str(i), 'pedestrian_yaw_'+str(i), 'pedestrian_trigger_distance_'+str(i), 'pedestrian_speed_'+str(i), 'pedestrian_dist_to_travel_'+str(i)])
-        # # vehicles
-        # for i in range(self.num_of_vehicles_max):
-        #     xl.extend([0, self.vehicle_x_min, self.vehicle_y_min, self.yaw_min, self.vehicle_initial_speed_min, self.vehicle_trigger_distance_min, self.vehicle_targeted_speed_min, 0, self.vehicle_targeted_x_min, self.vehicle_targeted_y_min, 0, self.vehicle_dist_to_travel_min, self.yaw_min, 0])
-        #
-        #     xu.extend([self.num_of_vehicle_types-1, self.vehicle_x_max, self.vehicle_y_max, self.yaw_max, self.vehicle_initial_speed_max, self.vehicle_trigger_distance_max, self.vehicle_targeted_speed_max, 1, self.vehicle_targeted_x_max, self.vehicle_targeted_y_max, 1, self.vehicle_dist_to_travel_max, self.yaw_max, self.num_of_vehicle_colors-1])
-        #     mask.extend(['int'] + ['real']*6 + ['int'] + ['real']*2 + ['int'] + ['real']*2 + ['int'])
-        #     labels.extend(['num_of_vehicle_types_'+str(i), 'vehicle_x_'+str(i), 'vehicle_y_'+str(i), 'yaw_'+str(i), 'vehicle_initial_speed_'+str(i), 'vehicle_trigger_distance_'+str(i), 'vehicle_targeted_speed_'+str(i), 'waypoint_follower_'+str(i), 'vehicle_targeted_x_'+str(i), 'vehicle_targeted_y_'+str(i), 'avoid_collision_'+str(i), 'vehicle_dist_to_travel_'+str(i), 'vehicle_yaw_'+str(i), 'num_of_vehicle_colors_'+str(i)])
-        #
-        #     for j in range(self.waypoints_num_limit):
-        #         xl.extend([self.perturbation_min]*2)
-        #         xu.extend([self.perturbation_max]*2)
-        #         mask.extend(['real']*2)
-        #         labels.extend(['perturbation_x_'+str(i)+'_'+str(j), 'perturbation_y_'+str(i)+'_'+str(j)])
-        #
-        # self.mask = mask
-        # self.labels = labels
-        #
-        # n_var = 5+self.waypoints_num_limit*2+self.num_of_static_max*4+self.num_of_pedestrians_max*7+self.num_of_vehicles_max*(14+self.waypoints_num_limit*2)
 
 
         fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels = setup_bounds_mask_labels_distributions_stage1()
@@ -500,6 +375,7 @@ class MyProblem(Problem):
         episode_max_time = self.episode_max_time
         call_from_dt = self.call_from_dt
         bug_folder = self.bug_folder
+        non_bug_folder = self.non_bug_folder
 
         xl = self.xl
         xu = self.xu
@@ -546,16 +422,22 @@ class MyProblem(Problem):
                 F = np.array(objectives[:4]) * objective_weights
 
 
-                if objectives[0] > 0 or objectives[4] or objectives[5]:
-                    info = {**info, 'x':x, 'waypoints_num_limit':waypoints_num_limit, 'num_of_static_max':num_of_static_max, 'num_of_pedestrians_max':num_of_pedestrians_max, 'num_of_vehicles_max':num_of_vehicles_max, 'customized_center_transforms':customized_center_transforms}
+                info = {**info, 'x':x, 'waypoints_num_limit':waypoints_num_limit, 'num_of_static_max':num_of_static_max, 'num_of_pedestrians_max':num_of_pedestrians_max, 'num_of_vehicles_max':num_of_vehicles_max, 'customized_center_transforms':customized_center_transforms}
 
-                    bug_info = {'counter':counter, 'x':x, 'objectives':objectives,  'loc':loc, 'object_type':object_type, 'labels':labels, 'info': info}
-                    cur_folder = bug_folder+'/'+str(counter)
-                    if not os.path.exists(cur_folder):
-                        os.mkdir(cur_folder)
-                    with open(cur_folder+'/'+'bug_info.pickle', 'wb') as f_out:
-                        pickle.dump(bug_info, f_out)
-                    # copy data to another place
+                cur_info = {'counter':counter, 'x':x, 'objectives':objectives,  'loc':loc, 'object_type':object_type, 'labels':labels, 'info': info}
+
+                is_bug = objectives[0] > 0 or objectives[4] or objectives[5]
+
+                if is_bug:
+                    cur_folder = make_hierarchical_dir([bug_folder, str(counter)])
+                else:
+                    cur_folder = make_hierarchical_dir([non_bug_folder, str(counter)])
+
+                with open(cur_folder+'/'+'cur_info.pickle', 'wb') as f_out:
+                    pickle.dump(cur_info, f_out)
+
+                if is_bug:
+                    # copy data to current folder if it is a bug
                     try:
                         new_path = os.path.join(cur_folder, 'data')
                         shutil.copytree(save_path, new_path)
@@ -705,16 +587,18 @@ class MyProblem(Problem):
 
 
 
-def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, ego_car_model, rerun=False):
+def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, ego_car_model, rerun=False, rerun_folder=None):
     arguments = arguments_info()
     arguments.port = customized_data['port']
     arguments.debug = 1
+    if rerun:
+        arguments.debug = 0
 
 
 
     if ego_car_model == 'lbc':
         arguments.agent='scenario_runner/team_code/image_agent.py'
-        arguments.agent_config='/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/epoch=24.ckpt'
+        arguments.agent_config='/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage2_default_25_epoch=15.ckpt'
         base_save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized'
     elif ego_car_model == 'auto_pilot':
         arguments.agent = 'leaderboard/team_code/auto_pilot.py'
@@ -728,6 +612,8 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
         arguments.agent = 'scenario_runner/team_code/map_agent.py'
         arguments.agent_config = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage1_default_50_epoch=16.ckpt'
         base_save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_map_model'
+    else:
+        print('unknown ego_car_model:', ego_car_model)
 
 
     if rerun:
@@ -800,17 +686,6 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
         for waypoint in route.iter('waypoint'):
             route_waypoints.append(create_transform(float(waypoint.attrib['x']), float(waypoint.attrib['y']), float(waypoint.attrib['z']), float(waypoint.attrib['pitch']), float(waypoint.attrib['yaw']), float(waypoint.attrib['roll'])))
 
-    # extract waypoints for the scenario
-    # world_annotations = RouteParser.parse_annotations_file(arguments.scenarios)
-    # info = world_annotations[town_name][0]["available_event_configurations"][0]
-    #
-    # center = info["center"]
-    # RouteParser.convert_waypoint_float(center)
-    # center_location = carla.Location(float(center['x']), float(center['y']), float(center['z']))
-    # center_rotation = carla.Rotation(float(center['pitch']), float(center['yaw']), 0.0)
-    # center_transform = carla.Transform(center_location, center_rotation)
-
-    # use the intermediate waypoint as the center transform
 
     # --------------------------------------------------------------------------
 
@@ -847,6 +722,18 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
     'direction':direction,
     'route_str':route_str,
     'ego_car_model':ego_car_model}
+
+
+    if rerun:
+        is_bug = objectives[0] > 0 or objectives[4] or objectives[5]
+        if is_bug:
+            print('\n'*3, 'rerun also causes a bug!!! will not save this', '\n'*3)
+        else:
+            assert rerun_folder
+            try:
+                shutil.copytree(save_path, rerun_folder)
+            except:
+                print('fail to copy from', save_path)
 
 
     return objectives, loc, object_type, info, save_path
@@ -1020,66 +907,7 @@ class MySampling(Sampling):
                 x.append(val)
 
 
-            # d = 4+problem.waypoints_num_limit*2+problem.num_of_static_max*4+problem.num_of_pedestrians_max*7+problem.num_of_vehicles_max*(12+problem.waypoints_num_limit*2)
-            #
-            # x = []
-            #
-            # # global
-            # friction = rng.random()
-            # weather_index = rng.integers(problem.num_of_weathers)
-            # num_of_static = rng.integers(problem.num_of_static_min, problem.num_of_static_max+1)
-            # num_of_pedestrians = rng.integers(problem.num_of_pedestrians_min, problem.num_of_pedestrians_max+1)
-            # num_of_vehicles = rng.integers(problem.num_of_vehicles_min, problem.num_of_vehicles_max+1)
-            # x.extend([friction, weather_index, num_of_static, num_of_pedestrians, num_of_vehicles])
-            #
-            # # ego car
-            # for _ in range(problem.waypoints_num_limit):
-            #     dx = np.clip(rng.normal(0, 2, 1)[0], problem.perturbation_min, problem.perturbation_max)
-            #     dy = np.clip(rng.normal(0, 2, 1)[0], problem.perturbation_min, problem.perturbation_max)
-            #     x.extend([dx, dy])
-            # # static
-            # for i in range(problem.num_of_static_max):
-            #     static_type_i = rng.integers(problem.num_of_static_types)
-            #     static_x_i = rand_real(rng, problem.static_x_min, problem.static_x_max)
-            #     static_y_i = rand_real(rng, problem.static_y_min, problem.static_y_max)
-            #     static_yaw_i = rand_real(rng, problem.static_yaw_min, problem.static_yaw_max)
-            #     x.extend([static_type_i, static_x_i, static_y_i, static_yaw_i])
-            # # pedestrians
-            # for i in range(problem.num_of_pedestrians_max):
-            #     pedestrian_type_i = rng.integers(problem.num_of_pedestrian_types)
-            #     pedestrian_x_i = rand_real(rng, problem.pedestrian_x_min, problem.pedestrian_x_max)
-            #     pedestrian_y_i = rand_real(rng, problem.pedestrian_x_min, problem.pedestrian_x_max)
-            #     pedestrian_yaw_i = rand_real(rng, problem.yaw_min, problem.yaw_max)
-            #     pedestrian_trigger_distance_i = rand_real(rng, problem.pedestrian_trigger_distance_min, problem.pedestrian_trigger_distance_max)
-            #     speed_i = rand_real(rng, problem.pedestrian_speed_min, problem.pedestrian_speed_max)
-            #     dist_to_travel_i = rand_real(rng, problem.pedestrian_dist_to_travel_min, problem.pedestrian_dist_to_travel_max)
-            #     x.extend([pedestrian_type_i, pedestrian_x_i, pedestrian_y_i, pedestrian_yaw_i, pedestrian_trigger_distance_i, speed_i, dist_to_travel_i])
-            # # vehicles
-            # for i in range(problem.num_of_vehicles_max):
-            #     vehicle_type_i = rand_real(rng, 0, problem.num_of_vehicle_types)
-            #     vehicle_x_i = rand_real(rng, problem.vehicle_x_min, problem.vehicle_x_max)
-            #     vehicle_y_i = rand_real(rng, problem.vehicle_x_min, problem.vehicle_x_max)
-            #     vehicle_yaw_i = rand_real(rng, problem.yaw_min, problem.yaw_max)
-            #     vehicle_initial_speed_i = rand_real(rng, problem.vehicle_initial_speed_min, problem.vehicle_initial_speed_max)
-            #     vehicle_trigger_distance_i = rand_real(rng, problem.vehicle_trigger_distance_min, problem.vehicle_trigger_distance_max)
-            #
-            #     targeted_speed_i = rand_real(rng, problem.vehicle_targeted_speed_min, problem.vehicle_targeted_speed_max)
-            #     waypoint_follower_i = rng.integers(2)
-            #
-            #     vehicle_targeted_x_i = rand_real(rng, problem.vehicle_targeted_x_min, problem.vehicle_targeted_x_max)
-            #     vehicle_targeted_y_i = rand_real(rng, problem.vehicle_targeted_x_min, problem.vehicle_targeted_x_max)
-            #
-            #     vehicle_avoid_collision_i = rng.integers(2)
-            #     vehicle_dist_to_travel_i = rand_real(rng, problem.vehicle_dist_to_travel_min, problem.vehicle_dist_to_travel_max)
-            #     vehicle_target_yaw_i = rand_real(rng, problem.yaw_min, problem.yaw_max)
-            #     vehicle_color_i = rng.integers(0, problem.num_of_vehicle_colors)
-            #
-            #     x.extend([vehicle_type_i, vehicle_x_i, vehicle_y_i, vehicle_yaw_i, vehicle_initial_speed_i, vehicle_trigger_distance_i, targeted_speed_i, waypoint_follower_i, vehicle_targeted_x_i, vehicle_targeted_y_i, vehicle_avoid_collision_i, vehicle_dist_to_travel_i, vehicle_target_yaw_i, vehicle_color_i])
-            #
-            #     for _ in range(problem.waypoints_num_limit):
-            #         dx = np.clip(rng.normal(0, 2, 1)[0], problem.perturbation_min, problem.perturbation_max)
-            #         dy = np.clip(rng.normal(0, 2, 1)[0], problem.perturbation_min, problem.perturbation_max)
-            #         x.extend([dx, dy])
+
             x = np.array(x).astype(float)
             X.append(x)
         X = np.stack(X)
@@ -1275,8 +1103,11 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
 
 
-    folder_names = [bug_root_folder, str(call_from_dt), algorithm_name, town_name, scenario, direction, route_str]
-    bug_parent_folder = make_hierarchical_dir(folder_names)
+    bug_folder_names = [bug_root_folder, str(call_from_dt), algorithm_name, town_name, scenario, direction, route_str]
+    bug_parent_folder = make_hierarchical_dir(bug_folder_names)
+
+    non_bug_folder_names = [non_bug_root_folder, str(call_from_dt), algorithm_name, town_name, scenario, direction, route_str]
+    non_bug_parent_folder = make_hierarchical_dir(non_bug_folder_names)
 
 
 
@@ -1288,7 +1119,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         algorithm.launch_cluster = True
         problem = algorithm.problem
     else:
-        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, ego_car_model=ego_car_model, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, customized_parameters_bounds=customized_d['customized_parameters_bounds'], customized_parameters_distributions=customized_d['customized_parameters_distributions'], customized_center_transforms=customized_d['customized_center_transforms'],
+        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, non_bug_parent_folder=non_bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, ego_car_model=ego_car_model, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, customized_parameters_bounds=customized_d['customized_parameters_bounds'], customized_parameters_distributions=customized_d['customized_parameters_distributions'], customized_center_transforms=customized_d['customized_center_transforms'],
         call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, dt_time_str=dt_time_str, dt_iter=dt_iter)
 
 
@@ -1391,7 +1222,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         os.mkdir(non_dt_save_folder)
     now = datetime.now()
     non_dt_time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
-    non_dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, dt_time_str])
+    non_dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, n_gen, pop_size, dt_time_str])
 
     pth = os.path.join(non_dt_save_folder, non_dt_save_file)
     np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time_list, bug_num=bug_num_list, labels=labels)

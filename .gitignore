@@ -20,3 +20,5 @@ wandb/*
 *.png
 dt_data/*
 non_dt_data/*
+non_bugs/*
+rerun/*

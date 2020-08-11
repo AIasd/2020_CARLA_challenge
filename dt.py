@@ -55,9 +55,9 @@ def filter_critical_regions(X, y):
 
 
 def main():
-    town_name = 'Town03'
+    town_name = 'Town01'
     scenario = 'Scenario12'
-    direction = 'front'
+    direction = 'left'
     route = 0
     scenario_type = 'default'
     ego_car_model = 'lbc'
@@ -87,12 +87,13 @@ def main():
 
 
     for i in range(outer_iterations):
+        dt_time_str_i = dt_time_str+'_'+str(i)
         dt = True
         if i == 0 or np.sum(y)==0:
             dt = False
         if i == 1:
             n_gen += 1
-        X_new, y_new, F_new, objectives_new, time_new, bug_num_new, labels = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str, i, town_name, scenario, direction, route, scenario_type, ego_car_model)
+        X_new, y_new, F_new, objectives_new, time_new, bug_num_new, labels = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str_i, i, town_name, scenario, direction, route, scenario_type, ego_car_model)
 
         if i == 0:
             X = X_new
@@ -120,7 +121,7 @@ def main():
     dt_save_folder = 'dt_data'
     if not os.path.exists(dt_save_folder):
         os.mkdir(dt_save_folder)
-    dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, dt_time_str])
+    dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, n_gen, pop_size, outer_iterations, dt_time_str])
 
     pth = os.path.join(dt_save_folder, dt_save_file)
     np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time, bug_num=bug_num, labels=labels)

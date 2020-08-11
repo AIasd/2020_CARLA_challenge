@@ -137,6 +137,8 @@ Stage 2:
 CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model --dataset_dir path/to/data --teacher_path path/to/model/from/stage1
 ```
 
+Note: if retraining is wanted, add the extra data into the folder of the dataset and then run stage 1 and stage 2.
+
 
 ## Demo Routes
 Town01-Scenario12-left-00

@@ -477,19 +477,21 @@ customized_bounds_and_distributions = {
     'leading_car_braking': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
         'num_of_static_max': 0,
+        'num_of_pedestrians_min': 0,
+        'num_of_pedestrians_max': 3,
         'num_of_vehicles_min': 1,
-        'num_of_vehicles_max': 2,
+        'num_of_vehicles_max': 3,
 
         'vehicle_x_min_0': -0.5,
         'vehicle_x_max_0': 0.5,
-        'vehicle_y_min_0': -4,
-        'vehicle_y_max_0': -15,
+        'vehicle_y_min_0': -3,
+        'vehicle_y_max_0': -12,
 
-        'vehicle_initial_speed_min_0': 2,
+        'vehicle_initial_speed_min_0': 1,
         'vehicle_initial_speed_max_0': 5,
         'vehicle_targeted_speed_min_0': 0,
-        'vehicle_targeted_speed_max_0': 2,
-        'vehicle_trigger_distance_min_0': 5,
+        'vehicle_targeted_speed_max_0': 1,
+        'vehicle_trigger_distance_min_0': 3,
         'vehicle_trigger_distance_max_0': 12,
 
         'vehicle_dist_to_travel_min_0': 5,
@@ -504,6 +506,19 @@ customized_bounds_and_distributions = {
     },
     'customized_center_transforms':{
         'vehicle_center_transform_0': ('waypoint_ratio', 0)
+    }},
+
+    'vehicles_only': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 0,
+        'num_of_pedestrians_max': 0,
+        'num_of_vehicles_min': 0,
+        'num_of_vehicles_max': 4
+    },
+    'customized_parameters_distributions':{
+    },
+    'customized_center_transforms':{
     }}
 
 
