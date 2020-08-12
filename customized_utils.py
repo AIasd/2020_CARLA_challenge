@@ -152,7 +152,7 @@ def add_transform(transform1, transform2):
     return create_transform(x, y, z, pitch, yaw, roll)
 
 
-def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_num_of_pedestrians, max_num_of_vehicles, static_types, pedestrian_types, vehicle_types, vehicle_colors, customized_center_transforms):
+def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_num_of_pedestrians, max_num_of_vehicles, static_types, pedestrian_types, vehicle_types, vehicle_colors, customized_center_transforms, parameters_min_bounds, parameters_max_bounds):
 
     # parameters
     # global
@@ -250,7 +250,9 @@ def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_
     'ego_car_waypoints_perturbation': ego_car_waypoints_perturbation,
     'add_center': True,
     'port': port,
-    'customized_center_transforms': customized_center_transforms}
+    'customized_center_transforms': customized_center_transforms,
+    'parameters_min_bounds': parameters_min_bounds,
+    'parameters_max_bounds': parameters_max_bounds}
 
 
     return customized_data

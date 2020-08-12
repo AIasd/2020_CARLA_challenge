@@ -14,7 +14,7 @@ import atexit
 os.environ['HAS_DISPLAY'] = '0'
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-port = 2027
+port = 2033
 save_rerun_cur_info = False
 
 def rerun_simulation(pickle_filename, rerun_save_folder, ind):
@@ -41,6 +41,14 @@ def rerun_simulation(pickle_filename, rerun_save_folder, ind):
         max_num_of_vehicles = d['num_of_vehicles_max']
         customized_center_transforms = d['customized_center_transforms']
 
+        if 'parameters_min_bounds' in d:
+            parameters_min_bounds = d['parameters_min_bounds']
+            parameters_max_bounds = d['parameters_max_bounds']
+        else:
+            parameters_min_bounds = None
+            parameters_max_bounds = None
+
+
         episode_max_time = 40
         call_from_dt = d['call_from_dt']
         town_name = d['town_name']
@@ -55,7 +63,7 @@ def rerun_simulation(pickle_filename, rerun_save_folder, ind):
 
     rerun_folder = make_hierarchical_dir(['rerun', folder])
 
-    customized_data = convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_num_of_pedestrians, max_num_of_vehicles, static_types, pedestrian_types, vehicle_types, vehicle_colors, customized_center_transforms)
+    customized_data = convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_num_of_pedestrians, max_num_of_vehicles, static_types, pedestrian_types, vehicle_types, vehicle_colors, customized_center_transforms, parameters_min_bounds, parameters_max_bounds)
     objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, ego_car, rerun=True, rerun_folder=cur_folder)
 
 

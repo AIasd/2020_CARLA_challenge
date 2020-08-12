@@ -1,27 +1,34 @@
 '''
 TBD:
-* multi-objective search VS 3 single-objective search and compare results
-* route completion bug
-* writing
 * continuous crash objective
 
+* emcmc
+* more routes
 
-* retraining
+
+* multi-objective search VS 3 single-objective search and compare results
+
+
+* need to bound the projection / add_dist process when keep trying to generate an actor to within the bounds
+* allow user to specify a region that actors cannot be generated within such that we can avoid spawning of static on route (a variable to control)
+
+
+* diversity of bugs
+
+* route completion bug
+
+* fix x afterwards when original setup cannot generate actors properly
+
 
 * analyze dt results(visualization, show leaves results)
-* debug dt (analyze dt results), test dt (multi obj and single obj) and baseline, and compare results
 
 
-
-
-* uniqueness of bugs
 * hd image saving
 
-* avoid spawning of objects on route (a variable to control)
+
 
 * save intermediate results to avoid crash
 
-* max time for running dt
 
 * analyze visualization across generations
 
@@ -123,7 +130,7 @@ Retrain model from scratch (stage 1):
 CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir '/home/zhongzzy9/Documents/self-driving-car/LBC_data/CARLA_challenge_autopilot' --max_epochs 25
 
 Retrain model from scratch (stage 2):
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir '../LBC_data/CARLA_challenge_autopilot' --teacher_path '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/checkpoints/32176d62026a4063a2de10e92ebdb03c/wandb/run-20200807_173829-32176d62026a4063a2de10e92ebdb03c/epoch=16.ckpt' --max_epochs 25
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir '../LBC_data/CARLA_challenge_autopilot' --teacher_path '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage1_retrain_9_50_leading_car_25_epoch=19.ckpt' --max_epochs 25
 
 '''
 
@@ -283,6 +290,7 @@ class MyProblem(Problem):
         self.dt = dt
         self.estimator = estimator
         self.critical_unique_leaves = critical_unique_leaves
+        self.has_run = 0
 
         self.objectives_list = []
         self.x_list = []
@@ -296,7 +304,7 @@ class MyProblem(Problem):
         self.episode_max_time = episode_max_time
 
 
-        if self.dt:
+        if self.call_from_dt:
             time_str = dt_time_str
         else:
             now = datetime.now()
@@ -313,7 +321,7 @@ class MyProblem(Problem):
         self.route_str = route_str
         self.ego_car_model = ego_car_model
 
-        if self.dt:
+        if self.call_from_dt:
             self.bug_folder += '/' + str(dt_iter)
             if not os.path.exists(self.bug_folder):
                 os.mkdir(self.bug_folder)
@@ -355,6 +363,9 @@ class MyProblem(Problem):
         xl = [pair[1] for pair in parameters_min_bounds.items()]
         xu = [pair[1] for pair in parameters_max_bounds.items()]
 
+
+        self.parameters_min_bounds = parameters_min_bounds
+        self.parameters_max_bounds = parameters_max_bounds
         self.mask = mask
         self.labels = labels
         self.parameters_distributions = parameters_distributions
@@ -383,8 +394,8 @@ class MyProblem(Problem):
         bug_folder = self.bug_folder
         non_bug_folder = self.non_bug_folder
 
-        xl = self.xl
-        xu = self.xu
+        parameters_min_bounds = self.parameters_min_bounds
+        parameters_max_bounds = self.parameters_max_bounds
         labels = self.labels
 
         dt = self.dt
@@ -408,27 +419,26 @@ class MyProblem(Problem):
             if dt and not is_critical_region(x[:-1], estimator, critical_unique_leaves):
                 objectives = [-1, 10000, 10000, 0, 0, 0, 0]
                 F = np.array(objectives[:4]) * objective_weights
-                return F, None, None, None, objectives
+                return F, None, None, None, objectives, 0
 
             else:
 
-                # x[:-1] = np.clip(x[:-1], np.array(xl), np.array(xu))
 
                 # x = denormalize_by_entry(self, x)
 
-                customized_data = convert_x_to_customized_data(x, waypoints_num_limit, num_of_static_max, num_of_pedestrians_max, num_of_vehicles_max, static_types, pedestrian_types, vehicle_types, vehicle_colors, customized_center_transforms)
+                customized_data = convert_x_to_customized_data(x, waypoints_num_limit, num_of_static_max, num_of_pedestrians_max, num_of_vehicles_max, static_types, pedestrian_types, vehicle_types, vehicle_colors, customized_center_transforms, parameters_min_bounds, parameters_max_bounds)
 
 
                 # run simulation
                 objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, ego_car_model)
 
                 # [ego_linear_speed, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light]
-
-
                 F = np.array(objectives[:4]) * objective_weights
 
 
-                info = {**info, 'x':x, 'waypoints_num_limit':waypoints_num_limit, 'num_of_static_max':num_of_static_max, 'num_of_pedestrians_max':num_of_pedestrians_max, 'num_of_vehicles_max':num_of_vehicles_max, 'customized_center_transforms':customized_center_transforms}
+                info = {**info, 'x':x, 'waypoints_num_limit':waypoints_num_limit, 'num_of_static_max':num_of_static_max, 'num_of_pedestrians_max':num_of_pedestrians_max, 'num_of_vehicles_max':num_of_vehicles_max, 'customized_center_transforms':customized_center_transforms,
+                'parameters_min_bounds':parameters_min_bounds,
+                'parameters_max_bounds':parameters_max_bounds}
 
                 cur_info = {'counter':counter, 'x':x, 'objectives':objectives,  'loc':loc, 'object_type':object_type, 'labels':labels, 'info': info}
 
@@ -451,7 +461,7 @@ class MyProblem(Problem):
                         print('fail to copy from', save_path)
 
 
-                return F, loc, object_type, info, objectives
+                return F, loc, object_type, info, objectives, 1
 
 
 
@@ -471,10 +481,10 @@ class MyProblem(Problem):
 
             for i in range(len(jobs)):
                 job = jobs[i]
-                F, loc, object_type, info, objectives = job.result()
+                F, loc, object_type, info, objectives, has_run = job.result()
 
 
-
+                self.has_run += has_run
                 # record bug
                 if objectives[0] > 0 or objectives[4] or objectives[5]:
                     bug_str = None
@@ -551,7 +561,7 @@ class MyProblem(Problem):
                 print(self.counter, time_elapsed, self.num_of_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane, mean_objectives_this_generation)
 
                 with open(mean_objectives_across_generations_path, 'a') as f_out:
-                    f_out.write(','.join([str(x) for x in [self.counter, time_elapsed, self.num_of_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane]]+[str(x) for x in mean_objectives_this_generation])+'\n')
+                    f_out.write(','.join([str(x) for x in [self.counter, self.has_run, time_elapsed, self.num_of_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane]]+[str(x) for x in mean_objectives_this_generation])+'\n')
 
                 print('+'*100)
                 print('\n'*10)
@@ -566,7 +576,7 @@ class MyProblem(Problem):
                 else:
                     launch_server = False
 
-                F, loc, object_type, info, objectives = fun(x, launch_server)
+                F, loc, object_type, info, objectives, has_run = fun(x, launch_server)
                 job_results.append(F)
 
                 # record bug
@@ -754,15 +764,19 @@ def estimate_objectives(save_path):
     events_path = os.path.join(save_path, 'events.txt')
     deviations_path = os.path.join(save_path, 'deviations.txt')
 
+    min_d = 10000
     offroad_d = 10000
     wronglane_d = 10000
     dev_dist = 0
+
 
     with open(deviations_path, 'r') as f_in:
         for line in f_in:
             type, d = line.split(',')
             d = float(d)
-            if type == 'offroad_d':
+            if type == 'min_d':
+                min_d = np.min([min_d, d])
+            elif type == 'offroad_d':
                 offroad_d = np.min([offroad_d, d])
             elif type == 'wronglane_d':
                 wronglane_d = np.min([wronglane_d, d])
@@ -771,6 +785,8 @@ def estimate_objectives(save_path):
 
 
 
+    # let it to be the closest distance with another object if no collision happens
+    # ego_linear_speed = -np.min([min_d, 7])
     ego_linear_speed = -1
     is_offroad = 0
     is_wrong_lane = 0
@@ -1218,6 +1234,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     time_list = problem.time_list
     bug_num_list = problem.bug_num_list
     labels = problem.labels
+    has_run = problem.has_run
 
 
     with open(os.path.join(problem.bug_folder, 'res_'+str(ind)+'.pkl'), 'wb') as f_out:
@@ -1244,7 +1261,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
             print('-'*100, 'pickled')
 
 
-    return X, y, F, objectives, time_list, bug_num_list, labels
+    return X, y, F, objectives, time_list, bug_num_list, labels, has_run
 
 if __name__ == '__main__':
     run_ga()

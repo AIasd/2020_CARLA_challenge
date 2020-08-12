@@ -55,20 +55,23 @@ def filter_critical_regions(X, y):
 
 
 def main():
-    town_name = 'Town01'
+    town_name = 'Town03'
     scenario = 'Scenario12'
-    direction = 'left'
+    direction = 'front'
     route = 0
     # ['default', 'leading_car_braking', 'vehicles_only']
     scenario_type = 'leading_car_braking'
     ego_car_model = 'lbc'
+    # ['generations', 'max_time']
+    termination_condition = 'generations'
+    max_running_time = 3600*24
 
     # [5, 7]
-    outer_iterations = 3
+    outer_iterations = 2
     # 5
-    n_gen = 3
+    n_gen = 2
     # 100
-    pop_size = 50
+    pop_size = 6
 
     X_filtered = None
     F_filtered = None
@@ -76,9 +79,10 @@ def main():
     y = None
     F = None
     objectives = None
-    time = None
+    elapsed_time = None
     bug_num = None
     labels = None
+    has_run = 0
     estimator = None
     critical_unique_leaves = None
 
@@ -88,28 +92,30 @@ def main():
 
 
     for i in range(outer_iterations):
-        dt_time_str_i = dt_time_str+'_'+str(i)
+        dt_time_str_i = dt_time_str
         dt = True
         if i == 0 or np.sum(y)==0:
             dt = False
         if i == 1:
             n_gen += 1
-        X_new, y_new, F_new, objectives_new, time_new, bug_num_new, labels = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str_i, i, town_name, scenario, direction, route, scenario_type, ego_car_model)
+        X_new, y_new, F_new, objectives_new, elapsed_time_new, bug_num_new, labels, has_run_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str_i, i, town_name, scenario, direction, route, scenario_type, ego_car_model)
 
         if i == 0:
             X = X_new
             y = y_new
             F = F_new
             objectives = objectives_new
-            time = time_new
+            elapsed_time = elapsed_time_new
             bug_num = bug_num_new
+
         else:
             X = np.concatenate([X, X_new])
             y = np.concatenate([y, y_new])
             F = np.concatenate([F, F_new])
             objectives = np.concatenate([objectives, objectives_new])
-            time.extend(time_new)
+            elapsed_time.extend(elapsed_time_new)
             bug_num.extend(bug_num_new)
+        has_run += has_run_new
 
 
         estimator, inds, critical_unique_leaves = filter_critical_regions(X, y)
@@ -118,20 +124,24 @@ def main():
         print(len(X_filtered), X.shape)
 
 
+        if termination_condition == 'max_time' and elapsed_time[-1] > max_running_time:
+            break
+
+
     # Save data
     dt_save_folder = 'dt_data'
     if not os.path.exists(dt_save_folder):
         os.mkdir(dt_save_folder)
-    dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, n_gen, pop_size, outer_iterations, dt_time_str])
+    dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, str(n_gen), str(pop_size), str(outer_iterations), dt_time_str])
 
     pth = os.path.join(dt_save_folder, dt_save_file)
-    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time, bug_num=bug_num, labels=labels)
+    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time, bug_num=bug_num, labels=labels, has_run=has_run)
     print('dt data saved')
     os.system('chmod -R 777 '+dt_save_folder)
 
 
 
-    return X, y, F, objectives, time, bug_num, labels
+    return X, y, F, objectives, time, bug_num, labels, has_run
 
 def visualization(estimator):
     tree.plot_tree(estimator)
@@ -140,7 +150,7 @@ def visualization(estimator):
     graph.render("tree")
 
 if __name__ == '__main__':
-    X, y, F, objectives, time, bug_num, labels = main()
+    X, y, F, objectives, time, bug_num, labels, has_run = main()
 
 
     # d = np.load('dt.npz')
