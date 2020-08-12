@@ -14,6 +14,7 @@ os.environ['HAS_DISPLAY'] = '0'
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 port = 2027
+save_rerun_cur_info = False
 
 def rerun_simulation(pickle_filename, rerun_save_folder, ind):
     cur_folder = rerun_save_folder+'/'+str(ind)
@@ -63,9 +64,9 @@ def rerun_simulation(pickle_filename, rerun_save_folder, ind):
 
     cur_info = {'x':x, 'objectives':objectives, 'loc':loc, 'object_type':object_type}
 
-
-    with open(os.path.join(cur_folder, str(ind)), 'wb') as f_out:
-        pickle.dump(cur_info, f_out)
+    if save_rerun_cur_info:
+        with open(os.path.join(cur_folder, str(ind)), 'wb') as f_out:
+            pickle.dump(cur_info, f_out)
 
     # copy data to another place
     try:
