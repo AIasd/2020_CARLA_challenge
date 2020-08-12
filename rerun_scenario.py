@@ -128,9 +128,9 @@ if __name__ == '__main__':
                     is_bug, objectives = rerun_simulation(pickle_filename, rerun_save_folder, ind)
 
                     if not objectives_avg:
-                        objectives_avg = objectives
+                        objectives_avg = np.array(objectives)
                     else:
-                        objectives_avg += objectives
+                        objectives_avg += np.array(objectives)
 
                     if is_bug:
                         bug_num += 1
