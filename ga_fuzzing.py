@@ -1,11 +1,16 @@
 '''
 TBD:
-* fix repeating seed
+* hd video recording
+* writing
+* continuous crash objective
+
+
+* retraining
+
 * analyze dt results(visualization, show leaves results)
 * debug dt (analyze dt results), test dt (multi obj and single obj) and baseline, and compare results
 
-* reproduce a bug
-* retraining
+
 
 
 * uniqueness of bugs
@@ -25,7 +30,6 @@ TBD:
 * estimate bug diversity via tree diversity
 * fix stage2 model training
 * debug nsga2-dt
-* introduction writing
 
 * emcmc
 * clustering+tsne(need to label different bugs first), bug category over generation plot
@@ -245,8 +249,8 @@ global_n_gen = 9
 global_pop_size = 50
 max_running_time = 3600*24
 # [ego_linear_speed, offroad_d, wronglane_d, dev_dist]
-# objective_weights = np.array([-1/7, 1, 100000, -1])
-objective_weights = np.array([-1/7, 1/3, 1/3, -1])
+# objective_weights = np.array([-1/7, 1/3, 1/3, -1])
+objective_weights = np.array([-1, 1/3, 1/3, -1])
 
 # ['generations', 'max_time']
 global_termination_condition = 'generations'
