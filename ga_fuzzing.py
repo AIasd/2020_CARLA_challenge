@@ -1231,7 +1231,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         os.mkdir(non_dt_save_folder)
     now = datetime.now()
     non_dt_time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
-    non_dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, n_gen, pop_size, dt_time_str])
+    non_dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, str(n_gen), str(pop_size), dt_time_str])
 
     pth = os.path.join(non_dt_save_folder, non_dt_save_file)
     np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time_list, bug_num=bug_num_list, labels=labels)
