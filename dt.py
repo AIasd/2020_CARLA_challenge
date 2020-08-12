@@ -60,7 +60,7 @@ def main():
     direction = 'left'
     route = 0
     # ['default', 'leading_car_braking', 'vehicles_only']
-    scenario_type = 'eading_car_braking'
+    scenario_type = 'leading_car_braking'
     ego_car_model = 'lbc'
 
     # [5, 7]

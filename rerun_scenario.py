@@ -8,7 +8,8 @@ import random
 import pickle
 import numpy as np
 from datetime import datetime
-from customized_utils import make_hierarchical_dir, convert_x_to_customized_data
+from customized_utils import make_hierarchical_dir, convert_x_to_customized_data, exit_handler
+import atexit
 
 os.environ['HAS_DISPLAY'] = '0'
 # '0,1'
@@ -78,6 +79,8 @@ def rerun_simulation(pickle_filename, rerun_save_folder, ind):
 
 
 if __name__ == '__main__':
+
+
     random.seed(0)
     now = datetime.now()
     time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
@@ -88,6 +91,8 @@ if __name__ == '__main__':
 
 
     rerun_save_folder = make_hierarchical_dir(['rerun', data, mode, time_str])
+
+    atexit.register(exit_handler, [port], rerun_save_folder)
 
 
 
