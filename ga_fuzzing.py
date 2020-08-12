@@ -1,6 +1,7 @@
 '''
 TBD:
-* hd video recording
+* multi-objective search VS 3 single-objective search and compare results
+* route completion bug
 * writing
 * continuous crash objective
 
@@ -192,6 +193,7 @@ import dill as pickle
 # import pickle
 import argparse
 import atexit
+import traceback
 
 
 
@@ -735,9 +737,12 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
         else:
             assert rerun_folder
             try:
-                shutil.copytree(save_path, rerun_folder)
+                # use this version to merge into the existing folder
+                from distutils.dir_util import copy_tree
+                copy_tree(save_path, rerun_folder)
             except:
                 print('fail to copy from', save_path)
+                traceback.print_exc()
 
 
     return objectives, loc, object_type, info, save_path

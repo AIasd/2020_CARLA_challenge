@@ -59,7 +59,8 @@ def main():
     scenario = 'Scenario12'
     direction = 'left'
     route = 0
-    scenario_type = 'default'
+    # ['default', 'leading_car_braking', 'vehicles_only']
+    scenario_type = 'eading_car_braking'
     ego_car_model = 'lbc'
 
     # [5, 7]
