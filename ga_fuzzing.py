@@ -1,5 +1,7 @@
 '''
 TBD:
+* explore generation blocking issue and might consider to pre-run a map and save legit regions
+
 * continuous crash objective
 
 * emcmc
@@ -1231,8 +1233,8 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     y = np.array(problem.y_list)
     F = np.stack(problem.F_list)
     objectives = np.stack(problem.objectives_list)
-    time_list = problem.time_list
-    bug_num_list = problem.bug_num_list
+    time_list = np.array(problem.time_list)
+    bug_num_list = np.array(problem.bug_num_list)
     labels = problem.labels
     has_run = problem.has_run
 

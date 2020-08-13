@@ -69,9 +69,9 @@ def main():
     # [5, 7]
     outer_iterations = 2
     # 5
-    n_gen = 2
+    n_gen = 1
     # 100
-    pop_size = 6
+    pop_size = 2
 
     X_filtered = None
     F_filtered = None
@@ -82,7 +82,7 @@ def main():
     elapsed_time = None
     bug_num = None
     labels = None
-    has_run = 0
+    has_run = []
     estimator = None
     critical_unique_leaves = None
 
@@ -113,9 +113,9 @@ def main():
             y = np.concatenate([y, y_new])
             F = np.concatenate([F, F_new])
             objectives = np.concatenate([objectives, objectives_new])
-            elapsed_time.extend(elapsed_time_new)
-            bug_num.extend(bug_num_new)
-        has_run += has_run_new
+            elapsed_time = np.concatenate([elapsed_time, elapsed_time_new + elapsed_time[-1]])
+            bug_num = np.concatenate([bug_num, bug_num_new])
+        has_run.append(has_run_new)
 
 
         estimator, inds, critical_unique_leaves = filter_critical_regions(X, y)
@@ -135,13 +135,13 @@ def main():
     dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, str(n_gen), str(pop_size), str(outer_iterations), dt_time_str])
 
     pth = os.path.join(dt_save_folder, dt_save_file)
-    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time, bug_num=bug_num, labels=labels, has_run=has_run)
-    print('dt data saved')
+    np.savez(pth, X=X, y=y, F=F, objectives=objectives, elapsed_time=elapsed_time, bug_num=bug_num, labels=labels, has_run=has_run)
+    print('dt data saved', 'has run', np.sum(has_run))
     os.system('chmod -R 777 '+dt_save_folder)
 
 
 
-    return X, y, F, objectives, time, bug_num, labels, has_run
+    return X, y, F, objectives, elapsed_time, bug_num, labels, has_run
 
 def visualization(estimator):
     tree.plot_tree(estimator)
@@ -150,7 +150,7 @@ def visualization(estimator):
     graph.render("tree")
 
 if __name__ == '__main__':
-    X, y, F, objectives, time, bug_num, labels, has_run = main()
+    X, y, F, objectives, elapsed_time, bug_num, labels, has_run = main()
 
 
     # d = np.load('dt.npz')
