@@ -1,5 +1,9 @@
 '''
 TBD:
+* more exact time for dt
+* mating critical region for dt
+* save state to continue
+
 * route completion bug
 
 * explore generation blocking issue and might consider to pre-run a map and save legit regions
@@ -263,7 +267,7 @@ run_parallelization = True
 save = False
 save_path = 'ga_intermediate.pkl'
 episode_max_time = 10000
-global_n_gen = 9
+global_n_gen = 10
 global_pop_size = 100
 max_running_time = 3600*24
 # [ego_linear_speed, closest_dist, offroad_d, wronglane_d, dev_dist]
@@ -790,10 +794,15 @@ def estimate_objectives(save_path):
     deviations_path = os.path.join(save_path, 'deviations.txt')
 
     # hack: threshold to avoid too large influence
+    ego_linear_speed = 0
     min_d = 7
     offroad_d = 7
     wronglane_d = 7
     dev_dist = 0
+
+    is_offroad = 0
+    is_wrong_lane = 0
+    is_run_red_light = 0
 
 
     with open(deviations_path, 'r') as f_in:
@@ -811,10 +820,7 @@ def estimate_objectives(save_path):
 
 
 
-    ego_linear_speed = -1
-    is_offroad = 0
-    is_wrong_lane = 0
-    is_run_red_light = 0
+
 
     x = None
     y = None
@@ -862,6 +868,9 @@ def estimate_objectives(save_path):
                     x = float(loc.group(1))
                     y = float(loc.group(2))
 
+    # limit impact of too large values
+    ego_linear_speed = np.min([ego_linear_speed, 7])
+    dev_dist = np.min([dev_dist, 7])
 
     return [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light], (x, y), object_type
 
@@ -1041,7 +1050,7 @@ class MyEvaluator(Evaluator):
     def _eval(self, problem, pop, **kwargs):
 
         super()._eval(problem, pop, **kwargs)
-        print(pop[0].X)
+        # print(pop[0].X)
         # hack:
         label_to_id = {label:i for i, label in enumerate(problem.labels)}
 
@@ -1064,10 +1073,10 @@ class MyEvaluator(Evaluator):
                     yaw_j_ind = label_to_id[object_type+'_yaw_'+str(j)]
 
 
-                    print(object_type, j)
-                    print('x', pop[i].X[x_j_ind], '->', x)
-                    print('y', pop[i].X[y_j_ind], '->', y)
-                    print('yaw', pop[i].X[yaw_j_ind], '->', yaw)
+                    # print(object_type, j)
+                    # print('x', pop[i].X[x_j_ind], '->', x)
+                    # print('y', pop[i].X[y_j_ind], '->', y)
+                    # print('yaw', pop[i].X[yaw_j_ind], '->', yaw)
                     pop[i].X[x_j_ind] = x
                     pop[i].X[y_j_ind] = y
                     pop[i].X[yaw_j_ind] = yaw
@@ -1087,20 +1096,20 @@ class MyEvaluator(Evaluator):
                                     ind_from = label_to_id['_'.join(['vehicle', str(j), waypoint_label, str(p)])]
                                     pop[i].X[ind_to] = pop[i].X[ind_from]
 
-                        empty_slots.append(i)
-            print()
+                        empty_slots.append(j)
+            # print()
 
 
         with open('tmp_folder/total.pickle', 'rb') as f_in:
             all_final_generated_transforms_list = pickle.load(f_in)
 
         for i, all_final_generated_transforms_list_i in enumerate(all_final_generated_transforms_list):
-            print(i)
+            # print(i)
             correct_spawn_locations(all_final_generated_transforms_list_i, i, 'static', static_general_labels)
             correct_spawn_locations(all_final_generated_transforms_list_i, i, 'pedestrian', pedestrian_general_labels)
             correct_spawn_locations(all_final_generated_transforms_list_i, i, 'vehicle', vehicle_general_labels)
-            print('\n'*3)
-        print(pop[0].X)
+            # print('\n'*3)
+        # print(pop[0].X)
 
 
 
