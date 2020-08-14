@@ -1,5 +1,9 @@
 '''
 TBD:
+* all objective 12 gen VS collision 6 gen + wrong route 6 gen VS all objective dt 3 * 4 gen: check average objectives and error numbers/types distributions, data t-sne visualization across generations and bug VS non-bug and different types of bugs, decision tree volumes
+* estimate single thread time
+
+
 * more exact time for dt
 * mating critical region for dt
 * save state to continue
