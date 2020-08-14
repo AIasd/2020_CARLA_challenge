@@ -518,9 +518,9 @@ customized_bounds_and_distributions = {
         'num_of_static_min': 0,
         'num_of_static_max': 0,
         'num_of_pedestrians_min': 0,
-        'num_of_pedestrians_max': 3,
+        'num_of_pedestrians_max': 5,
         'num_of_vehicles_min': 1,
-        'num_of_vehicles_max': 3,
+        'num_of_vehicles_max': 2,
 
         'vehicle_x_min_0': -0.5,
         'vehicle_x_max_0': 0.5,

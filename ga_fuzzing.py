@@ -249,7 +249,7 @@ global_scenario_type = 'leading_car_braking'
 algorithm_name = 'nsga2'
 # ['lbc', 'auto_pilot', 'pid_agent']
 global_ego_car_model = 'lbc'
-os.environ['HAS_DISPLAY'] = '1'
+os.environ['HAS_DISPLAY'] = '0'
 # This is used to control how this program use GPU
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
@@ -266,7 +266,7 @@ ind = arguments.ind
 run_parallelization = True
 save = False
 save_path = 'ga_intermediate.pkl'
-episode_max_time = 10000
+episode_max_time = 40
 global_n_gen = 10
 global_pop_size = 100
 max_running_time = 3600*24
@@ -431,7 +431,7 @@ class MyProblem(Problem):
 
         def fun(x, launch_server, counter):
             if dt and not is_critical_region(x[:-1], estimator, critical_unique_leaves):
-                objectives = [-1, 10000, 10000, 0, 0, 0, 0]
+                objectives = [0, 7, 7, 7, 0, 0, 0, 0]
                 F = np.array(objectives[:objective_weights.shape[0]]) * objective_weights
                 return F, None, None, None, objectives, 0
 
@@ -445,6 +445,8 @@ class MyProblem(Problem):
 
                 # run simulation
                 objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, ego_car_model)
+
+                print(counter, objectives)
 
                 # [ego_linear_speed, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light]
                 F = np.array(objectives[:objective_weights.shape[0]]) * objective_weights
