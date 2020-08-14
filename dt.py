@@ -67,11 +67,11 @@ def main():
     max_running_time = 3600*24
 
     # [5, 7]
-    outer_iterations = 2
+    outer_iterations = 3
     # 5
-    n_gen = 1
+    n_gen = 3
     # 100
-    pop_size = 2
+    pop_size = 50
 
     X_filtered = None
     F_filtered = None

@@ -211,8 +211,8 @@ def apply_tsne(pickle_path, n_gen, pop_size):
 def compare_with_dt(file):
     d = np.load(file, allow_pickle=True)
     print(np.sum(d['y']), len(d['y']))
-    from dt import filter_critical_regions
-    filter_critical_regions(d['X'], d['y'])
+    # from dt import filter_critical_regions
+    # filter_critical_regions(d['X'], d['y'])
     # for i in range(d['X'].shape[0]):
     #     for j in range(i+1, d['X'].shape[0]):
     #         if np.abs(np.sum(d['X'][i] - d['X'][j])) < 0.00001:
@@ -261,4 +261,4 @@ if __name__ == '__main__':
 
 
     # compare_with_dt('dt_data/Town03_Scenario12_front_0_default_1st.npz')
-    compare_with_dt('dt_data/Town03_Scenario12_front_0_default_2020_08_11_02_22_41.npz')
+    compare_with_dt('non_dt_data/Town03_Scenario12_front_0_leading_car_braking_4_50_2020_08_12_20_50_00.npz')

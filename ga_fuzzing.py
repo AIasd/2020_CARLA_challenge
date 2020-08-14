@@ -1,8 +1,10 @@
 '''
 TBD:
-* explore generation blocking issue and might consider to pre-run a map and save legit regions
+* route completion bug
 
-* continuous crash objective
+* explore generation blocking issue and might consider to pre-run a map and save legit regions
+* fix rgb with car high resolution
+
 
 * emcmc
 * more routes
@@ -17,7 +19,7 @@ TBD:
 
 * diversity of bugs
 
-* route completion bug
+
 
 * fix x afterwards when original setup cannot generate actors properly
 
@@ -132,7 +134,7 @@ Retrain model from scratch (stage 1):
 CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir '/home/zhongzzy9/Documents/self-driving-car/LBC_data/CARLA_challenge_autopilot' --max_epochs 25
 
 Retrain model from scratch (stage 2):
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir '../LBC_data/CARLA_challenge_autopilot' --teacher_path '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage1_retrain_9_50_leading_car_25_epoch=19.ckpt' --max_epochs 25
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir '../LBC_data/CARLA_challenge_autopilot' --teacher_path '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage1_retrain_9_50_leading_car_25_1hz_epoch=18.ckpt' --max_epochs 25
 
 '''
 
@@ -167,6 +169,7 @@ from pymoo.model.crossover import Crossover
 from pymoo.model.mutation import Mutation
 from pymoo.model.duplicate import ElementwiseDuplicateElimination
 from pymoo.model.population import Population
+from pymoo.model.evaluator import Evaluator
 
 from pymoo.algorithms.nsga2 import NSGA2
 from pymoo.algorithms.random import RandomAlgorithm
@@ -180,7 +183,11 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions
+from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit
+
+
+from collections import deque
+
 
 import numpy as np
 import carla
@@ -220,7 +227,7 @@ from dask.distributed import Client, LocalCluster
 
 
 
-random_seeds = [0, 10, 20]
+random_seeds = [10, 20, 30]
 rng = np.random.default_rng(random_seeds[0])
 bug_root_folder = 'bugs'
 non_bug_root_folder = 'non_bugs'
@@ -229,7 +236,7 @@ global_scenario = 'Scenario12'
 global_direction = 'front'
 global_route = 0
 
-# ['default', 'leading_car_braking', 'vehicles_only']
+# ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
 global_scenario_type = 'leading_car_braking'
 
 
@@ -238,7 +245,7 @@ global_scenario_type = 'leading_car_braking'
 algorithm_name = 'nsga2'
 # ['lbc', 'auto_pilot', 'pid_agent']
 global_ego_car_model = 'lbc'
-os.environ['HAS_DISPLAY'] = '0'
+os.environ['HAS_DISPLAY'] = '1'
 # This is used to control how this program use GPU
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
@@ -257,11 +264,10 @@ save = False
 save_path = 'ga_intermediate.pkl'
 episode_max_time = 10000
 global_n_gen = 9
-global_pop_size = 50
+global_pop_size = 100
 max_running_time = 3600*24
-# [ego_linear_speed, offroad_d, wronglane_d, dev_dist]
-# objective_weights = np.array([-1/7, 1/3, 1/3, -1])
-objective_weights = np.array([-1, 1/3, 1/3, -1])
+# [ego_linear_speed, closest_dist, offroad_d, wronglane_d, dev_dist]
+objective_weights = np.array([-1, 1, 1, 1, -1])
 
 # ['generations', 'max_time']
 global_termination_condition = 'generations'
@@ -273,6 +279,7 @@ if run_parallelization:
     global_scheduler_port = 8785
     global_dashboard_address = 8786
     global_ports = [2003, 2009]
+    # global_ports = [2003]
 
 
 
@@ -413,6 +420,7 @@ class MyProblem(Problem):
         route_str = self.route_str
         ego_car_model = self.ego_car_model
 
+        all_final_generated_transforms_list = []
 
 
 
@@ -420,7 +428,7 @@ class MyProblem(Problem):
         def fun(x, launch_server, counter):
             if dt and not is_critical_region(x[:-1], estimator, critical_unique_leaves):
                 objectives = [-1, 10000, 10000, 0, 0, 0, 0]
-                F = np.array(objectives[:4]) * objective_weights
+                F = np.array(objectives[:objective_weights.shape[0]]) * objective_weights
                 return F, None, None, None, objectives, 0
 
             else:
@@ -435,7 +443,7 @@ class MyProblem(Problem):
                 objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, ego_car_model)
 
                 # [ego_linear_speed, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light]
-                F = np.array(objectives[:4]) * objective_weights
+                F = np.array(objectives[:objective_weights.shape[0]]) * objective_weights
 
 
                 info = {**info, 'x':x, 'waypoints_num_limit':waypoints_num_limit, 'num_of_static_max':num_of_static_max, 'num_of_pedestrians_max':num_of_pedestrians_max, 'num_of_vehicles_max':num_of_vehicles_max, 'customized_center_transforms':customized_center_transforms,
@@ -444,7 +452,7 @@ class MyProblem(Problem):
 
                 cur_info = {'counter':counter, 'x':x, 'objectives':objectives,  'loc':loc, 'object_type':object_type, 'labels':labels, 'info': info}
 
-                is_bug = objectives[0] > 0 or objectives[4] or objectives[5]
+                is_bug = objectives[0] > 0 or objectives[5] or objectives[6]
 
                 if is_bug:
                     cur_folder = make_hierarchical_dir([bug_folder, str(counter)])
@@ -462,8 +470,13 @@ class MyProblem(Problem):
                     except:
                         print('fail to copy from', save_path)
 
+                # hack:
+                cur_port = int(x[-1])
+                filename = 'tmp_folder/'+str(cur_port)+'.pickle'
+                with open(filename, 'rb') as f_in:
+                    all_final_generated_transforms = pickle.load(f_in)
 
-                return F, loc, object_type, info, objectives, 1
+                return F, loc, object_type, info, objectives, 1, all_final_generated_transforms
 
 
 
@@ -483,12 +496,13 @@ class MyProblem(Problem):
 
             for i in range(len(jobs)):
                 job = jobs[i]
-                F, loc, object_type, info, objectives, has_run = job.result()
+                F, loc, object_type, info, objectives, has_run, all_final_generated_transforms_i = job.result()
+                all_final_generated_transforms_list.append(all_final_generated_transforms_i)
 
 
                 self.has_run += has_run
                 # record bug
-                if objectives[0] > 0 or objectives[4] or objectives[5]:
+                if objectives[0] > 0 or objectives[5] or objectives[6]:
                     bug_str = None
                     if objectives[0] > 0:
                         self.num_of_collisions += 1
@@ -498,10 +512,10 @@ class MyProblem(Problem):
                                 bug_str = k
                         if not bug_str:
                             bug_str = 'unknown_collision'+'_'+object_type
-                    elif objectives[4]:
+                    elif objectives[5]:
                         self.num_of_offroad += 1
                         bug_str = 'offroad'
-                    elif objectives[5]:
+                    elif objectives[6]:
                         self.num_of_wronglane += 1
                         bug_str = 'wronglane'
                     else:
@@ -519,6 +533,11 @@ class MyProblem(Problem):
                 self.objectives_list.append(np.array(objectives))
                 job_results.append(F)
 
+            print(all_final_generated_transforms_list)
+
+            # hack:
+            with open('tmp_folder/total.pickle', 'wb') as f_out:
+                pickle.dump(all_final_generated_transforms_list, f_out)
 
 
 
@@ -578,11 +597,11 @@ class MyProblem(Problem):
                 else:
                     launch_server = False
 
-                F, loc, object_type, info, objectives, has_run = fun(x, launch_server)
+                F, loc, object_type, info, objectives, has_run, _ = fun(x, launch_server)
                 job_results.append(F)
 
                 # record bug
-                if objectives[0] > 0 or objectives[4] or objectives[5]:
+                if objectives[0] > 0 or objectives[5] or objectives[6]:
                     self.num_of_bugs += 1
 
 
@@ -605,7 +624,7 @@ class MyProblem(Problem):
 
 
 
-def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, ego_car_model, rerun=False, rerun_folder=None):
+def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, ego_car_model, ego_car_model_path=None, rerun=False, rerun_folder=None):
     arguments = arguments_info()
     arguments.port = customized_data['port']
     arguments.debug = 1
@@ -615,8 +634,9 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
 
 
     if ego_car_model == 'lbc':
-        arguments.agent='scenario_runner/team_code/image_agent.py'
-        arguments.agent_config='/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage2_default_25_epoch=15.ckpt'
+        arguments.agent = 'scenario_runner/team_code/image_agent.py'
+        arguments.agent_config = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/epoch=24.ckpt'
+        # arguments.agent_config = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage2_retrain_9_50_leading_car_25_epoch=21.ckpt'
         base_save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized'
     elif ego_car_model == 'auto_pilot':
         arguments.agent = 'leaderboard/team_code/auto_pilot.py'
@@ -632,6 +652,9 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
         base_save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_map_model'
     else:
         print('unknown ego_car_model:', ego_car_model)
+
+    if ego_car_model_path:
+        arguments.agent_config = ego_car_model_path
 
 
     if rerun:
@@ -743,7 +766,7 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
 
 
     if rerun:
-        is_bug = objectives[0] > 0 or objectives[4] or objectives[5]
+        is_bug = objectives[0] > 0 or objectives[5] or objectives[6]
         if is_bug:
             print('\n'*3, 'rerun also causes a bug!!! will not save this', '\n'*3)
         else:
@@ -766,9 +789,10 @@ def estimate_objectives(save_path):
     events_path = os.path.join(save_path, 'events.txt')
     deviations_path = os.path.join(save_path, 'deviations.txt')
 
-    min_d = 10000
-    offroad_d = 10000
-    wronglane_d = 10000
+    # hack: threshold to avoid too large influence
+    min_d = 7
+    offroad_d = 7
+    wronglane_d = 7
     dev_dist = 0
 
 
@@ -787,8 +811,6 @@ def estimate_objectives(save_path):
 
 
 
-    # let it to be the closest distance with another object if no collision happens
-    # ego_linear_speed = -np.min([min_d, 7])
     ego_linear_speed = -1
     is_offroad = 0
     is_wrong_lane = 0
@@ -841,7 +863,7 @@ def estimate_objectives(save_path):
                     y = float(loc.group(2))
 
 
-    return [ego_linear_speed, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light], (x, y), object_type
+    return [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light], (x, y), object_type
 
 
 
@@ -1010,6 +1032,77 @@ class SimpleDuplicateElimination(ElementwiseDuplicateElimination):
         int_diff = np.sum(np.abs(a.X[int_inds] - b.X[int_inds])) == 0
         real_diff = np.sum(np.abs(a.X[real_inds] - b.X[real_inds]) - 0.05 * np.abs(self.xu[real_inds] - self.xl[real_inds])) == 0
         return int_diff and real_diff
+
+
+
+class MyEvaluator(Evaluator):
+
+
+    def _eval(self, problem, pop, **kwargs):
+
+        super()._eval(problem, pop, **kwargs)
+        print(pop[0].X)
+        # hack:
+        label_to_id = {label:i for i, label in enumerate(problem.labels)}
+
+        def correct_spawn_locations(all_final_generated_transforms_list_i, i, object_type, keys):
+            object_type_plural = object_type
+            if object_type in ['pedestrian', 'vehicle']:
+                object_type_plural += 's'
+
+            num_of_objects_ind = label_to_id['num_of_'+object_type_plural]
+            pop[i].X[num_of_objects_ind] = 0
+
+            empty_slots = deque()
+            for j, (x, y, yaw) in enumerate(all_final_generated_transforms_list_i[object_type]):
+                if x == None:
+                    empty_slots.append(j)
+                else:
+                    pop[i].X[num_of_objects_ind] += 1
+                    x_j_ind = label_to_id[object_type+'_x_'+str(j)]
+                    y_j_ind = label_to_id[object_type+'_y_'+str(j)]
+                    yaw_j_ind = label_to_id[object_type+'_yaw_'+str(j)]
+
+
+                    print(object_type, j)
+                    print('x', pop[i].X[x_j_ind], '->', x)
+                    print('y', pop[i].X[y_j_ind], '->', y)
+                    print('yaw', pop[i].X[yaw_j_ind], '->', yaw)
+                    pop[i].X[x_j_ind] = x
+                    pop[i].X[y_j_ind] = y
+                    pop[i].X[yaw_j_ind] = yaw
+
+                    if len(empty_slots) > 0:
+                        q = empty_slots.popleft()
+                        print('shift', j, 'to', q)
+                        for k in keys:
+                            print(k)
+                            ind_to = label_to_id[k+'_'+str(q)]
+                            ind_from = label_to_id[k+'_'+str(j)]
+                            pop[i].X[ind_to] = pop[i].X[ind_from]
+                        if object_type == 'vehicle':
+                            for p in range(waypoints_num_limit):
+                                for waypoint_label in waypoint_labels:
+                                    ind_to = label_to_id['_'.join(['vehicle', str(q), waypoint_label, str(p)])]
+                                    ind_from = label_to_id['_'.join(['vehicle', str(j), waypoint_label, str(p)])]
+                                    pop[i].X[ind_to] = pop[i].X[ind_from]
+
+                        empty_slots.append(i)
+            print()
+
+
+        with open('tmp_folder/total.pickle', 'rb') as f_in:
+            all_final_generated_transforms_list = pickle.load(f_in)
+
+        for i, all_final_generated_transforms_list_i in enumerate(all_final_generated_transforms_list):
+            print(i)
+            correct_spawn_locations(all_final_generated_transforms_list_i, i, 'static', static_general_labels)
+            correct_spawn_locations(all_final_generated_transforms_list_i, i, 'pedestrian', pedestrian_general_labels)
+            correct_spawn_locations(all_final_generated_transforms_list_i, i, 'vehicle', vehicle_general_labels)
+            print('\n'*3)
+        print(pop[0].X)
+
+
 
 
 
@@ -1206,7 +1299,8 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                    termination=termination,
                    seed=0,
                    verbose=True,
-                   save_history=False)
+                   save_history=False,
+                   evaluator=MyEvaluator())
 
     print('We have found', problem.num_of_bugs, 'bugs in total.')
 
@@ -1250,7 +1344,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         os.mkdir(non_dt_save_folder)
     now = datetime.now()
     non_dt_time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
-    non_dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, str(n_gen), str(pop_size), dt_time_str])
+    non_dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, str(n_gen), str(pop_size), non_dt_time_str])
 
     pth = os.path.join(non_dt_save_folder, non_dt_save_file)
     np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time_list, bug_num=bug_num_list, labels=labels)

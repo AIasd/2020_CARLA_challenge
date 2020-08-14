@@ -61,6 +61,10 @@ def create_transform(x, y, z, pitch, yaw, roll):
     transform = carla.Transform(location, rotation)
     return transform
 
+def copy_transform(t):
+    return create_transform(t.location.x, t.location.y, t.location.z, t.rotation.pitch, t.rotation.yaw, t.rotation.roll)
+
+
 def rand_real(rng, low, high):
     return rng.random()*(high-low)+low
 
@@ -78,7 +82,7 @@ def specify_args():
     parser.add_argument('--record', type=str, default='',
                         help='Use CARLA recording feature to create a recording of the scenario')
     # modification: 30->15
-    parser.add_argument('--timeout', default="15.0",
+    parser.add_argument('--timeout', default="8.0",
                         help='Set the CARLA client timeout value in seconds')
 
     # simulation setup
@@ -125,7 +129,7 @@ class arguments_info:
         self.debug = 0
         self.spectator = True
         self.record = ''
-        self.timeout = '15.0'
+        self.timeout = '8.0'
         self.challenge_mode = True
         self.routes = None
         self.scenarios = 'leaderboard/data/all_towns_traffic_scenarios_public.json'
@@ -306,6 +310,17 @@ def is_critical_region(x, estimator, critical_unique_leaves):
     return leave_id in critical_unique_leaves
 
 
+# hack:
+waypoints_num_limit = 5
+
+waypoint_labels = ['perturbation_x', 'perturbation_y']
+
+static_general_labels = ['num_of_static_types', 'static_x', 'static_y', 'static_yaw']
+
+pedestrian_general_labels = ['num_of_pedestrian_types', 'pedestrian_x', 'pedestrian_y', 'pedestrian_yaw', 'pedestrian_trigger_distance', 'pedestrian_speed', 'pedestrian_dist_to_travel']
+
+vehicle_general_labels = ['num_of_vehicle_types', 'vehicle_x', 'vehicle_y', 'vehicle_yaw', 'vehicle_initial_speed', 'vehicle_trigger_distance', 'vehicle_targeted_speed', 'vehicle_waypoint_follower', 'vehicle_targeted_x', 'vehicle_targeted_y', 'vehicle_avoid_collision', 'vehicle_dist_to_travel', 'vehicle_targeted_yaw', 'num_of_vehicle_colors']
+
 def setup_bounds_mask_labels_distributions_stage1():
 
     parameters_min_bounds = OrderedDict()
@@ -319,7 +334,7 @@ def setup_bounds_mask_labels_distributions_stage1():
         'num_of_pedestrian_types': len(pedestrian_types),
         'num_of_vehicle_types': len(vehicle_types),
         'num_of_vehicle_colors': len(vehicle_colors),
-        'waypoints_num_limit': 5
+        'waypoints_num_limit': waypoints_num_limit
     }
 
 
@@ -344,28 +359,51 @@ def setup_bounds_mask_labels_distributions_stage1():
 
     return fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels
 
+
+
+
+
+
 # Set up default bounds, mask, labels, and distributions for a Problem object
 def setup_bounds_mask_labels_distributions_stage2(fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels):
 
     waypoint_min = [-1.5, -1.5]
     waypoint_max = [1.5, 1.5]
     waypoint_mask = ['real', 'real']
-    waypoint_labels = ['perturbation_x', 'perturbation_y']
+
 
     static_general_min = [0, -20, -20, 0]
     static_general_max = [fixed_hyperparameters['num_of_static_types']-1, 20, 20, 360]
     static_mask = ['int'] + ['real']*3
-    static_general_labels = ['num_of_static_types', 'static_x', 'static_y', 'static_yaw']
+
 
     pedestrian_general_min = [0, -20, -20, 0, 2, 0, 0]
     pedestrian_general_max = [fixed_hyperparameters['num_of_pedestrian_types']-1, 20, 20, 360, 50, 4, 50]
     pedestrian_mask = ['int'] + ['real']*6
-    pedestrian_general_labels = ['num_of_pedestrian_types', 'pedestrian_x', 'pedestrian_y', 'pedestrian_yaw', 'pedestrian_trigger_distance', 'pedestrian_speed', 'pedestrian_dist_to_travel']
+
 
     vehicle_general_min = [0, -20, -20, 0, 0, 0, 0, 0, -20, -20, 0, 0, 0, 0]
     vehicle_general_max = [fixed_hyperparameters['num_of_vehicle_types']-1, 20, 20, 360, 15, 50, 15, 1, 20, 20, 1, 50, 360, fixed_hyperparameters['num_of_vehicle_colors']-1]
     vehicle_mask = ['int'] + ['real']*6 + ['int'] + ['real']*2 + ['int'] + ['real']*2 + ['int']
-    vehicle_general_labels = ['num_of_vehicle_types', 'vehicle_x', 'vehicle_y', 'vehicle_yaw', 'vehicle_initial_speed', 'vehicle_trigger_distance', 'vehicle_targeted_speed', 'vehicle_waypoint_follower', 'vehicle_targeted_x', 'vehicle_targeted_y', 'vehicle_avoid_collision', 'vehicle_dist_to_travel', 'vehicle_targeted_yaw', 'num_of_vehicle_colors']
+
+
+
+
+    assert len(waypoint_min) == len(waypoint_max)
+    assert len(waypoint_min) == len(waypoint_mask)
+    assert len(waypoint_mask) == len(waypoint_labels)
+
+    assert len(static_general_min) == len(static_general_max)
+    assert len(static_general_min) == len(static_mask)
+    assert len(static_mask) == len(static_general_labels)
+
+    assert len(pedestrian_general_min) == len(pedestrian_general_max)
+    assert len(pedestrian_general_min) == len(pedestrian_mask)
+    assert len(pedestrian_mask) == len(pedestrian_general_labels)
+
+    assert len(vehicle_general_min) == len(vehicle_general_max)
+    assert len(vehicle_general_min) == len(vehicle_mask)
+    assert len(vehicle_mask) == len(vehicle_general_labels)
 
 
 
@@ -489,10 +527,10 @@ customized_bounds_and_distributions = {
         'vehicle_y_min_0': -3,
         'vehicle_y_max_0': -12,
 
-        'vehicle_initial_speed_min_0': 1,
-        'vehicle_initial_speed_max_0': 5,
+        'vehicle_initial_speed_min_0': 3,
+        'vehicle_initial_speed_max_0': 7,
         'vehicle_targeted_speed_min_0': 0,
-        'vehicle_targeted_speed_max_0': 1,
+        'vehicle_targeted_speed_max_0': 3,
         'vehicle_trigger_distance_min_0': 3,
         'vehicle_trigger_distance_max_0': 12,
 
@@ -517,6 +555,19 @@ customized_bounds_and_distributions = {
         'num_of_pedestrians_max': 0,
         'num_of_vehicles_min': 0,
         'num_of_vehicles_max': 4
+    },
+    'customized_parameters_distributions':{
+    },
+    'customized_center_transforms':{
+    }},
+
+    'no_static': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 0,
+        'num_of_pedestrians_max': 2,
+        'num_of_vehicles_min': 0,
+        'num_of_vehicles_max': 2
     },
     'customized_parameters_distributions':{
     },
