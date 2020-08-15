@@ -1,7 +1,9 @@
 '''
 TBD:
-* save state to continue
 * route selection and scenario selection interface
+
+* save state to continue
+
 * all objective 12 gen VS collision 6 gen + wrong route 6 gen VS all objective dt 3 * 4 gen: check average objectives and error numbers/types distributions, data t-sne visualization across generations and bug VS non-bug and different types of bugs, decision tree volumes
 * estimate single thread time
 
@@ -849,7 +851,7 @@ def estimate_objectives(save_path):
             events = json.load(json_file)
     except:
         print('events_path', events_path, 'is not found')
-        return [ego_linear_speed, offroad_dist, is_wrong_lane, is_run_red_light]
+        return [0, 7, 7, 7, 0, 0, 0, 0], (None, None), None
 
     infractions = events['_checkpoint']['records'][0]['infractions']
     status = events['_checkpoint']['records'][0]['status']
@@ -872,7 +874,6 @@ def estimate_objectives(save_path):
                 if loc:
                     x = float(loc.group(1))
                     y = float(loc.group(2))
-                    offroad_dist = float(loc.group(4))
                     is_offroad = 1
             else:
                 if infraction_type == 'wrong_lane':
