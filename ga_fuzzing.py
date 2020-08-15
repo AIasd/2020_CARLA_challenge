@@ -1,12 +1,14 @@
 '''
 TBD:
+* save state to continue
+* route selection and scenario selection interface
 * all objective 12 gen VS collision 6 gen + wrong route 6 gen VS all objective dt 3 * 4 gen: check average objectives and error numbers/types distributions, data t-sne visualization across generations and bug VS non-bug and different types of bugs, decision tree volumes
 * estimate single thread time
 
 
 * more exact time for dt
 * mating critical region for dt
-* save state to continue
+
 
 * route completion bug
 
@@ -230,6 +232,8 @@ from pymoo.util.termination.default import MultiObjectiveDefaultTermination, Sin
 from pymoo.util.termination.max_time import TimeBasedTermination
 from pymoo.model.individual import Individual
 from pymoo.model.repair import Repair
+from pymoo.operators.mixed_variable_operator import MixedVariableMutation, MixedVariableCrossover
+from pymoo.factory import get_crossover, get_mutation
 
 from dask.distributed import Client, LocalCluster
 
@@ -239,9 +243,9 @@ random_seeds = [10, 20, 30]
 rng = np.random.default_rng(random_seeds[0])
 bug_root_folder = 'bugs'
 non_bug_root_folder = 'non_bugs'
-global_town_name = 'Town03'
+global_town_name = 'Town05'
 global_scenario = 'Scenario12'
-global_direction = 'front'
+global_direction = 'right'
 global_route = 0
 
 # ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
@@ -256,7 +260,7 @@ global_ego_car_model = 'lbc'
 os.environ['HAS_DISPLAY'] = '0'
 # This is used to control how this program use GPU
 # '0,1'
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 
 
 parser = argparse.ArgumentParser()
@@ -264,19 +268,19 @@ parser.add_argument('--resume-run', help='continue to run', default=False, actio
 parser.add_argument('--ind', help='ind ', default=0)
 arguments = parser.parse_args()
 
-resume_run = arguments.resume_run
-ind = arguments.ind
-
+# ind = arguments.ind
 run_parallelization = True
-save = False
+resume_run = False
+save = True
 save_path = 'ga_intermediate.pkl'
-episode_max_time = 40
-global_n_gen = 10
+
+episode_max_time = 50
+global_n_gen = 12
 global_pop_size = 100
 max_running_time = 3600*24
 # [ego_linear_speed, closest_dist, offroad_d, wronglane_d, dev_dist]
-objective_weights = np.array([-1, 1, 1, 1, -1])
-
+# objective_weights = np.array([-1, 1, 1, 1, -1])
+global_objective_weights = np.array([-1, 1, 1, 1, -1])
 # ['generations', 'max_time']
 global_termination_condition = 'generations'
 
@@ -286,7 +290,7 @@ global_ports = [2000]
 if run_parallelization:
     global_scheduler_port = 8785
     global_dashboard_address = 8786
-    global_ports = [2003, 2009]
+    global_ports = [2003, 2006]
     # global_ports = [2003]
 
 
@@ -301,7 +305,10 @@ for customizing weather choices, static_types, pedestrian_types, vehicle_types, 
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, ego_car_model, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, customized_parameters_bounds={}, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, ego_car_model, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, customized_parameters_bounds={}, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0, objective_weights=np.array([0, 0, 1, 1, -1])):
+
+
+        self.objective_weights = objective_weights
 
         self.call_from_dt = call_from_dt
         self.dt = dt
@@ -350,7 +357,10 @@ class MyProblem(Problem):
         self.num_of_offroad = 0
         self.num_of_wronglane = 0
 
-        self.start_time = time.time()
+        if resume_run and len(self.time_list) > 0:
+            self.start_time = time.time()
+        else:
+            self.start_time = time.time()
         self.time_elapsed = 0
         self.time_list = []
         self.bug_num_list = []
@@ -398,7 +408,7 @@ class MyProblem(Problem):
 
 
     def _evaluate(self, X, out, *args, **kwargs):
-
+        objective_weights = self.objective_weights
         customized_center_transforms = self.customized_center_transforms
 
         waypoints_num_limit = self.waypoints_num_limit
@@ -847,7 +857,7 @@ def estimate_objectives(save_path):
     for infraction_type in infraction_types:
         for infraction in infractions[infraction_type]:
             if 'collisions' in infraction_type:
-                typ = re.search('.*with type=(.*) and.*', infraction)
+                typ = re.search('.*with type=(.*) and id.*', infraction)
                 print(infraction, typ)
                 if typ:
                     object_type = typ.group(1)
@@ -858,7 +868,7 @@ def estimate_objectives(save_path):
                     ego_linear_speed = float(loc.group(4))
                     other_actor_linear_speed = float(loc.group(5))
             elif infraction_type == 'off_road':
-                loc = re.search('.*x=(.*), y=(.*), z=(.*), offroad distance=(.*)\)', infraction)
+                loc = re.search('.*x=(.*), y=(.*), z=(.*)\)', infraction)
                 if loc:
                     x = float(loc.group(1))
                     y = float(loc.group(2))
@@ -1172,29 +1182,26 @@ def customized_minimize(problem,
     # create a copy of the algorithm object to ensure no side-effects
     algorithm = copy.deepcopy(algorithm)
 
-    if resume_run:
-        res = algorithm.solve()
-    else:
-        # get the termination if provided as a tuple - create an object
-        if termination is not None and not isinstance(termination, Termination):
-            if isinstance(termination, str):
-                termination = get_termination(termination)
-            else:
-                termination = get_termination(*termination)
+    # get the termination if provided as a tuple - create an object
+    if termination is not None and not isinstance(termination, Termination):
+        if isinstance(termination, str):
+            termination = get_termination(termination)
+        else:
+            termination = get_termination(*termination)
 
 
-        # initialize the algorithm object given a problem
-        algorithm.initialize(problem, termination=termination, **kwargs)
+    # initialize the algorithm object given a problem
+    algorithm.initialize(problem, termination=termination, **kwargs)
 
-        # if no termination could be found add the default termination either for single or multi objective
-        if algorithm.termination is None:
-            if problem.n_obj > 1:
-                algorithm.termination = MultiObjectiveDefaultTermination()
-            else:
-                algorithm.termination = SingleObjectiveDefaultTermination()
+    # if no termination could be found add the default termination either for single or multi objective
+    if algorithm.termination is None:
+        if problem.n_obj > 1:
+            algorithm.termination = MultiObjectiveDefaultTermination()
+        else:
+            algorithm.termination = SingleObjectiveDefaultTermination()
 
-        # actually execute the algorithm
-        res = algorithm.solve()
+    # actually execute the algorithm
+    res = algorithm.solve()
 
     # store the deep copied algorithm in the result object
     res.algorithm = algorithm
@@ -1202,7 +1209,7 @@ def customized_minimize(problem,
     return res
 
 
-def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, n_gen_from_dt=0, pop_size_from_dt=0, dt_time_str=None, dt_iter=None, town_name=None, scenario=None, direction=None, route=None, scenario_type='default', ego_car_model='lbc'):
+def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, n_gen_from_dt=0, pop_size_from_dt=0, dt_time_str=None, dt_iter=None, town_name=None, scenario=None, direction=None, route=None, scenario_type='default', ego_car_model='lbc', objective_weights=np.array([-1, 1, 1, 1, -1])):
 
     if call_from_dt:
         termination_condition = 'generations'
@@ -1211,6 +1218,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         dashboard_address = 8792
         ports = [2021, 2027]
         pop_size = pop_size_from_dt
+
     else:
         termination_condition = global_termination_condition
         n_gen = global_n_gen
@@ -1224,6 +1232,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         route = global_route
         scenario_type = global_scenario_type
         ego_car_model = global_ego_car_model
+        objective_weights = global_objective_weights
 
 
     route_str = str(route)
@@ -1249,50 +1258,47 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
     if resume_run:
         with open(save_path, 'rb') as f_in:
-            algorithm = pickle.load(f_in)
+            problem = pickle.load(f_in)
 
-        algorithm.launch_cluster = True
-        problem = algorithm.problem
     else:
         problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, non_bug_parent_folder=non_bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, ego_car_model=ego_car_model, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, customized_parameters_bounds=customized_d['customized_parameters_bounds'], customized_parameters_distributions=customized_d['customized_parameters_distributions'], customized_center_transforms=customized_d['customized_center_transforms'],
-        call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, dt_time_str=dt_time_str, dt_iter=dt_iter)
-
-
-
-        from pymoo.operators.mixed_variable_operator import MixedVariableMutation, MixedVariableCrossover
-        from pymoo.factory import get_crossover, get_mutation
+        call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, dt_time_str=dt_time_str, dt_iter=dt_iter, objective_weights=objective_weights)
 
 
 
 
 
-        # deal with real and int separately
-        crossover = MixedVariableCrossover(problem.mask, {
-            "real": get_crossover("real_sbx", prob=0.6, eta=20),
-            "int": get_crossover("int_sbx", prob=0.6, eta=20)
-        })
-
-        mutation = MixedVariableMutation(problem.mask, {
-            "real": get_mutation("real_pm", eta=20.0, prob=1/problem.n_var),
-            "int": get_mutation("int_pm", eta=20.0, prob=1/problem.n_var)
-        })
 
 
-        # TBD: customize mutation and crossover to better fit our problem. e.g.
-        # might deal with int and real separately
-        if algorithm_name == 'nsga2':
-            algorithm = NSGA2_DT(dt=dt, X=X, F=F,
-                          pop_size=pop_size,
-                          sampling=MySampling(),
-                          crossover=crossover,
-                          mutation=mutation,
-                          eliminate_duplicates=SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl),
-                          repair=ClipRepair())
-        elif algorithm_name == 'random':
-            algorithm = RandomAlgorithm(pop_size=pop_size,
-                                        sampling=MySampling(),
-                                        eliminate_duplicates=SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl),
-                                        repair=ClipRepair())
+
+
+    # deal with real and int separately
+    crossover = MixedVariableCrossover(problem.mask, {
+        "real": get_crossover("real_sbx", prob=0.6, eta=20),
+        "int": get_crossover("int_sbx", prob=0.6, eta=20)
+    })
+
+    mutation = MixedVariableMutation(problem.mask, {
+        "real": get_mutation("real_pm", eta=20.0, prob=1/problem.n_var),
+        "int": get_mutation("int_pm", eta=20.0, prob=1/problem.n_var)
+    })
+
+
+    # TBD: customize mutation and crossover to better fit our problem. e.g.
+    # might deal with int and real separately
+    if algorithm_name == 'nsga2':
+        algorithm = NSGA2_DT(dt=dt, X=X, F=F,
+                      pop_size=pop_size,
+                      sampling=MySampling(),
+                      crossover=crossover,
+                      mutation=mutation,
+                      eliminate_duplicates=SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl),
+                      repair=ClipRepair())
+    elif algorithm_name == 'random':
+        algorithm = RandomAlgorithm(pop_size=pop_size,
+                                    sampling=MySampling(),
+                                    eliminate_duplicates=SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl),
+                                    repair=ClipRepair())
 
 
 
@@ -1326,13 +1332,13 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
     # for drawing hv
     # create the performance indicator object with reference point
-    metric = Hypervolume(ref_point=np.array([1.0, 1.0, 1.0, 1.0]))
+    metric = Hypervolume(ref_point=np.array([7.0, 7.0, 7.0, 7.0, 7.0]))
     # collect the population in each generation
     pop_each_gen = [a.pop for a in res.history]
     # receive the population in each generation
     obj_and_feasible_each_gen = [pop[pop.get("feasible")[:,0]].get("F") for pop in pop_each_gen]
     # calculate for each generation the HV metric
-    hv = [metric.calc(f) for f in obj_and_feasible_each_gen]
+    hv = np.array([metric.calc(f) for f in obj_and_feasible_each_gen])
 
 
 
@@ -1348,9 +1354,9 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     has_run = problem.has_run
 
 
-    with open(os.path.join(problem.bug_folder, 'res_'+str(ind)+'.pkl'), 'wb') as f_out:
-        pickle.dump({'X':X, 'y':y, 'F':F, 'objectives':objectives, 'n_gen':n_gen, 'pop_size':pop_size, 'hv':hv, 'time_list':time_list, 'bug_num_list':problem.bug_num_list}, f_out)
-        print('-'*100, 'pickled')
+    # with open(os.path.join(problem.bug_folder, 'res_'+str(ind)+'.pkl'), 'wb') as f_out:
+    #     pickle.dump({'X':X, 'y':y, 'F':F, 'objectives':objectives, 'n_gen':n_gen, 'pop_size':pop_size, 'hv':hv, 'time_list':time_list, 'bug_num_list':problem.bug_num_list}, f_out)
+    #     print('-'*100, 'pickled')
 
 
     # save another data npz for easy comparison with dt results
@@ -1362,17 +1368,17 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     non_dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, str(n_gen), str(pop_size), non_dt_time_str])
 
     pth = os.path.join(non_dt_save_folder, non_dt_save_file)
-    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time_list, bug_num=bug_num_list, labels=labels)
+    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time_list, bug_num=bug_num_list, labels=labels, hv=hv)
     print('non_dt npz saved')
 
 
     if save:
         with open(save_path, 'wb') as f_out:
-            pickle.dump(res.algorithm, f_out)
+            pickle.dump(problem, f_out)
             print('-'*100, 'pickled')
 
 
-    return X, y, F, objectives, time_list, bug_num_list, labels, has_run
+    return X, y, F, objectives, time_list, bug_num_list, labels, has_run, hv
 
 if __name__ == '__main__':
     run_ga()

@@ -55,9 +55,9 @@ def filter_critical_regions(X, y):
 
 
 def main():
-    town_name = 'Town03'
+    town_name = 'Town05'
     scenario = 'Scenario12'
-    direction = 'front'
+    direction = 'right'
     route = 0
     # ['default', 'leading_car_braking', 'vehicles_only']
     scenario_type = 'leading_car_braking'
@@ -65,11 +65,12 @@ def main():
     # ['generations', 'max_time']
     termination_condition = 'generations'
     max_running_time = 3600*24
+    objective_weights = np.array([-1, 1, 1, 1, -1])
 
     # [5, 7]
     outer_iterations = 3
     # 5
-    n_gen = 3
+    n_gen = 4
     # 100
     pop_size = 50
 
@@ -83,6 +84,7 @@ def main():
     bug_num = None
     labels = None
     has_run = []
+    hv = None
     estimator = None
     critical_unique_leaves = None
 
@@ -98,7 +100,7 @@ def main():
             dt = False
         if i == 1:
             n_gen += 1
-        X_new, y_new, F_new, objectives_new, elapsed_time_new, bug_num_new, labels, has_run_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str_i, i, town_name, scenario, direction, route, scenario_type, ego_car_model)
+        X_new, y_new, F_new, objectives_new, elapsed_time_new, bug_num_new, labels, has_run_new, hv_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str_i, i, town_name, scenario, direction, route, scenario_type, ego_car_model, objective_weights)
 
         if i == 0:
             X = X_new
@@ -107,6 +109,7 @@ def main():
             objectives = objectives_new
             elapsed_time = elapsed_time_new
             bug_num = bug_num_new
+            hv = hv_new
 
         else:
             X = np.concatenate([X, X_new])
@@ -115,6 +118,8 @@ def main():
             objectives = np.concatenate([objectives, objectives_new])
             elapsed_time = np.concatenate([elapsed_time, elapsed_time_new + elapsed_time[-1]])
             bug_num = np.concatenate([bug_num, bug_num_new])
+            hv = np.concatenate([hv, hv_new])
+
         has_run.append(has_run_new)
 
 
@@ -135,7 +140,7 @@ def main():
     dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, str(n_gen), str(pop_size), str(outer_iterations), dt_time_str])
 
     pth = os.path.join(dt_save_folder, dt_save_file)
-    np.savez(pth, X=X, y=y, F=F, objectives=objectives, elapsed_time=elapsed_time, bug_num=bug_num, labels=labels, has_run=has_run)
+    np.savez(pth, X=X, y=y, F=F, objectives=objectives, elapsed_time=elapsed_time, bug_num=bug_num, labels=labels, has_run=has_run, hv=hv)
     print('dt data saved', 'has run', np.sum(has_run))
     os.system('chmod -R 777 '+dt_save_folder)
 
