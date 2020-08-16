@@ -1,6 +1,10 @@
 '''
 TBD:
 * route selection and scenario selection interface
+* support constraints in the interface
+
+
+
 
 * save state to continue
 
@@ -195,7 +199,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit
+from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_volate_constraints
 
 
 from collections import deque
@@ -277,8 +281,8 @@ save = True
 save_path = 'ga_intermediate.pkl'
 
 episode_max_time = 50
-global_n_gen = 12
-global_pop_size = 100
+global_n_gen = 2
+global_pop_size = 2
 max_running_time = 3600*24
 # [ego_linear_speed, closest_dist, offroad_d, wronglane_d, dev_dist]
 # objective_weights = np.array([-1, 1, 1, 1, -1])
@@ -307,10 +311,16 @@ for customizing weather choices, static_types, pedestrian_types, vehicle_types, 
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, ego_car_model, run_parallelization, scheduler_port, dashboard_address, ports=[2000], episode_max_time=10000, customized_parameters_bounds={}, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0, objective_weights=np.array([0, 0, 1, 1, -1])):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, ego_car_model, run_parallelization, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0, objective_weights=np.array([0, 0, 1, 1, -1])):
+
+        customized_parameters_bounds = customized_config['customized_parameters_bounds']
+        customized_parameters_distributions = customized_config['customized_parameters_distributions']
+        customized_center_transforms = customized_config['customized_center_transforms']
+        customized_constraints = customized_config['customized_constraints']
 
 
         self.objective_weights = objective_weights
+        self.customized_constraints = customized_constraints
 
         self.call_from_dt = call_from_dt
         self.dt = dt
@@ -426,6 +436,7 @@ class MyProblem(Problem):
         parameters_min_bounds = self.parameters_min_bounds
         parameters_max_bounds = self.parameters_max_bounds
         labels = self.labels
+        customized_constraints = self.customized_constraints
 
         dt = self.dt
         estimator = self.estimator
@@ -446,10 +457,10 @@ class MyProblem(Problem):
 
 
         def fun(x, launch_server, counter):
-            if dt and not is_critical_region(x[:-1], estimator, critical_unique_leaves):
+            if (dt and not is_critical_region(x[:-1], estimator, critical_unique_leaves)) or if_volate_constraints(x, customized_constraints, labels):
                 objectives = [0, 7, 7, 7, 0, 0, 0, 0]
                 F = np.array(objectives[:objective_weights.shape[0]]) * objective_weights
-                return F, None, None, None, objectives, 0
+                return F, None, None, None, objectives, 0, None
 
             else:
 
@@ -869,6 +880,7 @@ def estimate_objectives(save_path):
                     y = float(loc.group(2))
                     ego_linear_speed = float(loc.group(4))
                     other_actor_linear_speed = float(loc.group(5))
+
             elif infraction_type == 'off_road':
                 loc = re.search('.*x=(.*), y=(.*), z=(.*)\)', infraction)
                 if loc:
@@ -958,28 +970,36 @@ class MySampling(Sampling):
         mask = problem.mask
         labels = problem.labels
         parameters_distributions = problem.parameters_distributions
+        max_sample_times = 300
 
         X = []
         print('n_samples', n_samples)
         for i in range(n_samples):
-            x = []
-            for i, dist in enumerate(parameters_distributions):
-                typ = mask[i]
-                lower = xl[i]
-                upper = xu[i]
-                label = labels[i]
-                if typ == 'int':
-                    val = rng.integers(lower, upper+1)
-                elif typ == 'real':
-                    if dist[0] == 'normal':
-                        if dist[1] == None:
-                            mean = (lower+upper)/2
-                        else:
-                            mean = dist[1]
-                        val = np.clip(rng.normal(mean, dist[2], 1)[0], lower, upper)
-                    else: # default is uniform
-                        val = rand_real(rng, lower, upper)
-                x.append(val)
+            success = False
+            for i in range(max_sample_times):
+                x = []
+                for i, dist in enumerate(parameters_distributions):
+                    typ = mask[i]
+                    lower = xl[i]
+                    upper = xu[i]
+                    label = labels[i]
+                    if typ == 'int':
+                        val = rng.integers(lower, upper+1)
+                    elif typ == 'real':
+                        if dist[0] == 'normal':
+                            if dist[1] == None:
+                                mean = (lower+upper)/2
+                            else:
+                                mean = dist[1]
+                            val = np.clip(rng.normal(mean, dist[2], 1)[0], lower, upper)
+                        else: # default is uniform
+                            val = rand_real(rng, lower, upper)
+                    x.append(val)
+                if not if_volate_constraints(x, problem.customized_constraints, problem.labels):
+                    success = True
+                    break
+            if not success:
+                raise
 
 
 
@@ -1121,11 +1141,12 @@ class MyEvaluator(Evaluator):
             all_final_generated_transforms_list = pickle.load(f_in)
 
         for i, all_final_generated_transforms_list_i in enumerate(all_final_generated_transforms_list):
-            # print(i)
-            correct_spawn_locations(all_final_generated_transforms_list_i, i, 'static', static_general_labels)
-            correct_spawn_locations(all_final_generated_transforms_list_i, i, 'pedestrian', pedestrian_general_labels)
-            correct_spawn_locations(all_final_generated_transforms_list_i, i, 'vehicle', vehicle_general_labels)
-            # print('\n'*3)
+            if all_final_generated_transforms_list_i:
+                # print(i)
+                correct_spawn_locations(all_final_generated_transforms_list_i, i, 'static', static_general_labels)
+                correct_spawn_locations(all_final_generated_transforms_list_i, i, 'pedestrian', pedestrian_general_labels)
+                correct_spawn_locations(all_final_generated_transforms_list_i, i, 'vehicle', vehicle_general_labels)
+                # print('\n'*3)
         # print(pop[0].X)
 
 
@@ -1217,7 +1238,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         n_gen = n_gen_from_dt
         scheduler_port = 8791
         dashboard_address = 8792
-        ports = [2021, 2027]
+        ports = [2021, 2024]
         pop_size = pop_size_from_dt
 
     else:
@@ -1262,7 +1283,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
             problem = pickle.load(f_in)
 
     else:
-        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, non_bug_parent_folder=non_bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, ego_car_model=ego_car_model, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, ports=ports, episode_max_time=episode_max_time, customized_parameters_bounds=customized_d['customized_parameters_bounds'], customized_parameters_distributions=customized_d['customized_parameters_distributions'], customized_center_transforms=customized_d['customized_center_transforms'],
+        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, non_bug_parent_folder=non_bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, ego_car_model=ego_car_model, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, customized_config=customized_d, ports=ports, episode_max_time=episode_max_time,
         call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, dt_time_str=dt_time_str, dt_iter=dt_iter, objective_weights=objective_weights)
 
 

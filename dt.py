@@ -72,7 +72,7 @@ def main():
     # 5
     n_gen = 4
     # 100
-    pop_size = 50
+    pop_size = 100
 
     X_filtered = None
     F_filtered = None

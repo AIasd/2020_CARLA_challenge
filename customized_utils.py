@@ -512,7 +512,9 @@ customized non-default center transforms for actors
 customized_bounds_and_distributions = {
     'default': {'customized_parameters_bounds':{},
     'customized_parameters_distributions':{},
-    'customized_center_transforms':{}},
+    'customized_center_transforms':{},
+    'customized_constraints':[]},
+
 
     'leading_car_braking': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
@@ -538,7 +540,6 @@ customized_bounds_and_distributions = {
         'vehicle_dist_to_travel_max_0': 30,
         'vehicle_yaw_min_0': 270,
         'vehicle_yaw_max_0': 270
-
     },
     'customized_parameters_distributions':{
         'vehicle_x_0': ('normal', None, 1),
@@ -546,7 +547,15 @@ customized_bounds_and_distributions = {
     },
     'customized_center_transforms':{
         'vehicle_center_transform_0': ('waypoint_ratio', 0)
-    }},
+    },
+    'customized_constraints':[]
+    # [
+    # {'coefficients': [1, 1],
+    # 'labels': ['vehicle_trigger_distance_0', 'vehicle_y_0'],
+    # 'value': 0}
+    # ]
+    },
+
 
     'vehicles_only': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
@@ -556,10 +565,10 @@ customized_bounds_and_distributions = {
         'num_of_vehicles_min': 0,
         'num_of_vehicles_max': 4
     },
-    'customized_parameters_distributions':{
-    },
-    'customized_center_transforms':{
-    }},
+    'customized_parameters_distributions':{},
+    'customized_center_transforms':{},
+    'customized_constraints':[]},
+
 
     'no_static': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
@@ -569,10 +578,31 @@ customized_bounds_and_distributions = {
         'num_of_vehicles_min': 0,
         'num_of_vehicles_max': 2
     },
-    'customized_parameters_distributions':{
-    },
-    'customized_center_transforms':{
-    }}
+    'customized_parameters_distributions':{},
+    'customized_center_transforms':{},
+    'customized_constraints':[]}
 
 
 }
+
+
+def if_volate_constraints(x, customized_constraints, labels):
+    labels_to_id = {label:i for i, label in enumerate(labels)}
+
+    keywords = ['coefficients', 'labels', 'value']
+
+    for constraint in customized_constraints:
+        for k in keywords:
+            assert k in constraint
+        assert len(constraint['coefficients']) == len(constraint['labels'])
+
+        ids = [labels_to_id[label] for label in constraint['labels']]
+        x_ids = [x[id] for id in ids]
+
+        coeff = np.array(constraint['coefficients'])
+        features = np.array(x_ids)
+
+        if_violate = np.sum(coeff * features) > constraint['value']
+        if if_violate:
+            return True
+    return False
