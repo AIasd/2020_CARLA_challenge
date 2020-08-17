@@ -18,7 +18,8 @@ def filter_critical_regions(X, y):
     print('+'*100, 'filter_critical_regions', '+'*100)
 
     min_samples_split = np.max([int(0.1*X.shape[0]), 2])
-    estimator = tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0.01, random_state=0)
+    # estimator = tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0.01, random_state=0)
+    tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0, random_state=0)
     print(X.shape, y.shape, X, y)
     estimator = estimator.fit(X, y)
 
@@ -55,10 +56,9 @@ def filter_critical_regions(X, y):
 
 
 def main():
-    town_name = 'Town05'
-    scenario = 'Scenario12'
-    direction = 'right'
-    route = 0
+    end_when_no_critical_region = False
+    # ['Town01_left_0', 'Town03_front_0', 'Town05_front_0', 'Town05_right_0']
+    route_type = 'town05_right_0'
     # ['default', 'leading_car_braking', 'vehicles_only']
     scenario_type = 'leading_car_braking'
     ego_car_model = 'lbc'
@@ -100,7 +100,7 @@ def main():
             dt = False
         if i == 1:
             n_gen += 1
-        X_new, y_new, F_new, objectives_new, elapsed_time_new, bug_num_new, labels, has_run_new, hv_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str_i, i, town_name, scenario, direction, route, scenario_type, ego_car_model, objective_weights)
+        X_new, y_new, F_new, objectives_new, elapsed_time_new, bug_num_new, labels, has_run_new, hv_new = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, n_gen, pop_size, dt_time_str_i, i, route_type, scenario_type, ego_car_model, objective_weights)
 
         if i == 0:
             X = X_new
@@ -127,7 +127,8 @@ def main():
         X_filtered = X[inds]
         F_filtered = F[inds]
         print(len(X_filtered), X.shape)
-
+        if len(X_filtered) == 0 and end_when_no_critical_region:
+            break
 
         if termination_condition == 'max_time' and elapsed_time[-1] > max_running_time:
             break

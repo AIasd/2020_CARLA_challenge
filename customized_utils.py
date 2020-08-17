@@ -10,6 +10,13 @@ import socket
 from collections import OrderedDict
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
+import sys
+import xml.etree.ElementTree as ET
+import pathlib
+from leaderboard.utils.route_parser import RouteParser
+
+import json
+
 def visualize_route(route):
     n = len(route)
 
@@ -284,7 +291,7 @@ def is_port_in_use(port):
         return s.connect_ex(('localhost', port)) == 0
 
 
-def exit_handler(ports, bug_folder):
+def exit_handler(ports, bug_folder, scenario_file):
     for port in ports:
         while is_port_in_use(port):
             try:
@@ -296,6 +303,7 @@ def exit_handler(ports, bug_folder):
             except:
                 continue
     os.system('sudo chmod -R 777 '+bug_folder)
+    # os.remove(scenario_file)
 
 def get_angle(x1, y1, x2, y2):
     angle = np.arctan2(x1*y2-y1*x2, x1*x2+y1*y2)
@@ -549,8 +557,7 @@ customized_bounds_and_distributions = {
         'vehicle_center_transform_0': ('waypoint_ratio', 0)
     },
     'customized_constraints':[]
-    # [
-    # {'coefficients': [1, 1],
+    # [{'coefficients': [1, 1],
     # 'labels': ['vehicle_trigger_distance_0', 'vehicle_y_0'],
     # 'value': 0}
     # ]
@@ -581,9 +588,39 @@ customized_bounds_and_distributions = {
     'customized_parameters_distributions':{},
     'customized_center_transforms':{},
     'customized_constraints':[]}
+}
 
+
+customized_routes = {
+    'town01_left_0': {
+    'town_name': 'Town01',
+    'direction': 'left',
+    'route_id': 0,
+    'location_list': [(89.1, 300.8), (110.4, 330.5)]
+    },
+    'town03_front_0': {
+    'town_name': 'Town03',
+    'direction': 'front',
+    'route_id': 0,
+    'location_list': [(9, -105), (9, -155)]
+    },
+    'town05_front_0': {
+    'town_name': 'Town05',
+    'direction': 'front',
+    'route_id': 0,
+    'location_list': [(-120, 60), (-124, 26)]
+    },
+    'town05_right_0': {
+    'town_name': 'Town05',
+    'direction': 'right',
+    'route_id': 0,
+    'location_list': [(-120, 25), (-103, 4)]
+    }
 
 }
+
+
+
 
 
 def if_volate_constraints(x, customized_constraints, labels):
@@ -606,3 +643,76 @@ def if_volate_constraints(x, customized_constraints, labels):
         if if_violate:
             return True
     return False
+
+def parse_route_and_scenario(location_list, town_name, scenario, direction, route_str, scenario_file):
+
+    # Parse Route
+    TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
+    <routes>
+    %s
+    </routes>"""
+
+    print(location_list, town_name, scenario, direction, route_str)
+
+
+    pitch = 0
+    roll = 0
+    yaw = 0
+    z = 0
+
+    start_str = '<route id="{}" town="{}">\n'.format(route_str, town_name)
+    waypoint_template = '\t<waypoint pitch="{}" roll="{}" x="{}" y="{}" yaw="{}" z="{}" />\n'
+    end_str = '</route>'
+
+    wp_str = ''
+
+    for x, y in location_list:
+        wp = waypoint_template.format(pitch, roll, x, y, yaw, z)
+        wp_str += wp
+
+    final_str = start_str+wp_str+end_str
+
+    folder = make_hierarchical_dir(['leaderboard/data/customized_routes', town_name, scenario, direction])
+
+
+    pathlib.Path(folder+'/route_{}.xml'.format(route_str)).write_text(TEMPLATE % final_str)
+
+
+    # Parse Scenario
+    x_0, y_0 = location_list[0]
+    x_0_str = str(x_0)
+    y_0_str = str(y_0)
+
+    new_scenario = {
+    "available_scenarios": [
+            {
+                town_name: [
+                    {
+                        "available_event_configurations": [
+                            {
+                                "route": int(route_str),
+                                "center": {
+                                    "pitch": "0.0",
+                                    "x": x_0_str,
+                                    "y": y_0_str,
+                                    "yaw": "270",
+                                    "z": "0.0"
+                                },
+                                "transform": {
+                                    "pitch": "0.0",
+                                    "x": x_0_str,
+                                    "y": y_0_str,
+                                    "yaw": "270",
+                                    "z": "0.0"
+                                }
+                            }
+                        ],
+                        "scenario_type": "Scenario12"
+                    }
+                ]
+            }
+        ]
+    }
+
+    with open(scenario_file, 'w') as f_out:
+        annotation_dict = json.dump(new_scenario, f_out, indent=4)

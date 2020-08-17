@@ -190,7 +190,6 @@ from pymoo.model.evaluator import Evaluator
 from pymoo.algorithms.nsga2 import NSGA2
 from pymoo.algorithms.random import RandomAlgorithm
 
-from pymoo.operators.mutation.polynomial_mutation import PolynomialMutation
 from pymoo.operators.crossover.simulated_binary_crossover import SimulatedBinaryCrossover
 
 from pymoo.performance_indicator.hv import Hypervolume
@@ -199,7 +198,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_volate_constraints
+from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_volate_constraints, customized_routes, parse_route_and_scenario
 
 
 from collections import deque
@@ -249,15 +248,12 @@ random_seeds = [10, 20, 30]
 rng = np.random.default_rng(random_seeds[0])
 bug_root_folder = 'bugs'
 non_bug_root_folder = 'non_bugs'
-global_town_name = 'Town05'
-global_scenario = 'Scenario12'
-global_direction = 'right'
-global_route = 0
-
+# ['town01_left_0', 'town03_front_0', 'town05_front_0', 'town05_right_0']
+global_route_type = 'town05_right_0'
 # ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
 global_scenario_type = 'leading_car_braking'
 
-
+scenario_file = 'current_scenario.json'
 
 # ['nsga2', 'random']
 algorithm_name = 'nsga2'
@@ -281,12 +277,12 @@ save = True
 save_path = 'ga_intermediate.pkl'
 
 episode_max_time = 50
-global_n_gen = 2
-global_pop_size = 2
+global_n_gen = 6
+global_pop_size = 100
 max_running_time = 3600*24
 # [ego_linear_speed, closest_dist, offroad_d, wronglane_d, dev_dist]
 # objective_weights = np.array([-1, 1, 1, 1, -1])
-global_objective_weights = np.array([-1, 1, 1, 1, -1])
+global_objective_weights = np.array([-1, 1, 0, 0, 0])
 # ['generations', 'max_time']
 global_termination_condition = 'generations'
 
@@ -311,7 +307,7 @@ for customizing weather choices, static_types, pedestrian_types, vehicle_types, 
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, ego_car_model, run_parallelization, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0, objective_weights=np.array([0, 0, 1, 1, -1])):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, run_parallelization, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0, objective_weights=np.array([0, 0, 1, 1, -1])):
 
         customized_parameters_bounds = customized_config['customized_parameters_bounds']
         customized_parameters_distributions = customized_config['customized_parameters_distributions']
@@ -355,6 +351,7 @@ class MyProblem(Problem):
         self.scenario = scenario
         self.direction = direction
         self.route_str = route_str
+        self.scenario_file = scenario_file
         self.ego_car_model = ego_car_model
 
         if self.call_from_dt:
@@ -449,6 +446,7 @@ class MyProblem(Problem):
         scenario = self.scenario
         direction = self.direction
         route_str = self.route_str
+        scenario_file = self.scenario_file
         ego_car_model = self.ego_car_model
 
         all_final_generated_transforms_list = []
@@ -471,7 +469,7 @@ class MyProblem(Problem):
 
 
                 # run simulation
-                objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, ego_car_model)
+                objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, scenario_file, ego_car_model)
 
                 print(counter, objectives)
 
@@ -596,11 +594,7 @@ class MyProblem(Problem):
                 submit_and_run_jobs(0, len(self.ports), True, job_results)
 
                 time_elapsed = time.time() - self.start_time
-                print('\n'*10)
-                print('+'*100)
-                print(self.counter, time_elapsed, self.num_of_bugs)
-                print('+'*100)
-                print('\n'*10)
+
 
                 if X.shape[0] > len(self.ports):
                     rng = np.random.default_rng(random_seeds[2])
@@ -657,7 +651,7 @@ class MyProblem(Problem):
 
 
 
-def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, ego_car_model, ego_car_model_path=None, rerun=False, rerun_folder=None):
+def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, scenario_file, ego_car_model, ego_car_model_path=None, rerun=False, rerun_folder=None):
     arguments = arguments_info()
     arguments.port = customized_data['port']
     arguments.debug = 1
@@ -697,7 +691,7 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
 
 
 
-    arguments.scenarios = 'leaderboard/data/fuzzing_scenarios.json'
+    arguments.scenarios = scenario_file
 
 
 
@@ -1033,9 +1027,6 @@ class NSGA2_DT(NSGA2):
     def _initialize(self):
         if self.dt:
             X_list = list(self.X)
-            if len(X_list) == 0:
-                print('No critical leaves!!! Start from random sampling!!!')
-                super()._initialize()
             F_list = list(self.F)
             pop = Population(len(X_list), individual=Individual())
             pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen, "CV", [0 for _ in range(len(X_list))], "feasible", [[True] for _ in range(len(X_list))])
@@ -1231,7 +1222,7 @@ def customized_minimize(problem,
     return res
 
 
-def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, n_gen_from_dt=0, pop_size_from_dt=0, dt_time_str=None, dt_iter=None, town_name=None, scenario=None, direction=None, route=None, scenario_type='default', ego_car_model='lbc', objective_weights=np.array([-1, 1, 1, 1, -1])):
+def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, n_gen_from_dt=0, pop_size_from_dt=0, dt_time_str=None, dt_iter=None, route_type=None, scenario_type='default', ego_car_model='lbc', objective_weights=np.array([-1, 1, 1, 1, -1])):
 
     if call_from_dt:
         termination_condition = 'generations'
@@ -1241,6 +1232,10 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         ports = [2021, 2024]
         pop_size = pop_size_from_dt
 
+        if dt and len(list(X)) == 0:
+            print('No critical leaves!!! Start from random sampling!!!')
+            dt = False
+
     else:
         termination_condition = global_termination_condition
         n_gen = global_n_gen
@@ -1248,23 +1243,32 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         dashboard_address = global_dashboard_address
         ports = global_ports
         pop_size = global_pop_size
-        town_name = global_town_name
-        scenario = global_scenario
-        direction = global_direction
-        route = global_route
+
+        route_type = global_route_type
+
         scenario_type = global_scenario_type
         ego_car_model = global_ego_car_model
         objective_weights = global_objective_weights
 
 
-    route_str = str(route)
-    if route < 10:
-        route_str = '0'+route_str
+
 
 
     # scenario_type = 'leading_car_braking'
     customized_d = customized_bounds_and_distributions[scenario_type]
+    route_info = customized_routes[route_type]
 
+    town_name = route_info['town_name']
+    scenario = 'Scenario12' # This is only for compatibility purpose
+    direction = route_info['direction']
+    route = route_info['route_id']
+    location_list = route_info['location_list']
+
+    route_str = str(route)
+    if route < 10:
+        route_str = '0'+route_str
+
+    parse_route_and_scenario(location_list, town_name, scenario, direction, route_str, scenario_file)
 
 
 
@@ -1283,7 +1287,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
             problem = pickle.load(f_in)
 
     else:
-        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, non_bug_parent_folder=non_bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, ego_car_model=ego_car_model, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, customized_config=customized_d, ports=ports, episode_max_time=episode_max_time,
+        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, non_bug_parent_folder=non_bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, scenario_file=scenario_file, ego_car_model=ego_car_model, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, customized_config=customized_d, ports=ports, episode_max_time=episode_max_time,
         call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, dt_time_str=dt_time_str, dt_iter=dt_iter, objective_weights=objective_weights)
 
 
@@ -1333,7 +1337,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
 
     # close simulator(s)
-    atexit.register(exit_handler, ports, problem.bug_folder)
+    atexit.register(exit_handler, ports, problem.bug_folder, scenario_file)
 
     # TypeError: can't pickle _asyncio.Task objects when save_history = True
     res = customized_minimize(problem,
