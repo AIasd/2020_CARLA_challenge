@@ -725,26 +725,27 @@ def is_similar(x_1, x_2, mask, xl, xu, p, c, th):
 
     int_inds = mask == 'int'
     real_inds = mask == 'real'
-    int_diff = np.abs(x_1[int_inds] - x_2[int_inds])
-    int_diff = c * np.ones(int_diff.shape) * (int_diff > 0)
+    int_diff_raw = np.abs(x_1[int_inds] - x_2[int_inds])
+    int_diff = c * np.ones(int_diff_raw.shape) * (int_diff_raw > eps)
 
-    real_diff = np.abs(x_1[real_inds] - x_2[real_inds]) / (xu - xl + eps)[real_inds]
-    real_diff = np.ones(real_diff.shape) * (real_diff > 0.01)
+    real_diff_raw = np.abs(x_1[real_inds] - x_2[real_inds]) / (np.abs(xu - xl) + eps)[real_inds]
+    real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > 0.15)
 
     diff = np.concatenate([int_diff, real_diff])
     diff_norm = np.linalg.norm(diff, p)
     equal = diff_norm < th
 
-    # print(int_diff)
-    # print(real_diff)
-    print(diff, diff_norm, equal)
-
-
+    # if not equal:
+    #     print(int_diff_raw, real_diff_raw)
 
     return equal
 
 
 def get_distinct_data_points(data_points, mask, xl, xu, p, c, th):
+
+    # ['forward', 'backward']
+    order = 'forward'
+
     mask_arr = np.array(mask)
     xl_arr = np.array(xl)
     xu_arr = np.array(xu)
@@ -754,16 +755,29 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th):
     if len(data_points) == 1:
         return data_points, [0]
     else:
-        distinct_inds = []
-        for i in range(len(data_points)-1):
-            similar = False
-            for j in range(i+1, len(data_points)):
-                print(i, j)
-                similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th)
-                if similar:
-                    break
-            if not similar:
-                distinct_inds.append(i)
-        distinct_inds.append(len(data_points)-1)
+        if order == 'backward':
+            distinct_inds = []
+            for i in range(len(data_points)-1):
+                similar = False
+                for j in range(i+1, len(data_points)):
+
+                    similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th)
+                    if similar:
+                        # print(i, j)
+                        break
+                if not similar:
+                    distinct_inds.append(i)
+            distinct_inds.append(len(data_points)-1)
+        elif order == 'forward':
+            distinct_inds = [0]
+            for i in range(1, len(data_points)):
+                similar = False
+                for j in distinct_inds:
+                    similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th)
+                    if similar:
+                        # print(i, j)
+                        break
+                if not similar:
+                    distinct_inds.append(i)
 
     return list(np.array(data_points)[distinct_inds]), distinct_inds

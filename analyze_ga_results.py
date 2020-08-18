@@ -154,6 +154,69 @@ def plot_each_bug_num_and_objective_num_over_generations(generation_data_paths):
     plt.savefig('bug_num_and_objective_num_over_generations')
 
 
+def check_unique_bug_num(folder, path):
+    f_list = []
+    for f in os.listdir(folder):
+        if os.path.isdir(folder+'/'+f):
+            f_list.append(f)
+    bug_counters = sorted([int(f) for f in f_list])
+
+    d = np.load(path, allow_pickle=True)
+    all_X = d['X']
+    all_y = d['y']
+    cutoffs = [100*i for i in range(1, 13)]
+
+
+    def subroutine(cutoff):
+        X = all_X[:cutoff]
+        y = all_y[:cutoff]
+
+        bugs = X[y==1]
+
+        from customized_utils import get_distinct_data_points, customized_bounds_and_distributions, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters
+
+        scenario_type = 'leading_car_braking'
+        customized_config = customized_bounds_and_distributions[scenario_type]
+        customized_parameters_bounds = customized_config['customized_parameters_bounds']
+
+
+        fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels = setup_bounds_mask_labels_distributions_stage1()
+        customize_parameters(parameters_min_bounds, customized_parameters_bounds)
+        customize_parameters(parameters_max_bounds, customized_parameters_bounds)
+
+
+        _, parameters_min_bounds, parameters_max_bounds, mask, labels, _, _ = setup_bounds_mask_labels_distributions_stage2(fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels)
+        customize_parameters(parameters_min_bounds, customized_parameters_bounds)
+        customize_parameters(parameters_max_bounds, customized_parameters_bounds)
+
+        p = 0
+        c = 1
+        th = 48
+
+        xl = [pair[1] for pair in parameters_min_bounds.items()]
+        xu = [pair[1] for pair in parameters_max_bounds.items()]
+
+        filtered_bugs, inds = get_distinct_data_points(bugs, mask, xl, xu, p, c, th)
+        print(cutoff, len(filtered_bugs), len(bugs))
+        return len(filtered_bugs), inds
+
+
+    num_of_unique_bugs = []
+    for cutoff in cutoffs:
+        num, inds = subroutine(cutoff)
+        num_of_unique_bugs.append(num)
+    print(inds)
+    # print(bug_counters)
+    counter_inds = np.array(bug_counters)[inds] - 1
+    print(all_X[counter_inds[-2]])
+    print(all_X[counter_inds[-1]])
+
+    plt.plot(cutoffs, num_of_unique_bugs)
+    plt.xlabel('num of simulations')
+    plt.ylabel('num of unique bugs')
+    plt.savefig('num_of_unique_bugs')
+
+
 
 
 # list bug types and their run numbers
@@ -295,8 +358,11 @@ if __name__ == '__main__':
     # ('collision', 'data_for_analysis/2020_08_17_00_40_54_6_100_leading_car_collision_objective/Town05_Scenario12_right_0_leading_car_braking_6_100_collision_objective_2020_08_17_04_56_20.npz')]
 
 
-    generation_data_paths = [('all', 'data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective/mean_objectives_across_generations.txt'),
-    ('out-of-road', 'data_for_analysis/2020_08_16_18_18_52_6_100_leading_car_out_of_road_objective/mean_objectives_across_generations.txt'),
-    ('collision', 'data_for_analysis/2020_08_17_00_40_54_6_100_leading_car_collision_objective/mean_objectives_across_generations.txt')]
+    # generation_data_paths = [('all', 'data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective/mean_objectives_across_generations.txt'),
+    # ('out-of-road', 'data_for_analysis/2020_08_16_18_18_52_6_100_leading_car_out_of_road_objective/mean_objectives_across_generations.txt'),
+    # ('collision', 'data_for_analysis/2020_08_17_00_40_54_6_100_leading_car_collision_objective/mean_objectives_across_generations.txt')]
+    #
+    # plot_each_bug_num_and_objective_num_over_generations(generation_data_paths)
 
-    plot_each_bug_num_and_objective_num_over_generations(generation_data_paths)
+
+    check_unique_bug_num('data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective', 'data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective/Town05_Scenario12_right_0_leading_car_braking_12_100_all_objectives_2020_08_16_00_53_08.npz')

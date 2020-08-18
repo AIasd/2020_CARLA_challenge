@@ -279,9 +279,9 @@ rng = np.random.default_rng(random_seeds[0])
 bug_root_folder = 'bugs'
 non_bug_root_folder = 'non_bugs'
 # ['town01_left_0', 'town03_front_0', 'town05_front_0', 'town05_right_0']
-global_route_type = 'town05_front_0'
+global_route_type = 'town01_left_0'
 # ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
-global_scenario_type = 'leading_car_braking'
+global_scenario_type = 'default'
 
 scenario_file = 'current_scenario.json'
 
@@ -289,7 +289,7 @@ scenario_file = 'current_scenario.json'
 algorithm_name = 'nsga2'
 # ['lbc', 'auto_pilot', 'pid_agent']
 global_ego_car_model = 'lbc'
-os.environ['HAS_DISPLAY'] = '1'
+os.environ['HAS_DISPLAY'] = '0'
 # This is used to control how this program use GPU
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
@@ -307,12 +307,12 @@ save = True
 save_path = 'ga_intermediate.pkl'
 
 episode_max_time = 50
-global_n_gen = 2
-global_pop_size = 2
+global_n_gen = 12
+global_pop_size = 100
 max_running_time = 3600*24
 # [ego_linear_speed, closest_dist, offroad_d, wronglane_d, dev_dist]
 # objective_weights = np.array([-1, 1, 1, 1, -1])
-global_objective_weights = np.array([-1, 1, 0, 0, 0])
+global_objective_weights = np.array([-1, 1, 1, 1, -1])
 # ['generations', 'max_time']
 global_termination_condition = 'generations'
 
@@ -422,9 +422,7 @@ class MyProblem(Problem):
         self.bugs_inds_list = []
         self.unique_bugs_inds_list = []
         # TBD: add to interface
-        self.p = 0
-        self.c = 1
-        self.th = 5
+
 
 
 
@@ -459,6 +457,9 @@ class MyProblem(Problem):
         self.customized_center_transforms = customized_center_transforms
 
 
+        self.p = 0
+        self.c = 1
+        self.th = int(len(self.labels) // 2)
 
         super().__init__(n_var=n_var, n_obj=4, n_constr=0, xl=xl, xu=xu, elementwise_evaluation=elementwise_evaluation)
 
@@ -1583,6 +1584,13 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     labels = problem.labels
     has_run = problem.has_run
 
+    mask = problem.mask
+    xl = problem.xl
+    xu = problem.xu
+    p = problem.p
+    c = problem.c
+    th = problem.th
+
 
     # with open(os.path.join(problem.bug_folder, 'res_'+str(ind)+'.pkl'), 'wb') as f_out:
     #     pickle.dump({'X':X, 'y':y, 'F':F, 'objectives':objectives, 'n_gen':n_gen, 'pop_size':pop_size, 'hv':hv, 'time_list':time_list, 'bug_num_list':problem.bug_num_list}, f_out)
@@ -1598,7 +1606,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     non_dt_save_file = '_'.join([route_type, scenario_type, str(n_gen), str(pop_size), non_dt_time_str])
 
     pth = os.path.join(non_dt_save_folder, non_dt_save_file)
-    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time_list, bug_num=bug_num_list, labels=labels, hv=hv)
+    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time_list, bug_num=bug_num_list, labels=labels, hv=hv, has_run=has_run, mask=mask, xl=xl, xu=xu, p=p, c=c, th=th, route_type=route_type, scenario_type=scenario_type)
     print('non_dt npz saved')
 
 
