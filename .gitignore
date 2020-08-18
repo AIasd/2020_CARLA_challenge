@@ -24,3 +24,4 @@ non_bugs/*
 rerun/*
 tmp_folder/*
 current_scenario.json
+data_for_analysis/*

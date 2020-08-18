@@ -98,31 +98,58 @@ def show_gen_f(bug_res_path):
     plt.plot(np.arange(len(val)), val)
     plt.show()
 
-def plot_each_bug_num_and_objective_num_over_generations(generation_data_path):
-    data = []
-    with open(generation_data_path, 'r') as f_in:
-        for line in f_in:
-            tokens = line.split(',')
-            if len(tokens) == 2:
-                pass
-            else:
-                tokens = [float(x.strip('\n')) for x in line.split(',')]
-                num, time, bugs, collisions, offroad, wronglane, speed, offroad, wronglane, dev = tokens[:10]
-                data.append(np.array([num, time, bugs, collisions, offroad, wronglane, speed, offroad, wronglane, dev]))
-    data = np.stack(data)
+def plot_each_bug_num_and_objective_num_over_generations(generation_data_paths):
+    # X=X, y=y, F=F, objectives=objectives, time=time_list, bug_num=bug_num_list, labels=labels, hv=hv
+    pop_size = 100
+    data_list = []
+    for generation_data_path in generation_data_paths:
+        data = []
+        with open(generation_data_path[1], 'r') as f_in:
+            for line in f_in:
+                tokens = line.split(',')
+                if len(tokens) == 2:
+                    pass
+                else:
+                    tokens = [float(x.strip('\n')) for x in line.split(',')]
+                    num, has_run, time, bugs, collisions, offroad_num, wronglane_num, speed, min_d, offroad, wronglane, dev = tokens[:12]
+                    out_of_road = offroad_num + wronglane_num
+                    data.append(np.array([num/pop_size, has_run, time, bugs, collisions, offroad_num, wronglane_num, out_of_road, speed, min_d, offroad, wronglane, dev]))
 
-    fig = plt.figure(figsize=(9, 9))
+        data = np.stack(data)
+        data_list.append(data)
+
+    labels = [generation_data_paths[i][0] for i in range(len(data_list))]
+    data = np.concatenate([data_list[1], data_list[2]], axis=0)
+
+    for i in range(len(data_list[1]), len(data_list[1])+len(data_list[2])):
+        data[i] += data_list[1][-1]
+    data_list.append(data)
+
+    labels.append('collision+out-of-road')
+
+    fig = plt.figure(figsize=(15, 9))
 
 
     plt.suptitle("values over time", fontsize=14)
 
 
-    info = [(2, 2, 'Bug Numbers'), (4, 3, 'Collision Numbers'), (5, 4, 'Offroad Numbers'), (6, 5, 'Wronglane Numbers'), (7, 6, 'Collision Speed'), (8, 7, 'Offroad Directed Distance'), (9, 8, 'Wronglane Directed Distance'), (11, 9, 'Deviation')]
+    info = [(1, 3, 'Bug Numbers'), (6, 4, 'Collision Numbers'), (7, 5, 'Offroad Numbers'), (8, 6, 'Wronglane Numbers'), (9, 7, 'Out-of-road Numbers'), (11, 8, 'Collision Speed'), (12, 9, 'Min object distance'), (13, 10, 'Offroad Directed Distance'), (14, 11, 'Wronglane Directed Distance'), (15, 12, 'Max Deviation')]
 
     for loc, ind, ylabel in info:
-        ax = fig.add_subplot(4, 3, loc)
-        plt.plot(data[:, 1], data[:, ind])
-        plt.xlabel("Time(s)")
+        ax = fig.add_subplot(3, 5, loc)
+        for i in [0, 3, 1, 2]:
+            if loc < 11 or i < 3:
+                label = labels[i]
+                if loc >= 11:
+                    y = []
+                    for j in range(data_list[i].shape[0]):
+                        y.append(np.mean(data_list[i][:j+1, ind]))
+                else:
+                    y = data_list[i][:, ind]
+                ax.plot(data_list[i][:, 0], y, label=label)
+        if loc == 1:
+            ax.legend()
+        plt.xlabel("Generations")
         plt.ylabel(ylabel)
     plt.savefig('bug_num_and_objective_num_over_generations')
 
@@ -261,4 +288,15 @@ if __name__ == '__main__':
 
 
     # compare_with_dt('dt_data/Town03_Scenario12_front_0_default_1st.npz')
-    compare_with_dt('non_dt_data/Town03_Scenario12_front_0_leading_car_braking_4_50_2020_08_12_20_50_00.npz')
+    # compare_with_dt('non_dt_data/Town03_Scenario12_front_0_leading_car_braking_4_50_2020_08_12_20_50_00.npz')
+
+    # generation_data_paths = [('all', 'data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective/Town05_Scenario12_right_0_leading_car_braking_12_100_all_objectives_2020_08_16_00_53_08.npz'),
+    # ('out-of-road', 'data_for_analysis/2020_08_16_18_18_52_6_100_leading_car_out_of_road_objective/Town05_Scenario12_right_0_leading_car_braking_6_100_out_of_road_objective_2020_08_16_22_29_33.npz'),
+    # ('collision', 'data_for_analysis/2020_08_17_00_40_54_6_100_leading_car_collision_objective/Town05_Scenario12_right_0_leading_car_braking_6_100_collision_objective_2020_08_17_04_56_20.npz')]
+
+
+    generation_data_paths = [('all', 'data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective/mean_objectives_across_generations.txt'),
+    ('out-of-road', 'data_for_analysis/2020_08_16_18_18_52_6_100_leading_car_out_of_road_objective/mean_objectives_across_generations.txt'),
+    ('collision', 'data_for_analysis/2020_08_17_00_40_54_6_100_leading_car_collision_objective/mean_objectives_across_generations.txt')]
+
+    plot_each_bug_num_and_objective_num_over_generations(generation_data_paths)

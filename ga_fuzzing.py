@@ -1,7 +1,23 @@
 '''
 TBD:
-* route selection and scenario selection interface
-* support constraints in the interface
+* random seed
+
+
+* tsne, decision tree volume
+
+* another scene
+
+
+
+
+
+
+* emcmc
+* algorithm selection interface (integrate dt into ga_fuzzing)
+* random seed
+* record high resolution image
+
+* avoid generation of other objects very close to the ego-car (this can also be achieved by customized constraints)
 
 
 
@@ -22,7 +38,6 @@ TBD:
 * fix rgb with car high resolution
 
 
-* emcmc
 * more routes
 
 
@@ -183,11 +198,14 @@ from pymoo.model.problem import Problem
 from pymoo.model.sampling import Sampling
 from pymoo.model.crossover import Crossover
 from pymoo.model.mutation import Mutation
-from pymoo.model.duplicate import ElementwiseDuplicateElimination
+from pymoo.model.duplicate import ElementwiseDuplicateElimination, NoDuplicateElimination
+
 from pymoo.model.population import Population
 from pymoo.model.evaluator import Evaluator
 
-from pymoo.algorithms.nsga2 import NSGA2
+from pymoo.algorithms.nsga2 import NSGA2, binary_tournament
+from pymoo.algorithms.nsga3 import NSGA3, comp_by_cv_then_random
+from pymoo.operators.selection.tournament_selection import TournamentSelection
 from pymoo.algorithms.random import RandomAlgorithm
 
 from pymoo.operators.crossover.simulated_binary_crossover import SimulatedBinaryCrossover
@@ -198,7 +216,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_volate_constraints, customized_routes, parse_route_and_scenario
+from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_volate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar
 
 
 from collections import deque
@@ -239,17 +257,29 @@ from pymoo.model.individual import Individual
 from pymoo.model.repair import Repair
 from pymoo.operators.mixed_variable_operator import MixedVariableMutation, MixedVariableCrossover
 from pymoo.factory import get_crossover, get_mutation
+from pymoo.model.mating import Mating
 
 from dask.distributed import Client, LocalCluster
 
 
 
+
+
+
+
+
+
+
+
+
+
+use_unique_bugs = True
 random_seeds = [10, 20, 30]
 rng = np.random.default_rng(random_seeds[0])
 bug_root_folder = 'bugs'
 non_bug_root_folder = 'non_bugs'
 # ['town01_left_0', 'town03_front_0', 'town05_front_0', 'town05_right_0']
-global_route_type = 'town05_right_0'
+global_route_type = 'town05_front_0'
 # ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
 global_scenario_type = 'leading_car_braking'
 
@@ -259,7 +289,7 @@ scenario_file = 'current_scenario.json'
 algorithm_name = 'nsga2'
 # ['lbc', 'auto_pilot', 'pid_agent']
 global_ego_car_model = 'lbc'
-os.environ['HAS_DISPLAY'] = '0'
+os.environ['HAS_DISPLAY'] = '1'
 # This is used to control how this program use GPU
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
@@ -277,8 +307,8 @@ save = True
 save_path = 'ga_intermediate.pkl'
 
 episode_max_time = 50
-global_n_gen = 6
-global_pop_size = 100
+global_n_gen = 2
+global_pop_size = 2
 max_running_time = 3600*24
 # [ego_linear_speed, closest_dist, offroad_d, wronglane_d, dev_dist]
 # objective_weights = np.array([-1, 1, 1, 1, -1])
@@ -294,6 +324,18 @@ if run_parallelization:
     global_dashboard_address = 8786
     global_ports = [2003, 2006]
     # global_ports = [2003]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -362,6 +404,7 @@ class MyProblem(Problem):
 
         self.counter = 0
         self.num_of_bugs = 0
+        self.num_of_unique_bugs = 0
         self.num_of_collisions = 0
         self.num_of_offroad = 0
         self.num_of_wronglane = 0
@@ -373,7 +416,15 @@ class MyProblem(Problem):
         self.time_elapsed = 0
         self.time_list = []
         self.bug_num_list = []
-
+        self.unique_bug_num_list = []
+        self.bugs = []
+        self.unique_bugs = []
+        self.bugs_inds_list = []
+        self.unique_bugs_inds_list = []
+        # TBD: add to interface
+        self.p = 0
+        self.c = 1
+        self.th = 5
 
 
 
@@ -554,7 +605,9 @@ class MyProblem(Problem):
                     with open(mean_objectives_across_generations_path, 'a') as f_out:
                         f_out.write(str(i)+','+bug_str+'\n')
 
-                    self.num_of_bugs += 1
+                    self.bugs.append(X[i].astype(float))
+                    self.bugs_inds_list.append(self.counter-len(jobs)+i)
+
                     self.y_list.append(1)
                 else:
                     self.y_list.append(0)
@@ -564,17 +617,24 @@ class MyProblem(Problem):
                 self.objectives_list.append(np.array(objectives))
                 job_results.append(F)
 
-            print(all_final_generated_transforms_list)
+            # print(all_final_generated_transforms_list)
 
             # hack:
             with open('tmp_folder/total.pickle', 'wb') as f_out:
                 pickle.dump(all_final_generated_transforms_list, f_out)
 
 
+            self.unique_bugs, distinct_inds = get_distinct_data_points(self.bugs, self.mask, self.xl, self.xu, self.p, self.c, self.th)
+            self.num_of_bugs = len(self.bugs)
+            self.num_of_unique_bugs = len(self.unique_bugs)
+            self.unique_bugs_inds_list = list(np.array(self.bugs_inds_list)[distinct_inds])
+
+
 
             # record time elapsed and bug numbers
             self.time_list.append(time_elapsed)
             self.bug_num_list.append(self.num_of_bugs)
+            self.unique_bug_num_list.append(self.num_of_unique_bugs)
 
 
 
@@ -606,11 +666,17 @@ class MyProblem(Problem):
                 print('+'*100)
                 mean_objectives_this_generation = np.mean(np.array(self.objectives_list[-X.shape[0]:]), axis=0)
 
-                print(self.counter, time_elapsed, self.num_of_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane, mean_objectives_this_generation)
+                print(self.counter, time_elapsed, self.num_of_bugs, self.num_of_unique_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane, mean_objectives_this_generation)
+                print(self.bugs_inds_list)
+                print(self.unique_bugs_inds_list)
+                for i in range(X.shape[0]-1):
+                    for j in range(i+1, X.shape[0]):
+                        if np.sum(X[i]-X[j])==0:
+                            print(X.shape[0], i, j, 'same')
 
                 with open(mean_objectives_across_generations_path, 'a') as f_out:
-                    f_out.write(','.join([str(x) for x in [self.counter, self.has_run, time_elapsed, self.num_of_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane]]+[str(x) for x in mean_objectives_this_generation])+'\n')
-
+                    f_out.write(','.join([str(x) for x in [self.counter, self.has_run, time_elapsed, self.num_of_bugs, self.num_of_unique_bugs, self.num_of_unique_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane]]+[str(x) for x in mean_objectives_this_generation])+'\n')
+                    f_out.write(';'.join([str(ind) for ind in self.unique_bugs_inds_list])+'\n')
                 print('+'*100)
                 print('\n'*10)
                 os.system('sudo chmod -R 777 '+self.bug_folder)
@@ -1042,6 +1108,32 @@ class NSGA2_DT(NSGA2):
 
 
 
+class NSGA3_DT(NSGA3):
+    def __init__(self, dt=False, X=None, F=None, **kwargs):
+        self.dt = dt
+        self.X = X
+        self.F = F
+
+        super().__init__(**kwargs)
+
+
+    def _initialize(self):
+        if self.dt:
+            X_list = list(self.X)
+            F_list = list(self.F)
+            pop = Population(len(X_list), individual=Individual())
+            pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen, "CV", [0 for _ in range(len(X_list))], "feasible", [[True] for _ in range(len(X_list))])
+
+            self.evaluator.eval(self.problem, pop, algorithm=self)
+
+            if self.survival:
+                pop = self.survival.do(self.problem, pop, len(pop), algorithm=self, n_min_infeas_survive=self.min_infeas_pop_size)
+
+            self.pop, self.off = pop, pop
+        else:
+            super()._initialize()
+
+
 
 
 
@@ -1063,12 +1155,94 @@ class SimpleDuplicateElimination(ElementwiseDuplicateElimination):
         self.xu = np.array(xu)
         self.xl = np.array(xl)
         self.cmp = lambda a, b: self.is_equal(a, b)
+
+        self.c = 1
+        self.p = 0
+        self.th = 5
+
+    # def do(self, pop, *args, return_indices=False, to_itself=True):
+    #     original = pop
+    #
+    #     if len(pop) == 0:
+    #         return pop
+    #
+    #     if to_itself:
+    #         pop = pop[~self._do(pop, None, np.full(len(pop), False))]
+    #
+    #     for arg in args:
+    #         if len(arg) > 0:
+    #
+    #             if len(pop) == 0:
+    #                 break
+    #             elif len(arg) == 0:
+    #                 continue
+    #             else:
+    #                 pop = pop[~self._do(pop, arg, np.full(len(pop), False))]
+    #
+    #     if return_indices:
+    #         no_duplicate, is_duplicate = [], []
+    #         H = set(pop)
+    #
+    #         for i, ind in enumerate(original):
+    #             if ind in H:
+    #                 no_duplicate.append(i)
+    #             else:
+    #                 is_duplicate.append(i)
+    #
+    #         return pop, no_duplicate, is_duplicate
+    #     else:
+    #         return pop
+
+
     def is_equal(self, a, b):
-        int_inds = self.mask == 'int'
-        real_inds = self.mask == 'real'
-        int_diff = np.sum(np.abs(a.X[int_inds] - b.X[int_inds])) == 0
-        real_diff = np.sum(np.abs(a.X[real_inds] - b.X[real_inds]) - 0.05 * np.abs(self.xu[real_inds] - self.xl[real_inds])) == 0
-        return int_diff and real_diff
+        if type(b).__module__ == np.__name__:
+            b_X = b
+        else:
+            b_X = b.X
+        return is_similar(a.X, b_X, self.mask, self.xl, self.xu, self.p, self.c, self.th)
+
+
+class MyMating(Mating):
+    def do(self, problem, pop, n_offsprings, **kwargs):
+
+        # the population object to be used
+        off = pop.new()
+
+        # infill counter - counts how often the mating needs to be done to fill up n_offsprings
+        n_infills = 0
+
+        # iterate until enough offsprings are created
+        while len(off) < n_offsprings:
+
+            # how many offsprings are remaining to be created
+            n_remaining = n_offsprings - len(off)
+
+            # do the mating
+            _off = self._do(problem, pop, n_remaining, **kwargs)
+
+            # repair the individuals if necessary - disabled if repair is NoRepair
+            _off = self.repair.do(problem, _off, **kwargs)
+
+            # eliminate the duplicates - disabled if it is NoRepair
+            _off = self.eliminate_duplicates.do(_off, problem.unique_bugs)
+
+            # if more offsprings than necessary - truncate them randomly
+            if len(off) + len(_off) > n_offsprings:
+                # IMPORTANT: Interestingly, this makes a difference in performance
+                n_remaining = n_offsprings - len(off)
+                _off = _off[:n_remaining]
+
+            # add to the offsprings and increase the mating counter
+            off = Population.merge(off, _off)
+            n_infills += 1
+
+            # if no new offsprings can be generated within a pre-specified number of generations
+            if n_infills > self.n_max_iterations:
+                break
+
+        return off
+
+
 
 
 
@@ -1254,6 +1428,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
 
 
+
     # scenario_type = 'leading_car_braking'
     customized_d = customized_bounds_and_distributions[scenario_type]
     route_info = customized_routes[route_type]
@@ -1293,11 +1468,6 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
 
 
-
-
-
-
-
     # deal with real and int separately
     crossover = MixedVariableCrossover(problem.mask, {
         "real": get_crossover("real_sbx", prob=0.6, eta=20),
@@ -1310,6 +1480,29 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     })
 
 
+    if algorithm_name == 'nsga3':
+        selection = TournamentSelection(func_comp=comp_by_cv_then_random)
+    else: # nsga2
+        selection = TournamentSelection(func_comp=binary_tournament)
+
+    repair = ClipRepair()
+
+    if use_unique_bugs:
+        eliminate_duplicates = SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl)
+        mating = MyMating(selection,
+                        crossover,
+                        mutation,
+                        repair=repair,
+                        eliminate_duplicates=eliminate_duplicates,
+                        n_max_iterations=100)
+    else:
+        eliminate_duplicates = NoDuplicateElimination()
+        mating = None
+
+
+
+
+
     # TBD: customize mutation and crossover to better fit our problem. e.g.
     # might deal with int and real separately
     if algorithm_name == 'nsga2':
@@ -1318,13 +1511,24 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       sampling=MySampling(),
                       crossover=crossover,
                       mutation=mutation,
-                      eliminate_duplicates=SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl),
-                      repair=ClipRepair())
+                      eliminate_duplicates=eliminate_duplicates,
+                      repair=repair,
+                      mating=mating)
+    elif algorithm_name == 'nsga3':
+        algorithm = NSGA3_DT(dt=dt, X=X, F=F,
+                      pop_size=pop_size,
+                      sampling=MySampling(),
+                      crossover=crossover,
+                      mutation=mutation,
+                      eliminate_duplicates=eliminate_duplicates,
+                      repair=repair,
+                      mating=mating)
     elif algorithm_name == 'random':
         algorithm = RandomAlgorithm(pop_size=pop_size,
                                     sampling=MySampling(),
-                                    eliminate_duplicates=SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl),
-                                    repair=ClipRepair())
+                                    eliminate_duplicates=eliminate_duplicates,
+                                    repair=repair,
+                                    mating=mating)
 
 
 
@@ -1391,7 +1595,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         os.mkdir(non_dt_save_folder)
     now = datetime.now()
     non_dt_time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
-    non_dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, str(n_gen), str(pop_size), non_dt_time_str])
+    non_dt_save_file = '_'.join([route_type, scenario_type, str(n_gen), str(pop_size), non_dt_time_str])
 
     pth = os.path.join(non_dt_save_folder, non_dt_save_file)
     np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time_list, bug_num=bug_num_list, labels=labels, hv=hv)

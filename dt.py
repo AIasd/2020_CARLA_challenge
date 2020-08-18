@@ -19,7 +19,7 @@ def filter_critical_regions(X, y):
 
     min_samples_split = np.max([int(0.1*X.shape[0]), 2])
     # estimator = tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0.01, random_state=0)
-    tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0, random_state=0)
+    estimator = tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0.0001, random_state=0)
     print(X.shape, y.shape, X, y)
     estimator = estimator.fit(X, y)
 
@@ -138,7 +138,10 @@ def main():
     dt_save_folder = 'dt_data'
     if not os.path.exists(dt_save_folder):
         os.mkdir(dt_save_folder)
-    dt_save_file = '_'.join([town_name, scenario, direction, str(route), scenario_type, str(n_gen), str(pop_size), str(outer_iterations), dt_time_str])
+
+
+
+    dt_save_file = '_'.join([route_type, scenario_type, str(n_gen), str(pop_size), str(outer_iterations), dt_time_str])
 
     pth = os.path.join(dt_save_folder, dt_save_file)
     np.savez(pth, X=X, y=y, F=F, objectives=objectives, elapsed_time=elapsed_time, bug_num=bug_num, labels=labels, has_run=has_run, hv=hv)

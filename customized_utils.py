@@ -556,11 +556,10 @@ customized_bounds_and_distributions = {
     'customized_center_transforms':{
         'vehicle_center_transform_0': ('waypoint_ratio', 0)
     },
-    'customized_constraints':[]
-    # [{'coefficients': [1, 1],
-    # 'labels': ['vehicle_trigger_distance_0', 'vehicle_y_0'],
-    # 'value': 0}
-    # ]
+    'customized_constraints': [{'coefficients': [1, 1],
+    'labels': ['vehicle_trigger_distance_0', 'vehicle_y_0'],
+    'value': 0}
+    ]
     },
 
 
@@ -716,3 +715,55 @@ def parse_route_and_scenario(location_list, town_name, scenario, direction, rout
 
     with open(scenario_file, 'w') as f_out:
         annotation_dict = json.dump(new_scenario, f_out, indent=4)
+
+
+
+
+
+def is_similar(x_1, x_2, mask, xl, xu, p, c, th):
+    eps = 1e-8
+
+    int_inds = mask == 'int'
+    real_inds = mask == 'real'
+    int_diff = np.abs(x_1[int_inds] - x_2[int_inds])
+    int_diff = c * np.ones(int_diff.shape) * (int_diff > 0)
+
+    real_diff = np.abs(x_1[real_inds] - x_2[real_inds]) / (xu - xl + eps)[real_inds]
+    real_diff = np.ones(real_diff.shape) * (real_diff > 0.01)
+
+    diff = np.concatenate([int_diff, real_diff])
+    diff_norm = np.linalg.norm(diff, p)
+    equal = diff_norm < th
+
+    # print(int_diff)
+    # print(real_diff)
+    print(diff, diff_norm, equal)
+
+
+
+    return equal
+
+
+def get_distinct_data_points(data_points, mask, xl, xu, p, c, th):
+    mask_arr = np.array(mask)
+    xl_arr = np.array(xl)
+    xu_arr = np.array(xu)
+    # print(data_points)
+    if len(data_points) == 0:
+        return [], []
+    if len(data_points) == 1:
+        return data_points, [0]
+    else:
+        distinct_inds = []
+        for i in range(len(data_points)-1):
+            similar = False
+            for j in range(i+1, len(data_points)):
+                print(i, j)
+                similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th)
+                if similar:
+                    break
+            if not similar:
+                distinct_inds.append(i)
+        distinct_inds.append(len(data_points)-1)
+
+    return list(np.array(data_points)[distinct_inds]), distinct_inds
