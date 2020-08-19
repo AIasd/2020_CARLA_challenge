@@ -1,5 +1,12 @@
 '''
+python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 24 --pop_size 100 -r 'town01_left_0'
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 24 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05'
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 24 --pop_size 100 -r 'town05_front_0' -c 'two_leading_cars_town05'
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 24 --pop_size 100 -r 'town04_front_0' -c 'two_pedestrians_cross_street_town04'
+
+
 TBD:
+
 
 * debug vehicles not moving
 
@@ -267,12 +274,7 @@ from pymoo.model.mating import Mating
 from dask.distributed import Client, LocalCluster
 
 
-'''
-python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 24 --pop_size 100 -r 'town01_left_0' --has_display 1
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 24 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --has_display 1
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 24 --pop_size 100 -r 'town05_front_0' -c 'two_leading_cars_town05' --has_display 1
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 24 --pop_size 100 -r 'town04_front_0' -c 'two_pedestrians_cross_street_town04' --has_display 1
-'''
+
 
 
 

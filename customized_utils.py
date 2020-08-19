@@ -534,14 +534,14 @@ customized_bounds_and_distributions = {
 
         'vehicle_x_min_0': -0.5,
         'vehicle_x_max_0': 0.5,
-        'vehicle_y_min_0': -3,
-        'vehicle_y_max_0': -15,
+        'vehicle_y_min_0': -5,
+        'vehicle_y_max_0': -10,
 
-        'vehicle_initial_speed_min_0': 3,
-        'vehicle_initial_speed_max_0': 7,
+        'vehicle_initial_speed_min_0': 2,
+        'vehicle_initial_speed_max_0': 4,
         'vehicle_targeted_speed_min_0': 0,
-        'vehicle_targeted_speed_max_0': 3,
-        'vehicle_trigger_distance_min_0': 3,
+        'vehicle_targeted_speed_max_0': 2,
+        'vehicle_trigger_distance_min_0': 7,
         'vehicle_trigger_distance_max_0': 15,
 
         'vehicle_dist_to_travel_min_0': 5,
@@ -550,8 +550,8 @@ customized_bounds_and_distributions = {
         'vehicle_yaw_max_0': 270
     },
     'customized_parameters_distributions':{
-        'vehicle_x_0': ('normal', None, 1),
-        'vehicle_y_0': ('normal', None, 8)
+        'vehicle_x_0': ('normal', None, 0.5),
+        'vehicle_y_0': ('normal', None, 5)
     },
     'customized_center_transforms':{
         'vehicle_center_transform_0': ('waypoint_ratio', 0)
@@ -619,7 +619,7 @@ customized_bounds_and_distributions = {
         'num_of_pedestrians_min': 2,
         'num_of_pedestrians_max': 4,
         'num_of_vehicles_min': 0,
-        'num_of_vehicles_max': 1,
+        'num_of_vehicles_max': 2,
 
         'pedestrian_x_min_0': -10,
         'pedestrian_x_max_0': -7,
@@ -757,7 +757,7 @@ customized_routes = {
     'town_name': 'Town05',
     'direction': 'right',
     'route_id': 0,
-    'location_list': [(-120, 25), (-103, 4)]
+    'location_list': [(-120, 30), (-103, 4)]
     },
     # go through non-signalized intersection, rural
     'town07_front_0': {
