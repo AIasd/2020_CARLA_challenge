@@ -180,7 +180,7 @@ CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir '..
 import sys
 import os
 sys.path.append('pymoo')
-carla_root = '/home/zhongzzy9/Documents/self-driving-car/carla_0994_no_rss'
+carla_root = '../carla_0994_no_rss'
 sys.path.append(carla_root+'/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg')
 sys.path.append(carla_root+'/PythonAPI/carla')
 sys.path.append(carla_root+'/PythonAPI')
@@ -189,7 +189,7 @@ sys.path.append('leaderboard')
 sys.path.append('leaderboard/team_code')
 sys.path.append('scenario_runner')
 sys.path.append('scenario_runner')
-sys.path.append('/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/carla_project/src')
+sys.path.append('carla_project/src')
 
 
 
@@ -289,7 +289,7 @@ scenario_file = 'current_scenario.json'
 algorithm_name = 'nsga2'
 # ['lbc', 'auto_pilot', 'pid_agent']
 global_ego_car_model = 'lbc'
-os.environ['HAS_DISPLAY'] = '0'
+os.environ['HAS_DISPLAY'] = '1'
 # This is used to control how this program use GPU
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
@@ -729,21 +729,21 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
 
     if ego_car_model == 'lbc':
         arguments.agent = 'scenario_runner/team_code/image_agent.py'
-        arguments.agent_config = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/epoch=24.ckpt'
-        # arguments.agent_config = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage2_retrain_9_50_leading_car_25_epoch=21.ckpt'
-        base_save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized'
+        arguments.agent_config = 'models/epoch=24.ckpt'
+        # arguments.agent_config = 'models/stage2_retrain_9_50_leading_car_25_epoch=21.ckpt'
+        base_save_folder = 'collected_data_customized'
     elif ego_car_model == 'auto_pilot':
         arguments.agent = 'leaderboard/team_code/auto_pilot.py'
         arguments.agent_config = ''
-        base_save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_autopilot'
+        base_save_folder = 'collected_data_autopilot'
     elif ego_car_model == 'pid_agent':
         arguments.agent = 'scenario_runner/team_code/pid_agent.py'
         arguments.agent_config = ''
-        base_save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_pid_agent'
+        base_save_folder = 'collected_data_pid_agent'
     elif ego_car_model == 'map_model':
         arguments.agent = 'scenario_runner/team_code/map_agent.py'
-        arguments.agent_config = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage1_default_50_epoch=16.ckpt'
-        base_save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_map_model'
+        arguments.agent_config = 'models/stage1_default_50_epoch=16.ckpt'
+        base_save_folder = 'collected_data_map_model'
     else:
         print('unknown ego_car_model:', ego_car_model)
 
@@ -1159,7 +1159,7 @@ class SimpleDuplicateElimination(ElementwiseDuplicateElimination):
 
         self.c = 1
         self.p = 0
-        self.th = 5
+        self.th = int(len(self.mask) // 2)
 
     # def do(self, pop, *args, return_indices=False, to_itself=True):
     #     original = pop

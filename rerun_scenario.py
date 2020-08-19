@@ -64,7 +64,7 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind):
     rerun_folder = make_hierarchical_dir(['rerun', folder])
 
 
-    ego_car_model_path = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage2_retrain_9_50_leading_car_25_1hz_epoch=23.ckpt'
+    ego_car_model_path = 'models/stage2_retrain_9_50_leading_car_25_1hz_epoch=23.ckpt'
 
     customized_data = convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_num_of_pedestrians, max_num_of_vehicles, static_types, pedestrian_types, vehicle_types, vehicle_colors, customized_center_transforms, parameters_min_bounds, parameters_max_bounds)
     objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, ego_car, ego_car_model_path=ego_car_model_path, rerun=True, rerun_folder=cur_folder)

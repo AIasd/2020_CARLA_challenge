@@ -117,7 +117,7 @@ def specify_args():
 
     # addition
     parser.add_argument("--weather-index", type=int, default=0, help="see WEATHER for reference")
-    parser.add_argument("--save-folder", type=str, default='/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data', help="Path to save simulation data")
+    parser.add_argument("--save-folder", type=str, default='collected_data', help="Path to save simulation data")
     parser.add_argument("--deviations-folder", type=str, default='', help="Path to the folder that saves deviations data")
 
 
@@ -142,12 +142,12 @@ class arguments_info:
         self.scenarios = 'leaderboard/data/all_towns_traffic_scenarios_public.json'
         self.repetitions = 1
         self.agent = 'scenario_runner/team_code/image_agent.py'
-        self.agent_config = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/epoch=24.ckpt'
+        self.agent_config = 'models/epoch=24.ckpt'
         self.track = 'SENSORS'
         self.resume = False
         self.checkpoint = ''
         self.weather_index = 19
-        self.save_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized'
+        self.save_folder = 'collected_data_customized'
         self.deviations_folder = ''
 
 
