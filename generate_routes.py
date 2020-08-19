@@ -1,6 +1,6 @@
 
 import sys
-sys.path.append("/home/zhongzzy9/Documents/self-driving-car/carla_0994_no_rss/PythonAPI/carla")
+sys.path.append("../carla_0994_no_rss/PythonAPI/carla")
 sys.path.append("scenario_runner")
 import xml.etree.ElementTree as ET
 import pathlib
