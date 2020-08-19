@@ -1,8 +1,7 @@
 '''
 TBD:
 
-* other two scenes
-
+* debug vehicles not moving
 
 * tsne, decision tree volume
 
@@ -222,7 +221,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_volate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_volate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug
 
 
 from collections import deque
@@ -267,10 +266,17 @@ from pymoo.model.mating import Mating
 
 from dask.distributed import Client, LocalCluster
 
-# python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 2 --pop_size 2 -r -c
-# python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 2 -r -c
-# python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 -r -c --n_gen 12 --pop_size 100
-# python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 -r -c --n_gen 12 --pop_size 100
+
+'''
+python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 24 --pop_size 100 -r 'town01_left_0' --has_display 1
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 24 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --has_display 1
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 24 --pop_size 100 -r 'town05_front_0' -c 'two_leading_cars_town05' --has_display 1
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 24 --pop_size 100 -r 'town04_front_0' -c 'two_pedestrians_cross_street_town04' --has_display 1
+'''
+
+
+
+
 
 
 parser = argparse.ArgumentParser()
@@ -318,7 +324,7 @@ global_objective_weights = np.array(arguments.objective_weights)
 
 
 
-use_unique_bugs = True
+use_unique_bugs = False
 random_seeds = [10, 20, 30]
 rng = np.random.default_rng(random_seeds[0])
 
@@ -550,7 +556,8 @@ class MyProblem(Problem):
 
                 cur_info = {'counter':counter, 'x':x, 'objectives':objectives,  'loc':loc, 'object_type':object_type, 'labels':labels, 'info': info}
 
-                is_bug = objectives[0] > 0 or objectives[5] or objectives[6]
+
+                is_bug = check_bug(objectives)
 
                 if is_bug:
                     cur_folder = make_hierarchical_dir([bug_folder, str(counter)])
@@ -600,7 +607,7 @@ class MyProblem(Problem):
 
                 self.has_run += has_run
                 # record bug
-                if objectives[0] > 0 or objectives[5] or objectives[6]:
+                if check_bug(objectives):
                     bug_str = None
                     if objectives[0] > 0:
                         self.num_of_collisions += 1
@@ -849,7 +856,7 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
 
 
     if rerun:
-        is_bug = objectives[0] > 0 or objectives[5] or objectives[6]
+        is_bug = check_bug(objectives)
         if is_bug:
             print('\n'*3, 'rerun also causes a bug!!! will not save this', '\n'*3)
         else:

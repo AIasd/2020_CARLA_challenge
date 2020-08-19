@@ -1023,7 +1023,7 @@ def game_loop(args):
     try:
 
         client = carla.Client(args.host, args.port)
-        town_name = 'Town05'
+        town_name = 'Town04'
         print(town_name)
         print(client.get_available_maps())
 

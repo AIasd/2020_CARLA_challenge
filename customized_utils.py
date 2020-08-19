@@ -345,8 +345,8 @@ def setup_bounds_mask_labels_distributions_stage1():
     }
 
 
-    general_min = [0.2, 0, 0, 0, 0]
-    general_max = [0.8, fixed_hyperparameters['num_of_weathers']-1, 2, 2, 2]
+    general_min = [0.5, 0, 0, 0, 0]
+    general_max = [0.9, fixed_hyperparameters['num_of_weathers']-1, 2, 2, 2]
     general_mask = ['real', 'int', 'int', 'int', 'int']
     general_labels = ['friction', 'num_of_weathers', 'num_of_static', 'num_of_pedestrians', 'num_of_vehicles']
 
@@ -374,8 +374,8 @@ def setup_bounds_mask_labels_distributions_stage1():
 # Set up default bounds, mask, labels, and distributions for a Problem object
 def setup_bounds_mask_labels_distributions_stage2(fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels):
 
-    waypoint_min = [-1.5, -1.5]
-    waypoint_max = [1.5, 1.5]
+    waypoint_min = [-0.5, 0.5]
+    waypoint_max = [0.5, 0.5]
     waypoint_mask = ['real', 'real']
 
 
@@ -490,7 +490,7 @@ def setup_bounds_mask_labels_distributions_stage2(fixed_hyperparameters, paramet
     parameters_distributions = OrderedDict()
     for label in labels:
         if 'perturbation' in label:
-            parameters_distributions[label] = ('normal', 0, 2)
+            parameters_distributions[label] = ('normal', 0, 0.25)
         else:
             parameters_distributions[label] = ('uniform')
 
@@ -511,6 +511,7 @@ def customize_parameters(parameters, customized_parameters):
 
 
 
+
 '''
 customized non-default center transforms for actors
 ['waypoint_ratio', 'absolute_location']
@@ -523,7 +524,7 @@ customized_bounds_and_distributions = {
     'customized_constraints':[]},
 
 
-    'leading_car_braking': {'customized_parameters_bounds':{
+    'leading_car_braking_town05': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
         'num_of_static_max': 0,
         'num_of_pedestrians_min': 0,
@@ -562,26 +563,153 @@ customized_bounds_and_distributions = {
     },
 
 
-    'vehicles_only': {'customized_parameters_bounds':{
+    'two_leading_cars_town05': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 0,
+        'num_of_pedestrians_max': 2,
+        'num_of_vehicles_min': 2,
+        'num_of_vehicles_max': 3,
+
+        'vehicle_x_min_0': -0.5,
+        'vehicle_x_max_0': 0.5,
+        'vehicle_y_min_0': -3,
+        'vehicle_y_max_0': -8,
+        'vehicle_yaw_min_0': 270,
+        'vehicle_yaw_max_0': 270,
+        'vehicle_initial_speed_min_0': 1,
+        'vehicle_initial_speed_max_0': 4,
+        'vehicle_trigger_distance_min_0': 0,
+        'vehicle_trigger_distance_max_0': 0,
+        'vehicle_dist_to_travel_min_0': 5,
+        'vehicle_dist_to_travel_max_0': 30,
+
+        'vehicle_x_min_1': -4,
+        'vehicle_x_max_1': -3,
+        'vehicle_y_min_1': -1,
+        'vehicle_y_max_1': -5,
+        'vehicle_yaw_min_1': 270,
+        'vehicle_yaw_max_1': 270,
+        'vehicle_initial_speed_min_1': 2,
+        'vehicle_initial_speed_max_1': 5,
+        'vehicle_targeted_speed_min_1': 4,
+        'vehicle_targeted_speed_max_1': 8,
+        'vehicle_trigger_distance_min_1': 2,
+        'vehicle_trigger_distance_max_1': 5,
+        'vehicle_dist_to_travel_min_1': 20,
+        'vehicle_dist_to_travel_max_1': 40,
+
+    },
+    'customized_parameters_distributions':{
+    },
+    'customized_center_transforms':{
+        'vehicle_center_transform_0': ('waypoint_ratio', 0),
+        'vehicle_center_transform_1': ('waypoint_ratio', 0)
+    },
+    'customized_constraints': [{'coefficients': [1, -1],
+    'labels': ['vehicle_initial_speed_1', 'vehicle_targeted_speed_1'],
+    'value': 0}
+    ]
+    },
+
+
+    'two_pedestrians_cross_street_town04': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 1,
+        'num_of_pedestrians_min': 2,
+        'num_of_pedestrians_max': 4,
+        'num_of_vehicles_min': 0,
+        'num_of_vehicles_max': 1,
+
+        'pedestrian_x_min_0': -10,
+        'pedestrian_x_max_0': -7,
+        'pedestrian_y_min_0': -20,
+        'pedestrian_y_max_0': -15,
+        'pedestrian_yaw_min_0': -45,
+        'pedestrian_yaw_max_0': 45,
+        'pedestrian_speed_min_0': 2,
+        'pedestrian_speed_max_0': 5,
+        'pedestrian_trigger_distance_min_0': 13,
+        'pedestrian_trigger_distance_max_0': 20,
+        'pedestrian_dist_to_travel_min_0': 15,
+        'pedestrian_dist_to_travel_max_0': 25,
+
+        'pedestrian_x_min_1': 2,
+        'pedestrian_x_max_1': 5,
+        'pedestrian_y_min_1': -20,
+        'pedestrian_y_max_1': -15,
+        'pedestrian_yaw_min_1': 135,
+        'pedestrian_yaw_max_1': 225,
+        'pedestrian_speed_min_1': 1,
+        'pedestrian_speed_max_1': 4,
+        'pedestrian_trigger_distance_min_1': 13,
+        'pedestrian_trigger_distance_max_1': 20,
+        'pedestrian_dist_to_travel_min_1': 15,
+        'pedestrian_dist_to_travel_max_1': 25,
+
+    },
+    'customized_parameters_distributions':{},
+    'customized_center_transforms':{
+        'pedestrian_center_transform_0': ('waypoint_ratio', 0),
+        'pedestrian_center_transform_1': ('waypoint_ratio', 0),
+    },
+    'customized_constraints': []
+    },
+
+
+
+
+
+    'highway_town04': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
         'num_of_static_max': 0,
         'num_of_pedestrians_min': 0,
         'num_of_pedestrians_max': 0,
-        'num_of_vehicles_min': 0,
-        'num_of_vehicles_max': 4
+        'num_of_vehicles_min': 2,
+        'num_of_vehicles_max': 5,
+        'vehicle_x_min_0': 0,
+        'vehicle_x_max_0': 6,
+        'vehicle_y_min_0': -3,
+        'vehicle_y_max_0': -10,
+        'vehicle_yaw_min_0': 270,
+        'vehicle_yaw_max_0': 270,
+        'vehicle_initial_speed_min_0': 4,
+        'vehicle_initial_speed_max_0': 10,
+        'vehicle_targeted_speed_min_0': 4,
+        'vehicle_targeted_speed_max_0': 10,
+        'vehicle_trigger_distance_min_0': 15,
+        'vehicle_trigger_distance_max_0': 15,
+
+        'vehicle_x_min_1': 0,
+        'vehicle_x_max_1': 6,
+        'vehicle_y_min_1': -3,
+        'vehicle_y_max_1': -10,
+        'vehicle_yaw_min_1': 270,
+        'vehicle_yaw_max_1': 270,
+        'vehicle_initial_speed_min_1': 4,
+        'vehicle_initial_speed_max_1': 10,
+        'vehicle_targeted_speed_min_1': 4,
+        'vehicle_targeted_speed_max_1': 10,
+        'vehicle_trigger_distance_min_1': 15,
+        'vehicle_trigger_distance_max_1': 15,
+        'vehicle_dist_to_travel_min_0': 5,
+        'vehicle_dist_to_travel_max_0': 30,
+        'vehicle_dist_to_travel_min_1': 5,
+        'vehicle_dist_to_travel_max_1': 30,
+
+
     },
     'customized_parameters_distributions':{},
-    'customized_center_transforms':{},
+    'customized_center_transforms':{
+        'vehicle_center_transform_0': ('waypoint_ratio', 0),
+        'vehicle_center_transform_1': ('waypoint_ratio', 0)
+    },
     'customized_constraints':[]},
 
 
     'no_static': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
         'num_of_static_max': 0,
-        'num_of_pedestrians_min': 0,
-        'num_of_pedestrians_max': 2,
-        'num_of_vehicles_min': 0,
-        'num_of_vehicles_max': 2
     },
     'customized_parameters_distributions':{},
     'customized_center_transforms':{},
@@ -590,6 +718,7 @@ customized_bounds_and_distributions = {
 
 
 customized_routes = {
+    # pick: turn left non-siginalized intersection, town
     'town01_left_0': {
     'town_name': 'Town01',
     'direction': 'left',
@@ -602,19 +731,55 @@ customized_routes = {
     'route_id': 0,
     'location_list': [(9, -105), (9, -155)]
     },
+    # pick: go through non-signalized intersection, town
+    'town04_front_0': {
+    'town_name': 'Town04',
+    'direction': 'front',
+    'route_id': 0,
+    'location_list': [(258, -230), (258, -270)]
+    },
+    # change lane, highway, error: other cars are not moving
+    'town04_front_1': {
+    'town_name': 'Town04',
+    'direction': 'front',
+    'route_id': 1,
+    'location_list': [(8, 256), (11, 216)]
+    },
+    # pick: change lane, town
     'town05_front_0': {
     'town_name': 'Town05',
     'direction': 'front',
     'route_id': 0,
     'location_list': [(-120, 60), (-124, 26)]
     },
+    # pick: right turn + leading car stops / slow down, town
     'town05_right_0': {
     'town_name': 'Town05',
     'direction': 'right',
     'route_id': 0,
     'location_list': [(-120, 25), (-103, 4)]
-    }
-
+    },
+    # go through non-signalized intersection, rural
+    'town07_front_0': {
+    'town_name': 'Town07',
+    'direction': 'front',
+    'route_id': 0,
+    'location_list': [(-151, -60), (-151, -15)]
+    },
+    # go through non-signalized intersection, rural, error: other cars are not moving
+    'town07_left_0': {
+    'town_name': 'Town07',
+    'direction': 'left',
+    'route_id': 0,
+    'location_list': [(-75, -64), (-102, -42)]
+    },
+    # change lane, city
+    'town10HD_front_0': {
+    'town_name': 'Town10HD',
+    'direction': 'front',
+    'route_id': 0,
+    'location_list': [(-35, 138), (-17, 143)]
+    },
 }
 
 
@@ -780,3 +945,8 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th):
                     distinct_inds.append(i)
 
     return list(np.array(data_points)[distinct_inds]), distinct_inds
+
+
+def check_bug(objectives):
+    # speed needs to be large than 0.2 to avoid false positive
+    return objectives[0] > 0.2 or objectives[5] or objectives[6]
