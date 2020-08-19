@@ -159,7 +159,7 @@ su zhongzzy9
 
 
 Run genertic algorithm for fuzzing:
-sudo -E /home/zhongzzy9/anaconda3/envs/carla99/bin/python ga_fuzzing.py
+python ga_fuzzing.py
 
 Retrain model from scratch (stage 1):
 CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir '/home/zhongzzy9/Documents/self-driving-car/LBC_data/CARLA_challenge_autopilot' --max_epochs 25
