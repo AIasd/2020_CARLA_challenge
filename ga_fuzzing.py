@@ -289,7 +289,7 @@ scenario_file = 'current_scenario.json'
 algorithm_name = 'nsga2'
 # ['lbc', 'auto_pilot', 'pid_agent']
 global_ego_car_model = 'lbc'
-os.environ['HAS_DISPLAY'] = '1'
+os.environ['HAS_DISPLAY'] = '0'
 # This is used to control how this program use GPU
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
@@ -680,7 +680,7 @@ class MyProblem(Problem):
                     f_out.write(';'.join([str(ind) for ind in self.unique_bugs_inds_list])+'\n')
                 print('+'*100)
                 print('\n'*10)
-                os.system('sudo chmod -R 777 '+self.bug_folder)
+                # os.system('sudo chmod -R 777 '+self.bug_folder)
 
 
         else:
