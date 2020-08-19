@@ -73,7 +73,7 @@ def test(device, net, loader):
 if __name__ == '__main__':
     batch = 32
     epoches = 5
-    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/detectors/saved_models'
+    parent_folder = 'detectors/saved_models'
     if not os.path.exists(parent_folder):
         os.mkdir(model_path)
     model_path = parent_folder + '/vgg16.pth'
@@ -93,8 +93,8 @@ if __name__ == '__main__':
     test_weather_indexes = [15]
     test_routes = routes[55:]
 
-    train_data_dir = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data'
-    test_data_dir = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data'
+    train_data_dir = 'collected_data'
+    test_data_dir = 'collected_data'
 
     # get datasets
     x_center_train, y_train = load_data(train_data_dir, train_weather_indexes, train_routes)
