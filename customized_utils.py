@@ -153,6 +153,9 @@ class arguments_info:
 
 
 
+
+
+
 def add_transform(transform1, transform2):
     x = transform1.location.x + transform2.location.x
     y = transform1.location.y + transform2.location.y
@@ -295,11 +298,8 @@ def exit_handler(ports, bug_folder, scenario_file):
     for port in ports:
         while is_port_in_use(port):
             try:
-                for proc in process_iter():
-                    for conns in proc.connections(kind='inet'):
-                        if conns.laddr.port == port:
-                            print('-'*20, 'kill server at port', port)
-                            proc.send_signal(SIGTERM)
+                subprocess.run('kill $(lsof -t -i :'+str(port)+')', shell=True)
+                print('-'*20, 'kill server at port', port)
             except:
                 continue
     # os.remove(scenario_file)

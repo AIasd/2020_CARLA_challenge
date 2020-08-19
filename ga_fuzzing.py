@@ -1,12 +1,18 @@
 '''
 TBD:
-* random seed
+
+* other two scenes
 
 
 * tsne, decision tree volume
 
-* another scene
+* random seed
 
+* no static objects on route
+
+
+* interface for selecting route
+* unified interface
 
 
 
@@ -216,7 +222,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real, specify_args, convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_volate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_volate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar
 
 
 from collections import deque
@@ -261,69 +267,81 @@ from pymoo.model.mating import Mating
 
 from dask.distributed import Client, LocalCluster
 
+# python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 2 --pop_size 2 -r -c
+# python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 2 -r -c
+# python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 -r -c --n_gen 12 --pop_size 100
+# python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 -r -c --n_gen 12 --pop_size 100
 
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-p','--ports', nargs='+', type=int, default=[2003, 2006], help='TCP port(s) to listen to (default: 2003 2006)')
+parser.add_argument("-s", "--scheduler_port", type=int, default=8785)
+parser.add_argument("-d", "--dashboard_address", type=int, default=8786)
+parser.add_argument("-r", "--route_type", type=str, default='town05_right_0')
+parser.add_argument("-c", "--scenario_type", type=str, default='default')
+parser.add_argument('-a','--algorithm_name', type=str, default='nsga2')
+parser.add_argument("-m", "--ego_car_model", type=str, default='lbc')
+parser.add_argument("--has_display", type=str, default='0')
+parser.add_argument("--root_folder", type=str, default='run_results')
+
+parser.add_argument("--episode_max_time", type=int, default=50)
+parser.add_argument("--n_gen", type=int, default=12)
+parser.add_argument("--pop_size", type=int, default=100)
+parser.add_argument('--objective_weights', nargs='+', type=float, default=[-1, 1, 1, 1, -1])
+arguments = parser.parse_args()
 
 
+global_ports = arguments.ports
+global_scheduler_port = arguments.scheduler_port
+global_dashboard_address = arguments.dashboard_address
+
+# ['town01_left_0', 'town03_front_0', 'town05_front_0', 'town05_right_0']
+global_route_type = arguments.route_type
+# ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
+global_scenario_type = arguments.scenario_type
+# ['nsga2', 'random']
+algorithm_name = arguments.algorithm_name
+# ['lbc', 'auto_pilot', 'pid_agent']
+global_ego_car_model = arguments.ego_car_model
+
+os.environ['HAS_DISPLAY'] = arguments.has_display
+root_folder = arguments.root_folder
 
 
+episode_max_time = arguments.episode_max_time
+global_n_gen = arguments.n_gen
+global_pop_size = arguments.pop_size
 
-
-
+# [ego_linear_speed, closest_dist, offroad_d, wronglane_d, dev_dist]
+# objective_weights = np.array([-1, 1, 1, 1, -1])
+global_objective_weights = np.array(arguments.objective_weights)
 
 
 
 use_unique_bugs = True
 random_seeds = [10, 20, 30]
 rng = np.random.default_rng(random_seeds[0])
-bug_root_folder = 'bugs'
-non_bug_root_folder = 'non_bugs'
-# ['town01_left_0', 'town03_front_0', 'town05_front_0', 'town05_right_0']
-global_route_type = 'town01_left_0'
-# ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
-global_scenario_type = 'default'
 
 scenario_file = 'current_scenario.json'
 
-# ['nsga2', 'random']
-algorithm_name = 'nsga2'
-# ['lbc', 'auto_pilot', 'pid_agent']
-global_ego_car_model = 'lbc'
-os.environ['HAS_DISPLAY'] = '0'
 # This is used to control how this program use GPU
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--resume-run', help='continue to run', default=False, action='store_true')
-parser.add_argument('--ind', help='ind ', default=0)
-arguments = parser.parse_args()
-
-# ind = arguments.ind
-run_parallelization = True
 resume_run = False
 save = True
 save_path = 'ga_intermediate.pkl'
 
-episode_max_time = 50
-global_n_gen = 12
-global_pop_size = 100
+
 max_running_time = 3600*24
-# [ego_linear_speed, closest_dist, offroad_d, wronglane_d, dev_dist]
-# objective_weights = np.array([-1, 1, 1, 1, -1])
-global_objective_weights = np.array([-1, 1, 1, 1, -1])
+
 # ['generations', 'max_time']
 global_termination_condition = 'generations'
 
-global_scheduler_port = 8788
-global_dashboard_address = 8789
-global_ports = [2000]
-if run_parallelization:
-    global_scheduler_port = 8785
-    global_dashboard_address = 8786
-    global_ports = [2003, 2006]
-    # global_ports = [2003]
+
+
+
+
 
 
 
@@ -349,7 +367,7 @@ for customizing weather choices, static_types, pedestrian_types, vehicle_types, 
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, run_parallelization, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_time_str='', dt_iter=0, objective_weights=np.array([0, 0, 1, 1, -1])):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, dt_iter=0, objective_weights=np.array([0, 0, 1, 1, -1])):
 
         customized_parameters_bounds = customized_config['customized_parameters_bounds']
         customized_parameters_distributions = customized_config['customized_parameters_distributions']
@@ -371,20 +389,16 @@ class MyProblem(Problem):
         self.y_list = []
         self.F_list = []
 
-        self.run_parallelization = run_parallelization
+
         self.scheduler_port = scheduler_port
         self.dashboard_address = dashboard_address
         self.ports = ports
         self.episode_max_time = episode_max_time
 
 
-        if self.call_from_dt:
-            time_str = dt_time_str
-        else:
-            now = datetime.now()
-            time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
-        self.bug_folder = bug_parent_folder + time_str
-        self.non_bug_folder = non_bug_parent_folder + time_str
+
+        self.bug_folder = bug_parent_folder
+        self.non_bug_folder = non_bug_parent_folder
         if not os.path.exists(self.bug_folder):
             os.mkdir(self.bug_folder)
 
@@ -460,6 +474,7 @@ class MyProblem(Problem):
         self.p = 0
         self.c = 1
         self.th = int(len(self.labels) // 2)
+        self.launch_server = True
 
         super().__init__(n_var=n_var, n_obj=4, n_constr=0, xl=xl, xu=xu, elementwise_evaluation=elementwise_evaluation)
 
@@ -643,72 +658,46 @@ class MyProblem(Problem):
 
         job_results = []
 
-        if self.run_parallelization:
-            with LocalCluster(scheduler_port=self.scheduler_port, dashboard_address=self.dashboard_address, n_workers=len(self.ports), threads_per_worker=1) as cluster, Client(cluster, connection_limit=8192) as client:
-                workers = []
-                for k in client.has_what():
-                    workers.append(k[len('tcp://'):])
 
-                assert X.shape[0] >= len(self.ports), print(X)
+        with LocalCluster(scheduler_port=self.scheduler_port, dashboard_address=self.dashboard_address, n_workers=len(self.ports), threads_per_worker=1) as cluster, Client(cluster, connection_limit=8192) as client:
+            workers = []
+            for k in client.has_what():
+                workers.append(k[len('tcp://'):])
 
-                rng = np.random.default_rng(random_seeds[1])
-                submit_and_run_jobs(0, len(self.ports), True, job_results)
+            assert X.shape[0] >= len(self.ports), print(X)
 
-                time_elapsed = time.time() - self.start_time
-
-
-                if X.shape[0] > len(self.ports):
-                    rng = np.random.default_rng(random_seeds[2])
-                    submit_and_run_jobs(len(self.ports), X.shape[0], False, job_results)
+            rng = np.random.default_rng(random_seeds[1])
+            submit_and_run_jobs(0, len(self.ports), self.launch_server, job_results)
+            self.launch_server = False
+            time_elapsed = time.time() - self.start_time
 
 
-                time_elapsed = time.time() - self.start_time
-                print('\n'*10)
-                print('+'*100)
-                mean_objectives_this_generation = np.mean(np.array(self.objectives_list[-X.shape[0]:]), axis=0)
-
-                print(self.counter, time_elapsed, self.num_of_bugs, self.num_of_unique_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane, mean_objectives_this_generation)
-                print(self.bugs_inds_list)
-                print(self.unique_bugs_inds_list)
-                for i in range(X.shape[0]-1):
-                    for j in range(i+1, X.shape[0]):
-                        if np.sum(X[i]-X[j])==0:
-                            print(X.shape[0], i, j, 'same')
-
-                with open(mean_objectives_across_generations_path, 'a') as f_out:
-                    f_out.write(','.join([str(x) for x in [self.counter, self.has_run, time_elapsed, self.num_of_bugs, self.num_of_unique_bugs, self.num_of_unique_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane]]+[str(x) for x in mean_objectives_this_generation])+'\n')
-                    f_out.write(';'.join([str(ind) for ind in self.unique_bugs_inds_list])+'\n')
-                print('+'*100)
-                print('\n'*10)
-                # os.system('sudo chmod -R 777 '+self.bug_folder)
+            if X.shape[0] > len(self.ports):
+                rng = np.random.default_rng(random_seeds[2])
+                submit_and_run_jobs(len(self.ports), X.shape[0], self.launch_server, job_results)
 
 
-        else:
-            for i in range(X.shape[0]):
-                x = np.concatenate([X[i], np.array(self.ports)])
-                if i == 0:
-                    launch_server = True
-                else:
-                    launch_server = False
+            time_elapsed = time.time() - self.start_time
+            print('\n'*10)
+            print('+'*100)
+            mean_objectives_this_generation = np.mean(np.array(self.objectives_list[-X.shape[0]:]), axis=0)
 
-                F, loc, object_type, info, objectives, has_run, _ = fun(x, launch_server)
-                job_results.append(F)
+            print(self.counter, time_elapsed, self.num_of_bugs, self.num_of_unique_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane, mean_objectives_this_generation)
+            print(self.bugs_inds_list)
+            print(self.unique_bugs_inds_list)
+            for i in range(X.shape[0]-1):
+                for j in range(i+1, X.shape[0]):
+                    if np.sum(X[i]-X[j])==0:
+                        print(X.shape[0], i, j, 'same')
 
-                # record bug
-                if objectives[0] > 0 or objectives[5] or objectives[6]:
-                    self.num_of_bugs += 1
+            with open(mean_objectives_across_generations_path, 'a') as f_out:
+                f_out.write(','.join([str(x) for x in [self.counter, self.has_run, time_elapsed, self.num_of_bugs, self.num_of_unique_bugs, self.num_of_unique_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane]]+[str(x) for x in mean_objectives_this_generation])+'\n')
+                f_out.write(';'.join([str(ind) for ind in self.unique_bugs_inds_list])+'\n')
+            print('+'*100)
+            print('\n'*10)
+            # os.system('sudo chmod -R 777 '+self.bug_folder)
 
 
-                # record specs for bugs
-                time_elapsed = time.time() - self.start_time
-                self.time_list.append(time_elapsed)
-                self.bug_num_list.append(self.num_of_bugs)
-
-                print('+'*100)
-                print(self.counter, time_elapsed, self.num_of_bugs)
-                print('+'*100)
-
-                self.counter += 1
 
 
 
@@ -1447,13 +1436,17 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     parse_route_and_scenario(location_list, town_name, scenario, direction, route_str, scenario_file)
 
 
+    if call_from_dt:
+        time_str = dt_time_str
+    else:
+        now = datetime.now()
+        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
 
 
-    bug_folder_names = [bug_root_folder, str(call_from_dt), algorithm_name, town_name, scenario, direction, route_str]
-    bug_parent_folder = make_hierarchical_dir(bug_folder_names)
+    parent_folder = make_hierarchical_dir([root_folder, str(call_from_dt), algorithm_name, town_name, scenario, direction, route_str, time_str])
 
-    non_bug_folder_names = [non_bug_root_folder, str(call_from_dt), algorithm_name, town_name, scenario, direction, route_str]
-    non_bug_parent_folder = make_hierarchical_dir(non_bug_folder_names)
+    bug_parent_folder = make_hierarchical_dir([parent_folder, 'bugs'])
+    non_bug_parent_folder = make_hierarchical_dir([parent_folder, 'non_bugs'])
 
 
 
@@ -1463,8 +1456,8 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
             problem = pickle.load(f_in)
 
     else:
-        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, non_bug_parent_folder=non_bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, scenario_file=scenario_file, ego_car_model=ego_car_model, run_parallelization=run_parallelization, scheduler_port=scheduler_port, dashboard_address=dashboard_address, customized_config=customized_d, ports=ports, episode_max_time=episode_max_time,
-        call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, dt_time_str=dt_time_str, dt_iter=dt_iter, objective_weights=objective_weights)
+        problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, non_bug_parent_folder=non_bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, scenario_file=scenario_file, ego_car_model=ego_car_model, scheduler_port=scheduler_port, dashboard_address=dashboard_address, customized_config=customized_d, ports=ports, episode_max_time=episode_max_time,
+        call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, dt_iter=dt_iter, objective_weights=objective_weights)
 
 
 
@@ -1598,16 +1591,13 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
 
     # save another data npz for easy comparison with dt results
-    non_dt_save_folder = 'non_dt_data'
-    if not os.path.exists(non_dt_save_folder):
-        os.mkdir(non_dt_save_folder)
-    now = datetime.now()
-    non_dt_time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
-    non_dt_save_file = '_'.join([route_type, scenario_type, str(n_gen), str(pop_size), non_dt_time_str])
 
-    pth = os.path.join(non_dt_save_folder, non_dt_save_file)
+
+    non_dt_save_file = '_'.join([route_type, scenario_type, str(n_gen), str(pop_size)])
+    pth = os.path.join(bug_parent_folder, non_dt_save_file)
+
     np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time_list, bug_num=bug_num_list, labels=labels, hv=hv, has_run=has_run, mask=mask, xl=xl, xu=xu, p=p, c=c, th=th, route_type=route_type, scenario_type=scenario_type)
-    print('non_dt npz saved')
+    print('npz saved')
 
 
     if save:
