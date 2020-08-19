@@ -302,7 +302,6 @@ def exit_handler(ports, bug_folder, scenario_file):
                             proc.send_signal(SIGTERM)
             except:
                 continue
-    os.system('sudo chmod -R 777 '+bug_folder)
     # os.remove(scenario_file)
 
 def get_angle(x1, y1, x2, y2):
