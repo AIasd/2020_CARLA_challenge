@@ -326,7 +326,7 @@ global_objective_weights = np.array(arguments.objective_weights)
 
 
 
-use_unique_bugs = False
+use_unique_bugs = True
 random_seeds = [10, 20, 30]
 rng = np.random.default_rng(random_seeds[0])
 
