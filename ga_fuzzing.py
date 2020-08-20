@@ -681,17 +681,16 @@ class MyProblem(Problem):
             for k in client.has_what():
                 workers.append(k[len('tcp://'):])
 
-            if X:
-                end_ind = np.min([self.ports, X.shape[0]])
-                rng = np.random.default_rng(random_seeds[1])
-                submit_and_run_jobs(0, end_ind, self.launch_server, job_results)
-                self.launch_server = False
-                time_elapsed = time.time() - self.start_time
+            end_ind = np.min([self.ports, X.shape[0]])
+            rng = np.random.default_rng(random_seeds[1])
+            submit_and_run_jobs(0, end_ind, self.launch_server, job_results)
+            self.launch_server = False
+            time_elapsed = time.time() - self.start_time
 
 
-                if X.shape[0] > len(self.ports):
-                    rng = np.random.default_rng(random_seeds[2])
-                    submit_and_run_jobs(len(self.ports), X.shape[0], self.launch_server, job_results)
+            if X.shape[0] > len(self.ports):
+                rng = np.random.default_rng(random_seeds[2])
+                submit_and_run_jobs(len(self.ports), X.shape[0], self.launch_server, job_results)
 
 
             time_elapsed = time.time() - self.start_time
