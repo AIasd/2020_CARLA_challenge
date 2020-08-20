@@ -6,7 +6,7 @@ python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 24 --pop_size 100 -r '
 
 
 TBD:
-
+* remove scenario file after run at exit_handler
 
 * debug vehicles not moving
 
