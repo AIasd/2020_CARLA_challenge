@@ -332,6 +332,10 @@ rng = np.random.default_rng(random_seeds[0])
 
 now = datetime.now()
 time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
+
+scenario_folder = 'scenario_files'
+if not os.path.exists('scenario_files'):
+    os.mkdir(scenario_folder)
 scenario_file = 'current_scenario_'+time_str+'.json'
 
 # This is used to control how this program use GPU
@@ -677,17 +681,17 @@ class MyProblem(Problem):
             for k in client.has_what():
                 workers.append(k[len('tcp://'):])
 
-            assert X.shape[0] >= len(self.ports), print(X)
+            if X:
+                end_ind = np.min([self.ports, X.shape[0]])
+                rng = np.random.default_rng(random_seeds[1])
+                submit_and_run_jobs(0, end_ind, self.launch_server, job_results)
+                self.launch_server = False
+                time_elapsed = time.time() - self.start_time
 
-            rng = np.random.default_rng(random_seeds[1])
-            submit_and_run_jobs(0, len(self.ports), self.launch_server, job_results)
-            self.launch_server = False
-            time_elapsed = time.time() - self.start_time
 
-
-            if X.shape[0] > len(self.ports):
-                rng = np.random.default_rng(random_seeds[2])
-                submit_and_run_jobs(len(self.ports), X.shape[0], self.launch_server, job_results)
+                if X.shape[0] > len(self.ports):
+                    rng = np.random.default_rng(random_seeds[2])
+                    submit_and_run_jobs(len(self.ports), X.shape[0], self.launch_server, job_results)
 
 
             time_elapsed = time.time() - self.start_time
@@ -709,9 +713,6 @@ class MyProblem(Problem):
             print('+'*100)
             print('\n'*10)
             # os.system('sudo chmod -R 777 '+self.bug_folder)
-
-
-
 
 
 
