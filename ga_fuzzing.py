@@ -330,7 +330,9 @@ use_unique_bugs = False
 random_seeds = [10, 20, 30]
 rng = np.random.default_rng(random_seeds[0])
 
-scenario_file = 'current_scenario.json'
+now = datetime.now()
+time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
+scenario_file = 'current_scenario_'+time_str+'.json'
 
 # This is used to control how this program use GPU
 # '0,1'
