@@ -228,7 +228,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_volate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_volate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct
 
 
 from collections import deque
@@ -484,6 +484,8 @@ class MyProblem(Problem):
         self.p = 0
         self.c = 1
         self.th = int(len(self.labels) // 2)
+        self.check_unique_coeff = (self.p, self.c, self.th)
+
         self.launch_server = True
 
         super().__init__(n_var=n_var, n_obj=4, n_constr=0, xl=xl, xu=xu, elementwise_evaluation=elementwise_evaluation)
@@ -1025,7 +1027,13 @@ class MySampling(Sampling):
 
 
     '''
+    def __init__(self, use_unique_bugs, check_unique_coeff):
+        self.use_unique_bugs = use_unique_bugs
+        self.check_unique_coeff = check_unique_coeff
+        assert len(self.check_unique_coeff) == 3
+
     def _do(self, problem, n_samples, **kwargs):
+        p, c, th = self.check_unique_coeff
         xl = problem.xl
         xu = problem.xu
         mask = problem.mask
@@ -1058,7 +1066,7 @@ class MySampling(Sampling):
                     else: # default is uniform
                         val = rand_real(rng, lower, upper)
                 x.append(val)
-            if not if_volate_constraints(x, problem.customized_constraints, problem.labels):
+            if not if_volate_constraints(x, problem.customized_constraints, problem.labels) and (not self.use_unique_bugs or is_distinct(x, X, mask, xl, xu, p, c, th)):
                 x = np.array(x).astype(float)
                 X.append(x)
         X = np.stack(X)
@@ -1145,16 +1153,17 @@ class ClipRepair(Repair):
 
 
 class SimpleDuplicateElimination(ElementwiseDuplicateElimination):
-    def __init__(self, mask, xu, xl, **kwargs) -> None:
+    def __init__(self, mask, xu, xl, check_unique_coeff, **kwargs) -> None:
         super().__init__(**kwargs)
         self.mask = np.array(mask)
         self.xu = np.array(xu)
         self.xl = np.array(xl)
         self.cmp = lambda a, b: self.is_equal(a, b)
+        self.check_unique_coeff = check_unique_coeff
+        assert len(self.check_unique_coeff) == 3
 
-        self.c = 1
-        self.p = 0
-        self.th = int(len(self.mask) // 2)
+
+
 
     # def do(self, pop, *args, return_indices=False, to_itself=True):
     #     original = pop
@@ -1195,7 +1204,8 @@ class SimpleDuplicateElimination(ElementwiseDuplicateElimination):
             b_X = b
         else:
             b_X = b.X
-        return is_similar(a.X, b_X, self.mask, self.xl, self.xu, self.p, self.c, self.th)
+        p, c, th = self.check_unique_coeff
+        return is_similar(a.X, b_X, self.mask, self.xl, self.xu, p, c, th)
 
 
 class MyMating(Mating):
@@ -1488,7 +1498,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     repair = ClipRepair()
 
     if use_unique_bugs:
-        eliminate_duplicates = SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl)
+        eliminate_duplicates = SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl, check_unique_coeff=problem.check_unique_coeff)
         mating = MyMating(selection,
                         crossover,
                         mutation,
@@ -1500,15 +1510,14 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         mating = None
 
 
-
-
+    sampling = MySampling(use_unique_bugs=use_unique_bugs, check_unique_coeff=problem.check_unique_coeff)
 
     # TBD: customize mutation and crossover to better fit our problem. e.g.
     # might deal with int and real separately
     if algorithm_name == 'nsga2':
         algorithm = NSGA2_DT(dt=dt, X=X, F=F,
                       pop_size=pop_size,
-                      sampling=MySampling(),
+                      sampling=sampling,
                       crossover=crossover,
                       mutation=mutation,
                       eliminate_duplicates=eliminate_duplicates,
@@ -1517,7 +1526,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     elif algorithm_name == 'nsga3':
         algorithm = NSGA3_DT(dt=dt, X=X, F=F,
                       pop_size=pop_size,
-                      sampling=MySampling(),
+                      sampling=sampling,
                       crossover=crossover,
                       mutation=mutation,
                       eliminate_duplicates=eliminate_duplicates,
@@ -1525,7 +1534,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       mating=mating)
     elif algorithm_name == 'random':
         algorithm = RandomAlgorithm(pop_size=pop_size,
-                                    sampling=MySampling(),
+                                    sampling=sampling,
                                     eliminate_duplicates=eliminate_duplicates,
                                     repair=repair,
                                     mating=mating)

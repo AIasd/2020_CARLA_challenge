@@ -905,6 +905,26 @@ def is_similar(x_1, x_2, mask, xl, xu, p, c, th):
     return equal
 
 
+def is_distinct(x, X, mask, xl, xu, p, c, th):
+
+
+    if len(X) == 0:
+        return True
+    else:
+        mask_arr = np.array(mask)
+        xl_arr = np.array(xl)
+        xu_arr = np.array(xu)
+        x = np.array(x)
+        X = np.stack(X)
+        for x_i in X:
+            similar = is_similar(x, x_i, mask_arr, xl_arr, xu_arr, p, c, th)
+            if similar:
+                # print('similar\n')
+                return False
+        return True
+
+
+
 def get_distinct_data_points(data_points, mask, xl, xu, p, c, th):
 
     # ['forward', 'backward']
