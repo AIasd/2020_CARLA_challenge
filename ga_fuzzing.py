@@ -6,7 +6,7 @@ python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 24 --pop_size 100 -r '
 
 
 TBD:
-* remove scenario file after run at exit_handler
+* integrate dt and support new interface
 
 * debug vehicles not moving
 
@@ -307,7 +307,7 @@ global_dashboard_address = arguments.dashboard_address
 global_route_type = arguments.route_type
 # ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
 global_scenario_type = arguments.scenario_type
-# ['nsga2', 'random']
+# ['nsga2', 'random', 'nsga2-dt', 'nsga3']
 algorithm_name = arguments.algorithm_name
 # ['lbc', 'auto_pilot', 'pid_agent']
 global_ego_car_model = arguments.ego_car_model
@@ -1031,44 +1031,39 @@ class MySampling(Sampling):
         mask = problem.mask
         labels = problem.labels
         parameters_distributions = problem.parameters_distributions
-        max_sample_times = 300
+        max_sample_times = n_samples*500
+
+        sample_time = 0
 
         X = []
         print('n_samples', n_samples)
-        for i in range(n_samples):
-            success = False
-            for i in range(max_sample_times):
-                x = []
-                for i, dist in enumerate(parameters_distributions):
-                    typ = mask[i]
-                    lower = xl[i]
-                    upper = xu[i]
-                    label = labels[i]
-                    if typ == 'int':
-                        val = rng.integers(lower, upper+1)
-                    elif typ == 'real':
-                        if dist[0] == 'normal':
-                            if dist[1] == None:
-                                mean = (lower+upper)/2
-                            else:
-                                mean = dist[1]
-                            val = np.clip(rng.normal(mean, dist[2], 1)[0], lower, upper)
-                        else: # default is uniform
-                            val = rand_real(rng, lower, upper)
-                    x.append(val)
-                if not if_volate_constraints(x, problem.customized_constraints, problem.labels):
-                    success = True
-                    break
-            if not success:
-                raise
 
-
-
-            x = np.array(x).astype(float)
-            X.append(x)
+        while sample_time < max_sample_times and len(X) < n_samples:
+            sample_time += 1
+            x = []
+            for i, dist in enumerate(parameters_distributions):
+                typ = mask[i]
+                lower = xl[i]
+                upper = xu[i]
+                label = labels[i]
+                if typ == 'int':
+                    val = rng.integers(lower, upper+1)
+                elif typ == 'real':
+                    if dist[0] == 'normal':
+                        if dist[1] == None:
+                            mean = (lower+upper)/2
+                        else:
+                            mean = dist[1]
+                        val = np.clip(rng.normal(mean, dist[2], 1)[0], lower, upper)
+                    else: # default is uniform
+                        val = rand_real(rng, lower, upper)
+                x.append(val)
+            if not if_volate_constraints(x, problem.customized_constraints, problem.labels):
+                x = np.array(x).astype(float)
+                X.append(x)
         X = np.stack(X)
         # X = normalize_by_entry(problem, X)
-
+        print('\n'*20, 'We sampled', X.shape[0], '/', n_samples, 'samples', '\n'*20)
         return X
 
 # def normalize_by_entry(problem, X):
