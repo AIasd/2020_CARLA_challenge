@@ -1071,7 +1071,7 @@ class MySampling(Sampling):
                 X.append(x)
         X = np.stack(X)
         # X = normalize_by_entry(problem, X)
-        print('\n'*20, 'We sampled', X.shape[0], '/', n_samples, 'samples', '\n'*20)
+        print('\n'*3, 'We sampled', X.shape[0], '/', n_samples, 'samples', '\n'*3)
         return X
 
 # def normalize_by_entry(problem, X):
