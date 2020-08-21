@@ -16,6 +16,7 @@ import pathlib
 from leaderboard.utils.route_parser import RouteParser
 
 import json
+from sklearn import tree
 
 def visualize_route(route):
     n = len(route)
@@ -316,6 +317,44 @@ def is_critical_region(x, estimator, critical_unique_leaves):
     print(leave_id, critical_unique_leaves)
     return leave_id in critical_unique_leaves
 
+
+def filter_critical_regions(X, y):
+    print('\n'*20)
+    print('+'*100, 'filter_critical_regions', '+'*100)
+
+    min_samples_split = np.max([int(0.1*X.shape[0]), 2])
+    estimator = tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0.01, random_state=0)
+    # estimator = tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0.0001, random_state=0)
+    print(X.shape, y.shape, X, y)
+    estimator = estimator.fit(X, y)
+
+    leave_ids = estimator.apply(X)
+    print('leave_ids', leave_ids)
+
+    unique_leave_ids = np.unique(leave_ids)
+    unique_leaves_bug_num = np.zeros(unique_leave_ids.shape[0])
+    unique_leaves_normal_num = np.zeros(unique_leave_ids.shape[0])
+
+    for j, unique_leave_id in enumerate(unique_leave_ids):
+        for i, leave_id in enumerate(leave_ids):
+            if leave_id == unique_leave_id:
+                if y[i] == 0:
+                    unique_leaves_normal_num[j] += 1
+                else:
+                    unique_leaves_bug_num[j] += 1
+
+    for i, unique_leave_i in enumerate(unique_leave_ids):
+        print('unique_leaves', unique_leave_i, unique_leaves_bug_num[i],  unique_leaves_normal_num[i])
+
+    critical_unique_leaves = unique_leave_ids[unique_leaves_bug_num >= unique_leaves_normal_num]
+
+    print('critical_unique_leaves', critical_unique_leaves)
+
+
+    inds = np.array([leave_id in critical_unique_leaves for leave_id in leave_ids])
+    print('\n'*20)
+
+    return estimator, inds, critical_unique_leaves
 
 # hack:
 waypoints_num_limit = 5
