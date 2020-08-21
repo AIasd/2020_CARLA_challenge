@@ -1762,9 +1762,6 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
 
 
-    # print(problem.x_list, problem.y_list, problem.F_list, problem.objectives_list)
-    print(problem.x_list)
-
     if len(problem.x_list) > 0:
         X = np.stack(problem.x_list)
         F = np.stack(problem.F_list)
