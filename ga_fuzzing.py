@@ -666,16 +666,16 @@ class MyProblem(Problem):
                                 bug_str = k
                         if not bug_str:
                             bug_str = 'unknown_collision'+'_'+object_type
-                        bug_type = 0
+                        bug_type = 1
                     elif objectives[5]:
                         bug_str = 'offroad'
-                        bug_type = 1
+                        bug_type = 2
                     elif objectives[6]:
                         bug_str = 'wronglane'
-                        bug_type = 2
+                        bug_type = 3
                     else:
                         bug_str = 'unknown'
-                        bug_type = 3
+                        bug_type = 4
                     with open(mean_objectives_across_generations_path, 'a') as f_out:
                         f_out.write(str(i)+','+bug_str+'\n')
 
@@ -683,7 +683,7 @@ class MyProblem(Problem):
                     self.bugs_inds_list.append(self.counter-len(jobs)+i)
                     self.bugs_type_list.append(bug_type)
 
-                    self.y_list.append(1)
+                    self.y_list.append(bug_type)
                 else:
                     self.y_list.append(0)
                 # we don't want to store port number
@@ -704,12 +704,23 @@ class MyProblem(Problem):
 
 
 
+        def process_specific_bug(bug_ind):
+            chosen_bugs = np.array(self.bugs_type_list) == bug_ind
+
+            specific_bugs = np.array(self.bugs)[chosen_bugs]
+            specific_bugs_inds_list = np.array(self.bugs_inds_list)[chosen_bugs]
+
+            unique_sepcific_bugs, sepcific_distinct_inds = get_distinct_data_points(specific_bugs, self.mask, self.xl, self.xu, self.p, self.c, self.th)
+
+
+            unique_specific_bugs_inds_list = list(specific_bugs_inds_list[sepcific_distinct_inds])
+
+            return unique_sepcific_bugs, unique_specific_bugs_inds_list, len(unique_sepcific_bugs)
 
 
 
 
         job_results = []
-
 
         with LocalCluster(scheduler_port=self.scheduler_port, dashboard_address=self.dashboard_address, n_workers=len(self.ports), threads_per_worker=1) as cluster, Client(cluster, connection_limit=8192) as client:
             workers = []
@@ -736,10 +747,14 @@ class MyProblem(Problem):
 
 
 
-            self.unique_bugs, distinct_inds = get_distinct_data_points(self.bugs, self.mask, self.xl, self.xu, self.p, self.c, self.th)
+
+            unique_collision_bugs, unique_collision_bugs_inds_list, unique_collision_num = process_specific_bug(1)
+            unique_offroad_bugs, unique_offroad_bugs_inds_list, unique_offroad_num = process_specific_bug(2)
+            unique_wronglane_bugs, unique_wronglane_bugs_inds_list, unique_wronglane_num = process_specific_bug(3)
 
 
-            unique_bugs_inds_list = list(np.array(self.bugs_inds_list)[distinct_inds])
+            self.unique_bugs = unique_collision_bugs + unique_offroad_bugs + unique_wronglane_bugs
+            unique_bugs_inds_list = unique_collision_bugs_inds_list + unique_offroad_bugs_inds_list + unique_wronglane_bugs_inds_list
 
 
             num_of_bugs = len(self.bugs)
@@ -749,18 +764,22 @@ class MyProblem(Problem):
             self.unique_bugs_num_list.append(num_of_unique_bugs)
             self.has_run_list.append(self.has_run)
 
-            unique_bugs_type_list = np.array(self.bugs_type_list)[distinct_inds]
-            unique_collision_num = np.sum(unique_bugs_type_list==0)
-            unique_offroad_num = np.sum(unique_bugs_type_list==1)
-            unique_wronglane_num = np.sum(unique_bugs_type_list==2)
 
-            num_of_collisions = np.sum(np.array(self.bugs_type_list)==0)
-            num_of_offroad = np.sum(np.array(self.bugs_type_list)==1)
-            num_of_wronglane = np.sum(np.array(self.bugs_type_list)==2)
+            num_of_collisions = np.sum(np.array(self.bugs_type_list)==1)
+            num_of_offroad = np.sum(np.array(self.bugs_type_list)==2)
+            num_of_wronglane = np.sum(np.array(self.bugs_type_list)==3)
+
+
+            print(unique_collision_bugs, unique_offroad_bugs, unique_wronglane_bugs)
+            print(unique_collision_bugs_inds_list, unique_offroad_bugs_inds_list, unique_wronglane_bugs_inds_list)
+            print(unique_collision_num, unique_offroad_num, unique_wronglane_num)
+            print()
 
             print(self.counter, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_collisions, num_of_offroad, num_of_wronglane, mean_objectives_this_generation, unique_collision_num, unique_offroad_num, unique_wronglane_num)
             print(self.bugs_inds_list)
             print(unique_bugs_inds_list)
+
+
             for i in range(X.shape[0]-1):
                 for j in range(i+1, X.shape[0]):
                     if np.sum(X[i]-X[j])==0:
