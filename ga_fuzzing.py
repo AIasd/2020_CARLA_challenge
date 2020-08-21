@@ -16,7 +16,8 @@ python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 16 --pop_size 1000 -r 
 
 
 TBD:
-
+* random count unique bugs
+* random relaunch local cluster
 * unique bug count for dt; run dt performance for unique bugs
 
 * find another scenario that may have out-of-road violations
@@ -1365,6 +1366,10 @@ class MyEvaluator(Evaluator):
                     empty_slots.append(j)
                 else:
                     pop[i].X[num_of_objects_ind] += 1
+                    if object_type+'_x_'+str(j) not in label_to_id:
+                        print(object_type+'_x_'+str(j))
+                        print(all_final_generated_transforms_list_i[object_type])
+                        raise
                     x_j_ind = label_to_id[object_type+'_x_'+str(j)]
                     y_j_ind = label_to_id[object_type+'_y_'+str(j)]
                     yaw_j_ind = label_to_id[object_type+'_yaw_'+str(j)]
