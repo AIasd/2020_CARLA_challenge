@@ -16,6 +16,16 @@ python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'tow
 
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt
 
+
+
+
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model auto_pilot
+
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model pid_agent
+
+
+
+
 TBD:
 * unique bug count for dt; run dt performance for unique bugs
 
@@ -306,7 +316,7 @@ parser.add_argument("-s", "--scheduler_port", type=int, default=8785)
 parser.add_argument("-d", "--dashboard_address", type=int, default=8786)
 parser.add_argument("-r", "--route_type", type=str, default='town05_right_0')
 parser.add_argument("-c", "--scenario_type", type=str, default='default')
-parser.add_argument('-a','--algorithm_name', type=str, default='nsga2')
+parser.add_argument('-a','--algorithm_name', type=str, default='nsga2-un')
 parser.add_argument("-m", "--ego_car_model", type=str, default='lbc')
 parser.add_argument("--has_display", type=str, default='0')
 parser.add_argument("--root_folder", type=str, default='run_results')
