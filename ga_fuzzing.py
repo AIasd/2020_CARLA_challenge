@@ -1161,59 +1161,56 @@ class MyMating(Mating):
         self.emcmc = emcmc
 
     def do(self, problem, pop, n_offsprings, **kwargs):
-        print('self.use_unique_bugs', 'self.emcmc', self.use_unique_bugs, self.emcmc)
-        if self.use_unique_bugs or self.emcmc:
-            print('MyMating do')
-            # the population object to be used
-            off = pop.new()
 
-            parents = pop.new()
+        # the population object to be used
+        off = pop.new()
+        parents = pop.new()
 
-            # infill counter - counts how often the mating needs to be done to fill up n_offsprings
-            n_infills = 0
+        # infill counter - counts how often the mating needs to be done to fill up n_offsprings
+        n_infills = 0
 
-            # iterate until enough offsprings are created
-            while len(off) < n_offsprings:
-                print('n_infills', n_infills)
-                # how many offsprings are remaining to be created
+        # iterate until enough offsprings are created
+        while len(off) < n_offsprings:
+            print('n_infills', n_infills)
+            # how many offsprings are remaining to be created
+            n_remaining = n_offsprings - len(off)
+
+            # do the mating
+            _off, _parents = self._do(problem, pop, n_remaining, **kwargs)
+
+
+            # repair the individuals if necessary - disabled if repair is NoRepair
+            _off = self.repair.do(problem, _off, **kwargs)
+
+            # eliminate the duplicates - disabled if it is NoRepair
+            if self.use_unique_bugs:
+                _off, no_duplicate, _ = self.eliminate_duplicates.do(_off, problem.unique_bugs, return_indices=True, to_itself=True)
+                _parents = _parents[no_duplicate]
+                assert len(_parents)==len(_off)
+
+
+            # if more offsprings than necessary - truncate them randomly
+            if len(off) + len(_off) > n_offsprings:
+                # IMPORTANT: Interestingly, this makes a difference in performance
                 n_remaining = n_offsprings - len(off)
-
-                # do the mating
-                _off, _parents = self._do(problem, pop, n_remaining, **kwargs)
-
-                # repair the individuals if necessary - disabled if repair is NoRepair
-                _off = self.repair.do(problem, _off, **kwargs)
-
-                # eliminate the duplicates - disabled if it is NoRepair
-                if self.use_unique_bugs:
-                    _off, no_duplicate, _ = self.eliminate_duplicates.do(_off, problem.unique_bugs, return_indices=True, to_itself=True)
-                    _parents = _parents[no_duplicate]
-                    print('do len(_parents), len(_off)', len(_parents), len(_off))
-                    assert len(_parents)==len(_off)
+                _off = _off[:n_remaining]
+                _parents = _parents[:n_remaining]
 
 
-                # if more offsprings than necessary - truncate them randomly
-                if len(off) + len(_off) > n_offsprings:
-                    # IMPORTANT: Interestingly, this makes a difference in performance
-                    n_remaining = n_offsprings - len(off)
-                    _off = _off[:n_remaining]
-                    _parents = _parents[:n_remaining]
+            # add to the offsprings and increase the mating counter
+            off = Population.merge(off, _off)
+            parents = Population.merge(parents, _parents)
+            n_infills += 1
+
+            # if no new offsprings can be generated within a pre-specified number of generations
+            if n_infills > self.n_max_iterations:
+                break
+
+        assert len(parents)==len(off)
+
+        return off, parents
 
 
-                # add to the offsprings and increase the mating counter
-                off = Population.merge(off, _off)
-                parents = Population.merge(parents, _parents)
-                n_infills += 1
-
-                # if no new offsprings can be generated within a pre-specified number of generations
-                if n_infills > self.n_max_iterations:
-                    break
-            print('do len(parents), len(off)', len(parents), len(off))
-            assert len(parents)==len(off)
-
-            return off, parents
-        else:
-            return super().do(problem, pop, n_offsprings, **kwargs)
 
     # only to get parents
     def _do(self, problem, pop, n_offsprings, parents=None, **kwargs):
@@ -1227,6 +1224,8 @@ class MyMating(Mating):
             parents = self.selection.do(pop, n_select, self.crossover.n_parents, **kwargs)
 
             parents_obj = pop[parents].reshape([-1, 1]).squeeze()
+        else:
+            parents_obj = parents
 
 
         # do the crossover using the parents index and the population - additional data provided if necessary
@@ -1235,10 +1234,9 @@ class MyMating(Mating):
         # do the mutation on the offsprings created through crossover
         _off = self.mutation.do(problem, _off, **kwargs)
 
-        if self.use_unique_bugs or self.emcmc:
-            return _off, parents_obj
-        else:
-            return _off
+
+        return _off, parents_obj
+
 
 
 class NSGA2_DT(NSGA2):
@@ -1254,36 +1252,41 @@ class NSGA2_DT(NSGA2):
 
     # mainly used to modify survival
     def _next(self):
+
+        # do the mating using the current population
+        self.off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
+        self.off.set("n_gen", self.n_gen)
+
+        # if the mating could not generate any new offspring (duplicate elimination might make that happen)
+        if len(self.off) == 0:
+            self.termination.force_termination = True
+            return
+
+        # if not the desired number of offspring could be created
+        elif len(self.off) < self.n_offsprings:
+            if self.verbose:
+                print("WARNING: Mating could not produce the required number of (unique) offsprings!")
+
+        # evaluate the offspring
+        self.evaluator.eval(self.problem, self.off, algorithm=self)
+
         if self.emcmc:
-            # do the mating using the current population
-            self.off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
-            self.off.set("n_gen", self.n_gen)
-            print('NSGA2_DT self.off', len(self.off), 'parents', len(parents))
-            # if the mating could not generate any new offspring (duplicate elimination might make that happen)
-            if len(self.off) == 0:
-                self.termination.force_termination = True
-                return
-
-            # if not the desired number of offspring could be created
-            elif len(self.off) < self.n_offsprings:
-                if self.verbose:
-                    print("WARNING: Mating could not produce the required number of (unique) offsprings!")
-
-            # evaluate the offspring
-            self.evaluator.eval(self.problem, self.off, algorithm=self)
-
-
             # check if this problem is a copy or not
             new_pop = do_emcmc(parents, self.off, self.n_gen, self.problem.objective_weights)
 
             self.pop = Population.merge(self.pop, new_pop)
 
-
-
             if self.survival:
                 self.pop = self.survival.do(self.problem, self.pop, self.survival_size, algorithm=self, n_min_infeas_survive=self.min_infeas_pop_size)
+
         else:
-            super()._next()
+            # merge the offsprings with the current population
+            self.pop = Population.merge(self.pop, self.off)
+
+            # the do survival selection
+            if self.survival:
+                self.pop = self.survival.do(self.problem, self.pop, self.pop_size, algorithm=self, n_min_infeas_survive=self.min_infeas_pop_size)
+
 
 
     def _initialize(self):
