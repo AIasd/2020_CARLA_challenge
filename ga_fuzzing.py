@@ -12,12 +12,10 @@ python ga_fuzzing.py -p 2033 2036 -s 8800 -d 8801 --n_gen 24 --pop_size 100 -r '
 
 
 
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 16 --pop_size 1000 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
 
 
 TBD:
-* random count unique bugs
-* random relaunch local cluster
 * unique bug count for dt; run dt performance for unique bugs
 
 * find another scenario that may have out-of-road violations
@@ -458,7 +456,10 @@ class MyProblem(Problem):
         self.scenario_file = scenario_file
         self.ego_car_model = ego_car_model
 
-
+        if resume_run and len(self.time_list) > 0:
+            self.start_time = time.time()
+        else:
+            self.start_time = time.time()
 
 
         self.counter = 0
@@ -469,10 +470,7 @@ class MyProblem(Problem):
         self.num_of_wronglane = 0
         self.bugs_type_list = []
 
-        if resume_run and len(self.time_list) > 0:
-            self.start_time = time.time()
-        else:
-            self.start_time = time.time()
+
         self.time_elapsed = 0
         self.time_list = []
         self.bug_num_list = []
@@ -482,7 +480,6 @@ class MyProblem(Problem):
         self.bugs_inds_list = []
         self.unique_bugs_inds_list = []
         self.distinct_inds = None
-        # TBD: add to interface
 
 
 
@@ -660,18 +657,18 @@ class MyProblem(Problem):
                                 bug_str = k
                         if not bug_str:
                             bug_str = 'unknown_collision'+'_'+object_type
-                        bug_type = 'collision'
+                        bug_type = 0
                     elif objectives[5]:
                         self.num_of_offroad += 1
                         bug_str = 'offroad'
-                        bug_type = 0
+                        bug_type = 1
                     elif objectives[6]:
                         self.num_of_wronglane += 1
                         bug_str = 'wronglane'
-                        bug_type = 1
+                        bug_type = 2
                     else:
                         bug_str = 'unknown'
-                        bug_type = 2
+                        bug_type = 3
                     with open(mean_objectives_across_generations_path, 'a') as f_out:
                         f_out.write(str(i)+','+bug_str+'\n')
                     self.bugs_type_list.append(bug_type)
@@ -1244,11 +1241,12 @@ class MyMating(Mating):
 
 
 class NSGA2_DT(NSGA2):
-    def __init__(self, dt=False, X=None, F=None, emcmc=False, **kwargs):
+    def __init__(self, dt=False, X=None, F=None, emcmc=False, algorithm_name='nsga2-un', **kwargs):
         self.dt = dt
         self.X = X
         self.F = F
         self.emcmc = emcmc
+        self.algorithm_name = algorithm_name
         super().__init__(**kwargs)
 
         # heuristic: we keep up about 2 times of each generation's population
@@ -1256,11 +1254,14 @@ class NSGA2_DT(NSGA2):
 
     # mainly used to modify survival
     def _next(self):
+        if self.algorithm_name == 'random':
+            self.off = self.initialization.do(self.problem, self.pop_size, algorithm=self)
+        else:
+            # do the mating using the current population
+            self.off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
 
-        # do the mating using the current population
-        self.off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
+
         self.off.set("n_gen", self.n_gen)
-
         # if the mating could not generate any new offspring (duplicate elimination might make that happen)
         if len(self.off) == 0:
             self.termination.force_termination = True
@@ -1274,7 +1275,11 @@ class NSGA2_DT(NSGA2):
         # evaluate the offspring
         self.evaluator.eval(self.problem, self.off, algorithm=self)
 
-        if self.emcmc:
+
+
+        if self.algorithm_name == 'random':
+            self.pop = self.off
+        elif self.emcmc:
             new_pop = do_emcmc(parents, self.off, self.n_gen, self.problem.objective_weights)
 
             self.pop = Population.merge(self.pop, new_pop)
@@ -1688,8 +1693,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
     # TBD: customize mutation and crossover to better fit our problem. e.g.
     # might deal with int and real separately
-    if algorithm_name in ['nsga2', 'nsga2-dt', 'nsga2-emcmc', 'nsga2-un', 'nsga2-un-emcmc']:
-        algorithm = NSGA2_DT(dt=dt, X=X, F=F, emcmc=emcmc,
+    algorithm = NSGA2_DT(dt=dt, X=X, F=F, emcmc=emcmc, algorithm_name=algorithm_name,
                       pop_size=pop_size,
                       sampling=sampling,
                       crossover=crossover,
@@ -1698,12 +1702,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       repair=repair,
                       mating=mating)
 
-    elif algorithm_name == 'random':
-        algorithm = RandomAlgorithm(pop_size=pop_size,
-                                    sampling=sampling,
-                                    eliminate_duplicates=eliminate_duplicates,
-                                    repair=repair,
-                                    mating=mating)
+
 
 
 
@@ -1719,12 +1718,13 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     atexit.register(exit_handler, ports, problem.bug_folder, scenario_file)
 
     # TypeError: can't pickle _asyncio.Task objects when save_history = True
+    # verbose has to be set to False to avoid an error when algorithm_name=random
     res = customized_minimize(problem,
                    algorithm,
                    resume_run,
                    termination=termination,
                    seed=0,
-                   verbose=True,
+                   verbose=False,
                    save_history=False,
                    evaluator=MyEvaluator())
 
