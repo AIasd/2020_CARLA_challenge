@@ -472,6 +472,9 @@ class MyProblem(Problem):
             self.bugs_type_list = cumulative_info['bugs_type_list']
             self.bugs_inds_list = cumulative_info['bugs_inds_list']
 
+            self.bugs_num_list = cumulative_info['bugs_num_list']
+            self.unique_bugs_num_list = cumulative_info['unique_bugs_num_list']
+            self.has_run_list = cumulative_info['has_run_list']
         else:
             self.counter = 0
             self.has_run = 0
@@ -483,6 +486,10 @@ class MyProblem(Problem):
 
             self.bugs_type_list = []
             self.bugs_inds_list = []
+
+            self.bugs_num_list = []
+            self.unique_bugs_num_list = []
+            self.has_run_list = []
 
 
 
@@ -737,6 +744,10 @@ class MyProblem(Problem):
 
             num_of_bugs = len(self.bugs)
             num_of_unique_bugs = len(self.unique_bugs)
+
+            self.bugs_num_list.append(num_of_bugs)
+            self.unique_bugs_num_list.append(num_of_unique_bugs)
+            self.has_run_list.append(self.has_run)
 
             unique_bugs_type_list = np.array(self.bugs_type_list)[distinct_inds]
             unique_collision_num = np.sum(unique_bugs_type_list==0)
@@ -1526,10 +1537,8 @@ def run_nsga2_dt():
     y = None
     F = None
     objectives = None
-    elapsed_time = None
     bug_num = None
     labels = None
-    has_run = []
     hv = None
     estimator = None
     critical_unique_leaves = None
@@ -1544,7 +1553,7 @@ def run_nsga2_dt():
         dt = True
         if i == 0 or np.sum(y)==0:
             dt = False
-        X_new, y_new, F_new, objectives_new, elapsed_time_new, bug_num_new, labels, has_run_new, hv_new, parent_folder, cumulative_info = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, dt_time_str_i, i, cumulative_info)
+        X_new, y_new, F_new, objectives_new, labels, hv_new, parent_folder, cumulative_info = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, dt_time_str_i, i, cumulative_info)
 
         if len(X_new) == 0:
             break
@@ -1554,7 +1563,6 @@ def run_nsga2_dt():
             y = y_new
             F = F_new
             objectives = objectives_new
-            elapsed_time = elapsed_time_new
             bug_num = bug_num_new
             hv = hv_new
 
@@ -1563,11 +1571,9 @@ def run_nsga2_dt():
             y = np.concatenate([y, y_new])
             F = np.concatenate([F, F_new])
             objectives = np.concatenate([objectives, objectives_new])
-            elapsed_time = np.concatenate([elapsed_time, elapsed_time_new + elapsed_time[-1]])
             bug_num = np.concatenate([bug_num, bug_num_new])
             hv = np.concatenate([hv, hv_new])
 
-        has_run.append(has_run_new)
 
 
         estimator, inds, critical_unique_leaves = filter_critical_regions(X, y)
@@ -1579,10 +1585,16 @@ def run_nsga2_dt():
 
 
     # Save data
+    has_run_list = cumulative_info['has_run_list']
+    time_list = cumulative_info['time_list']
+    bugs_num_list = cumulative_info['bugs_num_list']
+    unique_bugs_num_list = cumulative_info['unique_bugs_num_list']
+
+
     dt_save_file = '_'.join([route_type, scenario_type, ego_car_model, str(n_gen), str(pop_size), str(outer_iterations), dt_time_str])
 
     pth = os.path.join(parent_folder, dt_save_file)
-    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=elapsed_time, bug_num=bug_num, labels=labels, hv=hv, has_run=has_run, route_type=route_type, scenario_type=scenario_type)
+    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, labels=labels, hv=hv, has_run_list=has_run_list, route_type=route_type, scenario_type=scenario_type)
 
 
 
@@ -1766,9 +1778,11 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         objectives = []
     y = np.array(problem.y_list)
     time_list = np.array(problem.time_list)
-    bug_num_list = np.array(problem.bug_num_list)
+    bugs_num_list = np.array(problem.bugs_num_list)
+    unique_bugs_num_list = np.array(problem.unique_bugs_num_list)
     labels = problem.labels
     has_run = problem.has_run
+    has_run_list = problem.has_run_list
 
     mask = problem.mask
     xl = problem.xl
@@ -1777,19 +1791,13 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     c = problem.c
     th = problem.th
 
-
-    # with open(os.path.join(problem.bug_folder, 'res_'+str(ind)+'.pkl'), 'wb') as f_out:
-    #     pickle.dump({'X':X, 'y':y, 'F':F, 'objectives':objectives, 'n_gen':n_gen, 'pop_size':pop_size, 'hv':hv, 'time_list':time_list, 'bug_num_list':problem.bug_num_list}, f_out)
-    #     print('-'*100, 'pickled')
-
-
     # save another data npz for easy comparison with dt results
 
 
     non_dt_save_file = '_'.join([route_type, scenario_type, ego_car_model, str(n_gen), str(pop_size)])
     pth = os.path.join(bug_parent_folder, non_dt_save_file)
 
-    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time=time_list, bug_num=bug_num_list, labels=labels, hv=hv, has_run=has_run, mask=mask, xl=xl, xu=xu, p=p, c=c, th=th, route_type=route_type, scenario_type=scenario_type)
+    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, has_run_list=has_run_list, labels=labels, hv=hv, mask=mask, xl=xl, xu=xu, p=p, c=c, th=th, route_type=route_type, scenario_type=scenario_type)
     print('npz saved')
 
 
@@ -1807,11 +1815,14 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         'bugs': problem.bugs,
         'unique_bugs': problem.unique_bugs,
         'bugs_type_list': problem.bugs_type_list,
-        'bugs_inds_list': problem.bugs_inds_list
+        'bugs_inds_list': problem.bugs_inds_list,
+        'bugs_num_list': problem.bugs_num_list,
+        'unique_bugs_num_list': problem.unique_bugs_num_list,
+        'has_run_list': problem.has_run_list
     }
 
 
-    return X, y, F, objectives, time_list, bug_num_list, labels, has_run, hv, cur_parent_folder, cumulative_info
+    return X, y, F, objectives, labels, hv, cur_parent_folder, cumulative_info
 
 if __name__ == '__main__':
     if algorithm_name == 'nsga2-dt':
