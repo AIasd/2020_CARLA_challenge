@@ -14,6 +14,7 @@ python ga_fuzzing.py -p 2033 2036 -s 8800 -d 8801 --n_gen 24 --pop_size 100 -r '
 
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
 
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt
 
 TBD:
 * unique bug count for dt; run dt performance for unique bugs
@@ -413,7 +414,7 @@ for customizing weather choices, static_types, pedestrian_types, vehicle_types, 
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, objective_weights=np.array([0, 0, 1, 1, -1])):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, cumulative_info=None, objective_weights=np.array([0, 0, 1, 1, -1])):
 
         customized_parameters_bounds = customized_config['customized_parameters_bounds']
         customized_parameters_distributions = customized_config['customized_parameters_distributions']
@@ -428,7 +429,7 @@ class MyProblem(Problem):
         self.dt = dt
         self.estimator = estimator
         self.critical_unique_leaves = critical_unique_leaves
-        self.has_run = 0
+
 
         self.objectives_list = []
         self.x_list = []
@@ -456,30 +457,32 @@ class MyProblem(Problem):
         self.scenario_file = scenario_file
         self.ego_car_model = ego_car_model
 
-        if resume_run and len(self.time_list) > 0:
-            self.start_time = time.time()
+
+
+        if cumulative_info:
+            self.counter = cumulative_info['counter']
+            self.has_run = cumulative_info['has_run']
+            self.start_time = cumulative_info['start_time']
+
+            self.time_list = cumulative_info['time_list']
+
+            self.bugs = cumulative_info['bugs']
+            self.unique_bugs = cumulative_info['unique_bugs']
+
+            self.bugs_type_list = cumulative_info['bugs_type_list']
+            self.bugs_inds_list = cumulative_info['bugs_inds_list']
+
         else:
+            self.counter = 0
+            self.has_run = 0
             self.start_time = time.time()
 
+            self.time_list = []
+            self.bugs = []
+            self.unique_bugs = []
 
-        self.counter = 0
-        self.num_of_bugs = 0
-        self.num_of_unique_bugs = 0
-        self.num_of_collisions = 0
-        self.num_of_offroad = 0
-        self.num_of_wronglane = 0
-        self.bugs_type_list = []
-
-
-        self.time_elapsed = 0
-        self.time_list = []
-        self.bug_num_list = []
-        self.unique_bug_num_list = []
-        self.bugs = []
-        self.unique_bugs = []
-        self.bugs_inds_list = []
-        self.unique_bugs_inds_list = []
-        self.distinct_inds = None
+            self.bugs_type_list = []
+            self.bugs_inds_list = []
 
 
 
@@ -650,7 +653,6 @@ class MyProblem(Problem):
                 if check_bug(objectives):
                     bug_str = None
                     if objectives[0] > 0:
-                        self.num_of_collisions += 1
                         collision_types = {'pedestrian_collision':pedestrian_types, 'car_collision':car_types, 'motercycle_collision':motorcycle_types, 'cyclist_collision':cyclist_types, 'static_collision':static_types}
                         for k,v in collision_types.items():
                             if object_type in v:
@@ -659,11 +661,9 @@ class MyProblem(Problem):
                             bug_str = 'unknown_collision'+'_'+object_type
                         bug_type = 0
                     elif objectives[5]:
-                        self.num_of_offroad += 1
                         bug_str = 'offroad'
                         bug_type = 1
                     elif objectives[6]:
-                        self.num_of_wronglane += 1
                         bug_str = 'wronglane'
                         bug_type = 2
                     else:
@@ -671,10 +671,10 @@ class MyProblem(Problem):
                         bug_type = 3
                     with open(mean_objectives_across_generations_path, 'a') as f_out:
                         f_out.write(str(i)+','+bug_str+'\n')
-                    self.bugs_type_list.append(bug_type)
 
                     self.bugs.append(X[i].astype(float))
                     self.bugs_inds_list.append(self.counter-len(jobs)+i)
+                    self.bugs_type_list.append(bug_type)
 
                     self.y_list.append(1)
                 else:
@@ -692,19 +692,10 @@ class MyProblem(Problem):
                 pickle.dump(all_final_generated_transforms_list, f_out)
 
 
-            self.unique_bugs, self.distinct_inds = get_distinct_data_points(self.bugs, self.mask, self.xl, self.xu, self.p, self.c, self.th)
-            self.num_of_bugs = len(self.bugs)
-            self.num_of_unique_bugs = len(self.unique_bugs)
-            self.unique_bugs_inds_list = list(np.array(self.bugs_inds_list)[self.distinct_inds])
-
-
-
-
-
             # record time elapsed and bug numbers
             self.time_list.append(time_elapsed)
-            self.bug_num_list.append(self.num_of_bugs)
-            self.unique_bug_num_list.append(self.num_of_unique_bugs)
+
+
 
 
 
@@ -737,22 +728,36 @@ class MyProblem(Problem):
             mean_objectives_this_generation = np.mean(np.array(self.objectives_list[-X.shape[0]:]), axis=0)
 
 
-            unique_bugs_type_list = np.array(self.bugs_type_list)[self.distinct_inds]
+
+            self.unique_bugs, distinct_inds = get_distinct_data_points(self.bugs, self.mask, self.xl, self.xu, self.p, self.c, self.th)
+
+
+            unique_bugs_inds_list = list(np.array(self.bugs_inds_list)[distinct_inds])
+
+
+            num_of_bugs = len(self.bugs)
+            num_of_unique_bugs = len(self.unique_bugs)
+
+            unique_bugs_type_list = np.array(self.bugs_type_list)[distinct_inds]
             unique_collision_num = np.sum(unique_bugs_type_list==0)
             unique_offroad_num = np.sum(unique_bugs_type_list==1)
             unique_wronglane_num = np.sum(unique_bugs_type_list==2)
 
-            print(self.counter, time_elapsed, self.num_of_bugs, self.num_of_unique_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane, mean_objectives_this_generation, unique_collision_num, unique_offroad_num, unique_wronglane_num)
+            num_of_collisions = np.sum(np.array(self.bugs_type_list)==0)
+            num_of_offroad = np.sum(np.array(self.bugs_type_list)==1)
+            num_of_wronglane = np.sum(np.array(self.bugs_type_list)==2)
+
+            print(self.counter, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_collisions, num_of_offroad, num_of_wronglane, mean_objectives_this_generation, unique_collision_num, unique_offroad_num, unique_wronglane_num)
             print(self.bugs_inds_list)
-            print(self.unique_bugs_inds_list)
+            print(unique_bugs_inds_list)
             for i in range(X.shape[0]-1):
                 for j in range(i+1, X.shape[0]):
                     if np.sum(X[i]-X[j])==0:
                         print(X.shape[0], i, j, 'same')
 
             with open(mean_objectives_across_generations_path, 'a') as f_out:
-                f_out.write(','.join([str(x) for x in [self.counter, self.has_run, time_elapsed, self.num_of_bugs, self.num_of_unique_bugs, self.num_of_unique_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane, unique_collision_num, unique_offroad_num, unique_wronglane_num]]+[str(x) for x in mean_objectives_this_generation])+'\n')
-                f_out.write(';'.join([str(ind) for ind in self.unique_bugs_inds_list])+'\n')
+                f_out.write(','.join([str(x) for x in [self.counter, self.has_run, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_collisions, num_of_offroad, num_of_wronglane, unique_collision_num, unique_offroad_num, unique_wronglane_num]]+[str(x) for x in mean_objectives_this_generation])+'\n')
+                f_out.write(';'.join([str(ind) for ind in unique_bugs_inds_list])+'\n')
             print('+'*100)
             print('\n'*10)
             # os.system('sudo chmod -R 777 '+self.bug_folder)
@@ -1513,6 +1518,7 @@ def run_nsga2_dt():
     n_gen = global_n_gen
     pop_size = global_pop_size
 
+    cumulative_info = None
 
     X_filtered = None
     F_filtered = None
@@ -1538,7 +1544,7 @@ def run_nsga2_dt():
         dt = True
         if i == 0 or np.sum(y)==0:
             dt = False
-        X_new, y_new, F_new, objectives_new, elapsed_time_new, bug_num_new, labels, has_run_new, hv_new, parent_folder = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, dt_time_str_i, i)
+        X_new, y_new, F_new, objectives_new, elapsed_time_new, bug_num_new, labels, has_run_new, hv_new, parent_folder, cumulative_info = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, dt_time_str_i, i, cumulative_info)
 
         if len(X_new) == 0:
             break
@@ -1582,7 +1588,7 @@ def run_nsga2_dt():
 
 
 
-def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, dt_time_str=None, dt_iter=None):
+def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, dt_time_str=None, dt_iter=None, cumulative_info=None):
 
     if call_from_dt:
         termination_condition = 'generations'
@@ -1653,7 +1659,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
     else:
         problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, non_bug_parent_folder=non_bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, scenario_file=scenario_file, ego_car_model=ego_car_model, scheduler_port=scheduler_port, dashboard_address=dashboard_address, customized_config=customized_d, ports=ports, episode_max_time=episode_max_time,
-        call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, objective_weights=objective_weights)
+        call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, cumulative_info=cumulative_info, objective_weights=objective_weights)
 
 
 
@@ -1728,7 +1734,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                    save_history=False,
                    evaluator=MyEvaluator())
 
-    print('We have found', problem.num_of_bugs, 'bugs in total.')
+    print('We have found', len(problem.bugs), 'bugs in total.')
 
 
     # print("Best solution found: %s" % res.X)
@@ -1793,7 +1799,19 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
             print('-'*100, 'pickled')
 
 
-    return X, y, F, objectives, time_list, bug_num_list, labels, has_run, hv, cur_parent_folder
+    cumulative_info = {
+        'has_run': problem.has_run,
+        'start_time': problem.start_time,
+        'counter': problem.counter,
+        'time_list': problem.time_list,
+        'bugs': problem.bugs,
+        'unique_bugs': problem.unique_bugs,
+        'bugs_type_list': problem.bugs_type_list,
+        'bugs_inds_list': problem.bugs_inds_list
+    }
+
+
+    return X, y, F, objectives, time_list, bug_num_list, labels, has_run, hv, cur_parent_folder, cumulative_info
 
 if __name__ == '__main__':
     if algorithm_name == 'nsga2-dt':
