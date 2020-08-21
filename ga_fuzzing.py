@@ -1,33 +1,27 @@
 '''
 python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 24 --pop_size 100 -r 'town01_left_0'
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 24 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05'
-
 python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 24 --pop_size 100 -r 'town04_front_0' -c 'two_pedestrians_cross_street_town04'
 
 
 
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 24 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05'
-
 python ga_fuzzing.py -p 2027 2030 -s 8797 -d 8798 --n_gen 24 --pop_size 100 -r 'town07_front_0'
-
 python ga_fuzzing.py -p 2033 2036 -s 8800 -d 8801 --n_gen 24 --pop_size 100 -r 'town03_front_0'
+
+
+
+
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 16 --pop_size 1000 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
 
 
 TBD:
 
+* unique bug count for dt; run dt performance for unique bugs
+
 * find another scenario that may have out-of-road violations
 
 * adjust objective weights
-
-
-* run dt performance for unique bugs
-
-* support random
-
-
-* number of bugs for each category
-
-* compare with random
 
 * record high resolution image
 

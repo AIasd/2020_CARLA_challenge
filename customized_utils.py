@@ -303,7 +303,7 @@ def exit_handler(ports, bug_folder, scenario_file):
                 print('-'*20, 'kill server at port', port)
             except:
                 continue
-    os.remove(scenario_file)
+    # os.remove(scenario_file)
 
 def get_angle(x1, y1, x2, y2):
     angle = np.arctan2(x1*y2-y1*x2, x1*x2+y1*y2)
@@ -573,8 +573,8 @@ customized_bounds_and_distributions = {
 
         'vehicle_x_min_0': -0.5,
         'vehicle_x_max_0': 0.5,
-        'vehicle_y_min_0': -5,
-        'vehicle_y_max_0': -10,
+        'vehicle_y_min_0': -10,
+        'vehicle_y_max_0': -5,
 
         'vehicle_initial_speed_min_0': 3,
         'vehicle_initial_speed_max_0': 6,
