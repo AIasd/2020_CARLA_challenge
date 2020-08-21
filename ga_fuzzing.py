@@ -6,11 +6,30 @@ python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 24 --pop_size 100 -r '
 
 
 TBD:
-* integrate dt and support new interface
+
+
+
+* adjust objective weights
+
+* currently emcmc and use_unique_bugs are tangled; they need to be disentangled
+
+
+* nsga3 for more candidates in selection i.e. tournament? less greedy when doing survival, emcmc?
+
+* integrate dt and support new interface; dt performance for unique bugs
+
+
+* number of bugs for each category
+
+* compare with random
+
+* record high resolution image
+
+
 
 * debug vehicles not moving
 
-* tsne, decision tree volume
+* tsne (rescaling, count discrete difference as 1), decision tree volume
 
 * random seed
 
@@ -26,8 +45,8 @@ TBD:
 
 * emcmc
 * algorithm selection interface (integrate dt into ga_fuzzing)
-* random seed
-* record high resolution image
+
+
 
 * avoid generation of other objects very close to the ego-car (this can also be achieved by customized constraints)
 
@@ -255,7 +274,7 @@ import dill as pickle
 import argparse
 import atexit
 import traceback
-
+import math
 
 
 
@@ -296,6 +315,14 @@ parser.add_argument("--episode_max_time", type=int, default=50)
 parser.add_argument("--n_gen", type=int, default=12)
 parser.add_argument("--pop_size", type=int, default=100)
 parser.add_argument('--objective_weights', nargs='+', type=float, default=[-1, 1, 1, 1, -1])
+parser.add_argument('--use_unique_bugs',
+                      type=eval,
+                      choices=[True, False],
+                      default='True')
+parser.add_argument('--emcmc',
+                      type=eval,
+                      choices=[True, False],
+                      default='True')
 arguments = parser.parse_args()
 
 
@@ -320,13 +347,17 @@ episode_max_time = arguments.episode_max_time
 global_n_gen = arguments.n_gen
 global_pop_size = arguments.pop_size
 
+use_unique_bugs = arguments.use_unique_bugs
+emcmc = arguments.emcmc
+
 # [ego_linear_speed, closest_dist, offroad_d, wronglane_d, dev_dist]
 # objective_weights = np.array([-1, 1, 1, 1, -1])
 global_objective_weights = np.array(arguments.objective_weights)
 
 
 
-use_unique_bugs = True
+
+
 random_seeds = [10, 20, 30]
 rng = np.random.default_rng(random_seeds[0])
 
@@ -336,7 +367,7 @@ time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
 scenario_folder = 'scenario_files'
 if not os.path.exists('scenario_files'):
     os.mkdir(scenario_folder)
-scenario_file = 'current_scenario_'+time_str+'.json'
+scenario_file = scenario_folder+'/'+'current_scenario_'+time_str+'.json'
 
 # This is used to control how this program use GPU
 # '0,1'
@@ -351,7 +382,7 @@ max_running_time = 3600*24
 
 # ['generations', 'max_time']
 global_termination_condition = 'generations'
-
+default_objectives = [0, 7, 7, 7, 0, 0, 0, 0]
 
 
 
@@ -539,7 +570,7 @@ class MyProblem(Problem):
 
         def fun(x, launch_server, counter):
             if (dt and not is_critical_region(x[:-1], estimator, critical_unique_leaves)) or if_volate_constraints(x, customized_constraints, labels):
-                objectives = [0, 7, 7, 7, 0, 0, 0, 0]
+                objectives = default_objectives
                 F = np.array(objectives[:objective_weights.shape[0]]) * objective_weights
                 return F, None, None, None, objectives, 0, None
 
@@ -605,7 +636,7 @@ class MyProblem(Problem):
                 worker = workers[j]
                 x = np.concatenate([X[i], np.array([port])])
                 jobs.append(client.submit(fun, x, launch_server, self.counter, workers=worker))
-
+                print(i, self.counter)
                 self.counter += 1
 
 
@@ -682,6 +713,7 @@ class MyProblem(Problem):
                 workers.append(k[len('tcp://'):])
 
             end_ind = np.min([len(self.ports), X.shape[0]])
+            print('end_ind, X.shape[0]', end_ind, X.shape[0])
             rng = np.random.default_rng(random_seeds[1])
             submit_and_run_jobs(0, end_ind, self.launch_server, job_results)
             self.launch_server = False
@@ -690,7 +722,7 @@ class MyProblem(Problem):
 
             if X.shape[0] > len(self.ports):
                 rng = np.random.default_rng(random_seeds[2])
-                submit_and_run_jobs(len(self.ports), X.shape[0], self.launch_server, job_results)
+                submit_and_run_jobs(end_ind, X.shape[0], self.launch_server, job_results)
 
 
             time_elapsed = time.time() - self.start_time
@@ -925,7 +957,7 @@ def estimate_objectives(save_path):
             events = json.load(json_file)
     except:
         print('events_path', events_path, 'is not found')
-        return [0, 7, 7, 7, 0, 0, 0, 0], (None, None), None
+        return default_objectives, (None, None), None
 
     infractions = events['_checkpoint']['records'][0]['infractions']
     status = events['_checkpoint']['records'][0]['status']
@@ -1044,7 +1076,6 @@ class MySampling(Sampling):
         sample_time = 0
 
         X = []
-        print('n_samples', n_samples)
 
         while sample_time < max_sample_times and len(X) < n_samples:
             sample_time += 1
@@ -1053,6 +1084,7 @@ class MySampling(Sampling):
                 typ = mask[i]
                 lower = xl[i]
                 upper = xu[i]
+                assert lower <= upper, problem.labels[i]+','+str(lower)+'>'+str(upper)
                 label = labels[i]
                 if typ == 'int':
                     val = rng.integers(lower, upper+1)
@@ -1062,63 +1094,185 @@ class MySampling(Sampling):
                             mean = (lower+upper)/2
                         else:
                             mean = dist[1]
-                        val = np.clip(rng.normal(mean, dist[2], 1)[0], lower, upper)
+                        val = rng.normal(mean, dist[2], 1)[0]
                     else: # default is uniform
                         val = rand_real(rng, lower, upper)
+                    val = np.clip(val, lower, upper)
                 x.append(val)
             if not if_volate_constraints(x, problem.customized_constraints, problem.labels) and (not self.use_unique_bugs or is_distinct(x, X, mask, xl, xu, p, c, th)):
                 x = np.array(x).astype(float)
                 X.append(x)
         X = np.stack(X)
-        # X = normalize_by_entry(problem, X)
-        print('\n'*3, 'We sampled', X.shape[0], '/', n_samples, 'samples', '\n'*3)
+
+        print('\n'*3, 'We sampled', X.shape[0], '/', n_samples, 'samples', 'by samping', sample_time, 'times' '\n'*3)
         return X
 
-# def normalize_by_entry(problem, X):
-#     for i in np.where((problem.xu - problem.xl) == 0)[0]:
-#         print(i, problem.labels[i])
-#     return (X - problem.xl) / (problem.xu - problem.xl)
-#
-# def denormalize_by_entry(problem, X):
-#     return X * (problem.xu - problem.xl) + problem.xl
 
 
+def do_emcmc(parents, off, n_gen, objective_weights):
+    base_val = np.sum(np.array(default_objectives[:len(objective_weights)])*np.array(objective_weights))
+    filtered_off = []
+    F_list = []
+    for i in off:
+        for p in parents:
+            print(i.F, p.F)
+
+            i_val = np.sum(np.array(i.F) * np.array(objective_weights))
+            p_val = np.sum(np.array(p.F) * np.array(objective_weights))
+
+            print('1', base_val, i_val, p_val)
+            i_val = np.abs(base_val-i_val)
+            p_val = np.abs(base_val-p_val)
+            prob = np.min([i_val / p_val, 1])
+            print('2', base_val, i_val, p_val, prob)
+
+            if np.random.uniform() < prob:
+                filtered_off.append(i.X)
+                F_list.append(i.F)
+
+    pop = Population(len(filtered_off), individual=Individual())
+    pop.set("X", filtered_off, "F", F_list, "n_gen", n_gen, "CV", [0 for _ in range(len(filtered_off))], "feasible", [[True] for _ in range(len(filtered_off))])
+
+    return Population.merge(parents, off)
+
+
+class MyMating(Mating):
+    def __init__(self,
+                 selection,
+                 crossover,
+                 mutation,
+                 use_unique_bugs,
+                 emcmc,
+                 **kwargs):
+
+        super().__init__(selection, crossover, mutation, **kwargs)
+        self.use_unique_bugs = use_unique_bugs
+        self.emcmc = emcmc
+
+    def do(self, problem, pop, n_offsprings, **kwargs):
+        print('self.use_unique_bugs', 'self.emcmc', self.use_unique_bugs, self.emcmc)
+        if self.use_unique_bugs or self.emcmc:
+            print('MyMating do')
+            # the population object to be used
+            off = pop.new()
+
+            parents = pop.new()
+
+            # infill counter - counts how often the mating needs to be done to fill up n_offsprings
+            n_infills = 0
+
+            # iterate until enough offsprings are created
+            while len(off) < n_offsprings:
+                print('n_infills', n_infills)
+                # how many offsprings are remaining to be created
+                n_remaining = n_offsprings - len(off)
+
+                # do the mating
+                _off, _parents = self._do(problem, pop, n_remaining, **kwargs)
+
+                # repair the individuals if necessary - disabled if repair is NoRepair
+                _off = self.repair.do(problem, _off, **kwargs)
+
+                # eliminate the duplicates - disabled if it is NoRepair
+                if self.use_unique_bugs:
+                    _off, no_duplicate, _ = self.eliminate_duplicates.do(_off, problem.unique_bugs, return_indices=True, to_itself=True)
+                    _parents = _parents[no_duplicate]
+                    print('do len(_parents), len(_off)', len(_parents), len(_off))
+                    assert len(_parents)==len(_off)
+
+
+                # if more offsprings than necessary - truncate them randomly
+                if len(off) + len(_off) > n_offsprings:
+                    # IMPORTANT: Interestingly, this makes a difference in performance
+                    n_remaining = n_offsprings - len(off)
+                    _off = _off[:n_remaining]
+                    _parents = _parents[:n_remaining]
+
+
+                # add to the offsprings and increase the mating counter
+                off = Population.merge(off, _off)
+                parents = Population.merge(parents, _parents)
+                n_infills += 1
+
+                # if no new offsprings can be generated within a pre-specified number of generations
+                if n_infills > self.n_max_iterations:
+                    break
+            print('do len(parents), len(off)', len(parents), len(off))
+            assert len(parents)==len(off)
+
+            return off, parents
+        else:
+            return super().do(problem, pop, n_offsprings, **kwargs)
+
+    # only to get parents
+    def _do(self, problem, pop, n_offsprings, parents=None, **kwargs):
+
+        # if the parents for the mating are not provided directly - usually selection will be used
+        if parents is None:
+
+            # how many parents need to be select for the mating - depending on number of offsprings remaining
+            n_select = math.ceil(n_offsprings / self.crossover.n_offsprings)
+            # select the parents for the mating - just an index array
+            parents = self.selection.do(pop, n_select, self.crossover.n_parents, **kwargs)
+
+            parents_obj = pop[parents].reshape([-1, 1]).squeeze()
+
+
+        # do the crossover using the parents index and the population - additional data provided if necessary
+        _off = self.crossover.do(problem, pop, parents, **kwargs)
+
+        # do the mutation on the offsprings created through crossover
+        _off = self.mutation.do(problem, _off, **kwargs)
+
+        if self.use_unique_bugs or self.emcmc:
+            return _off, parents_obj
+        else:
+            return _off
 
 
 class NSGA2_DT(NSGA2):
-    def __init__(self, dt=False, X=None, F=None, **kwargs):
+    def __init__(self, dt=False, X=None, F=None, emcmc=False, **kwargs):
         self.dt = dt
         self.X = X
         self.F = F
-
+        self.emcmc = emcmc
         super().__init__(**kwargs)
 
+        # heuristic: we keep up about 2 times of each generation's population
+        self.survival_size = self.pop_size * 2
 
-    def _initialize(self):
-        if self.dt:
-            X_list = list(self.X)
-            F_list = list(self.F)
-            pop = Population(len(X_list), individual=Individual())
-            pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen, "CV", [0 for _ in range(len(X_list))], "feasible", [[True] for _ in range(len(X_list))])
+    # mainly used to modify survival
+    def _next(self):
+        if self.emcmc:
+            # do the mating using the current population
+            self.off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
+            self.off.set("n_gen", self.n_gen)
+            print('NSGA2_DT self.off', len(self.off), 'parents', len(parents))
+            # if the mating could not generate any new offspring (duplicate elimination might make that happen)
+            if len(self.off) == 0:
+                self.termination.force_termination = True
+                return
 
-            self.evaluator.eval(self.problem, pop, algorithm=self)
+            # if not the desired number of offspring could be created
+            elif len(self.off) < self.n_offsprings:
+                if self.verbose:
+                    print("WARNING: Mating could not produce the required number of (unique) offsprings!")
+
+            # evaluate the offspring
+            self.evaluator.eval(self.problem, self.off, algorithm=self)
+
+
+            # check if this problem is a copy or not
+            new_pop = do_emcmc(parents, self.off, self.n_gen, self.problem.objective_weights)
+
+            self.pop = Population.merge(self.pop, new_pop)
+
+
 
             if self.survival:
-                pop = self.survival.do(self.problem, pop, len(pop), algorithm=self, n_min_infeas_survive=self.min_infeas_pop_size)
-
-            self.pop, self.off = pop, pop
+                self.pop = self.survival.do(self.problem, self.pop, self.survival_size, algorithm=self, n_min_infeas_survive=self.min_infeas_pop_size)
         else:
-            super()._initialize()
-
-
-
-class NSGA3_DT(NSGA3):
-    def __init__(self, dt=False, X=None, F=None, **kwargs):
-        self.dt = dt
-        self.X = X
-        self.F = F
-
-        super().__init__(**kwargs)
+            super()._next()
 
 
     def _initialize(self):
@@ -1162,43 +1316,6 @@ class SimpleDuplicateElimination(ElementwiseDuplicateElimination):
         self.check_unique_coeff = check_unique_coeff
         assert len(self.check_unique_coeff) == 3
 
-
-
-
-    # def do(self, pop, *args, return_indices=False, to_itself=True):
-    #     original = pop
-    #
-    #     if len(pop) == 0:
-    #         return pop
-    #
-    #     if to_itself:
-    #         pop = pop[~self._do(pop, None, np.full(len(pop), False))]
-    #
-    #     for arg in args:
-    #         if len(arg) > 0:
-    #
-    #             if len(pop) == 0:
-    #                 break
-    #             elif len(arg) == 0:
-    #                 continue
-    #             else:
-    #                 pop = pop[~self._do(pop, arg, np.full(len(pop), False))]
-    #
-    #     if return_indices:
-    #         no_duplicate, is_duplicate = [], []
-    #         H = set(pop)
-    #
-    #         for i, ind in enumerate(original):
-    #             if ind in H:
-    #                 no_duplicate.append(i)
-    #             else:
-    #                 is_duplicate.append(i)
-    #
-    #         return pop, no_duplicate, is_duplicate
-    #     else:
-    #         return pop
-
-
     def is_equal(self, a, b):
         if type(b).__module__ == np.__name__:
             b_X = b
@@ -1208,53 +1325,9 @@ class SimpleDuplicateElimination(ElementwiseDuplicateElimination):
         return is_similar(a.X, b_X, self.mask, self.xl, self.xu, p, c, th)
 
 
-class MyMating(Mating):
-    def do(self, problem, pop, n_offsprings, **kwargs):
-
-        # the population object to be used
-        off = pop.new()
-
-        # infill counter - counts how often the mating needs to be done to fill up n_offsprings
-        n_infills = 0
-
-        # iterate until enough offsprings are created
-        while len(off) < n_offsprings:
-
-            # how many offsprings are remaining to be created
-            n_remaining = n_offsprings - len(off)
-
-            # do the mating
-            _off = self._do(problem, pop, n_remaining, **kwargs)
-
-            # repair the individuals if necessary - disabled if repair is NoRepair
-            _off = self.repair.do(problem, _off, **kwargs)
-
-            # eliminate the duplicates - disabled if it is NoRepair
-            _off = self.eliminate_duplicates.do(_off, problem.unique_bugs)
-
-            # if more offsprings than necessary - truncate them randomly
-            if len(off) + len(_off) > n_offsprings:
-                # IMPORTANT: Interestingly, this makes a difference in performance
-                n_remaining = n_offsprings - len(off)
-                _off = _off[:n_remaining]
-
-            # add to the offsprings and increase the mating counter
-            off = Population.merge(off, _off)
-            n_infills += 1
-
-            # if no new offsprings can be generated within a pre-specified number of generations
-            if n_infills > self.n_max_iterations:
-                break
-
-        return off
-
-
-
 
 
 class MyEvaluator(Evaluator):
-
-
     def _eval(self, problem, pop, **kwargs):
 
         super()._eval(problem, pop, **kwargs)
@@ -1499,15 +1572,17 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
     if use_unique_bugs:
         eliminate_duplicates = SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl, check_unique_coeff=problem.check_unique_coeff)
-        mating = MyMating(selection,
-                        crossover,
-                        mutation,
-                        repair=repair,
-                        eliminate_duplicates=eliminate_duplicates,
-                        n_max_iterations=100)
     else:
         eliminate_duplicates = NoDuplicateElimination()
-        mating = None
+
+    mating = MyMating(selection,
+                    crossover,
+                    mutation,
+                    use_unique_bugs,
+                    emcmc,
+                    repair=repair,
+                    eliminate_duplicates=eliminate_duplicates,
+                    n_max_iterations=100)
 
 
     sampling = MySampling(use_unique_bugs=use_unique_bugs, check_unique_coeff=problem.check_unique_coeff)
@@ -1515,7 +1590,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     # TBD: customize mutation and crossover to better fit our problem. e.g.
     # might deal with int and real separately
     if algorithm_name == 'nsga2':
-        algorithm = NSGA2_DT(dt=dt, X=X, F=F,
+        algorithm = NSGA2_DT(dt=dt, X=X, F=F, emcmc=emcmc,
                       pop_size=pop_size,
                       sampling=sampling,
                       crossover=crossover,
@@ -1523,15 +1598,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       eliminate_duplicates=eliminate_duplicates,
                       repair=repair,
                       mating=mating)
-    elif algorithm_name == 'nsga3':
-        algorithm = NSGA3_DT(dt=dt, X=X, F=F,
-                      pop_size=pop_size,
-                      sampling=sampling,
-                      crossover=crossover,
-                      mutation=mutation,
-                      eliminate_duplicates=eliminate_duplicates,
-                      repair=repair,
-                      mating=mating)
+
     elif algorithm_name == 'random':
         algorithm = RandomAlgorithm(pop_size=pop_size,
                                     sampling=sampling,

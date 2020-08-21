@@ -568,48 +568,30 @@ customized_bounds_and_distributions = {
         'num_of_static_max': 0,
         'num_of_pedestrians_min': 0,
         'num_of_pedestrians_max': 2,
-        'num_of_vehicles_min': 2,
+        'num_of_vehicles_min': 1,
         'num_of_vehicles_max': 3,
 
-        'vehicle_x_min_0': -0.5,
-        'vehicle_x_max_0': 0.5,
-        'vehicle_y_min_0': -3,
+
+        'vehicle_x_min_0': -4,
+        'vehicle_x_max_0': -3,
+        'vehicle_y_min_0': -15,
         'vehicle_y_max_0': -8,
         'vehicle_yaw_min_0': 270,
         'vehicle_yaw_max_0': 270,
-        'vehicle_initial_speed_min_0': 1,
-        'vehicle_initial_speed_max_0': 4,
+        'vehicle_initial_speed_min_0': 3,
+        'vehicle_initial_speed_max_0': 7,
         'vehicle_trigger_distance_min_0': 0,
         'vehicle_trigger_distance_max_0': 0,
-        'vehicle_dist_to_travel_min_0': 5,
-        'vehicle_dist_to_travel_max_0': 30,
-
-        'vehicle_x_min_1': -4,
-        'vehicle_x_max_1': -3,
-        'vehicle_y_min_1': -1,
-        'vehicle_y_max_1': -5,
-        'vehicle_yaw_min_1': 270,
-        'vehicle_yaw_max_1': 270,
-        'vehicle_initial_speed_min_1': 2,
-        'vehicle_initial_speed_max_1': 5,
-        'vehicle_targeted_speed_min_1': 4,
-        'vehicle_targeted_speed_max_1': 8,
-        'vehicle_trigger_distance_min_1': 2,
-        'vehicle_trigger_distance_max_1': 5,
-        'vehicle_dist_to_travel_min_1': 20,
-        'vehicle_dist_to_travel_max_1': 40,
+        'vehicle_dist_to_travel_min_0': 20,
+        'vehicle_dist_to_travel_max_0': 40,
 
     },
     'customized_parameters_distributions':{
     },
     'customized_center_transforms':{
-        'vehicle_center_transform_0': ('waypoint_ratio', 0),
-        'vehicle_center_transform_1': ('waypoint_ratio', 0)
+        'vehicle_center_transform_0': ('waypoint_ratio', 0)
     },
-    'customized_constraints': [{'coefficients': [1, -1],
-    'labels': ['vehicle_initial_speed_1', 'vehicle_targeted_speed_1'],
-    'value': 0}
-    ]
+    'customized_constraints': []
     },
 
 
@@ -679,6 +661,8 @@ customized_bounds_and_distributions = {
         'vehicle_targeted_speed_max_0': 10,
         'vehicle_trigger_distance_min_0': 15,
         'vehicle_trigger_distance_max_0': 15,
+        'vehicle_dist_to_travel_min_0': 5,
+        'vehicle_dist_to_travel_max_0': 30,
 
         'vehicle_x_min_1': 0,
         'vehicle_x_max_1': 6,
@@ -692,8 +676,6 @@ customized_bounds_and_distributions = {
         'vehicle_targeted_speed_max_1': 10,
         'vehicle_trigger_distance_min_1': 15,
         'vehicle_trigger_distance_max_1': 15,
-        'vehicle_dist_to_travel_min_0': 5,
-        'vehicle_dist_to_travel_max_0': 30,
         'vehicle_dist_to_travel_min_1': 5,
         'vehicle_dist_to_travel_max_1': 30,
 
@@ -884,7 +866,8 @@ def parse_route_and_scenario(location_list, town_name, scenario, direction, rout
 
 
 
-def is_similar(x_1, x_2, mask, xl, xu, p, c, th):
+def is_similar(x_1, x_2, mask, xl, xu, p, c, th, verbose=False, labels=[]):
+
     eps = 1e-8
 
     int_inds = mask == 'int'
@@ -893,20 +876,31 @@ def is_similar(x_1, x_2, mask, xl, xu, p, c, th):
     int_diff = c * np.ones(int_diff_raw.shape) * (int_diff_raw > eps)
 
     real_diff_raw = np.abs(x_1[real_inds] - x_2[real_inds]) / (np.abs(xu - xl) + eps)[real_inds]
+
     real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > 0.15)
 
     diff = np.concatenate([int_diff, real_diff])
+
     diff_norm = np.linalg.norm(diff, p)
     equal = diff_norm < th
 
-    # if not equal:
-    #     print(int_diff_raw, real_diff_raw)
+    # if verbose:
+    #     print('diff_raw', int_diff_raw, real_diff_raw, p, c, th, diff, diff_norm)
+    #
+    #     x_1_r = np.concatenate([x_1[int_inds], x_1[real_inds]])
+    #     x_2_r = np.concatenate([x_2[int_inds], x_2[real_inds]])
+    #     print(diff[42], x_1_r[42], x_2_r[42], diff[62], x_1_r[62], x_2_r[62])
+    #     if len(labels)>0:
+    #         labels = np.array(labels)
+    #         # print(labels[int_inds])
+    #         # print(labels[real_inds])
+    #         labels_r = np.concatenate([labels[int_inds], labels[real_inds]])
+    #         print(labels_r[42], labels_r[62])
 
     return equal
 
 
 def is_distinct(x, X, mask, xl, xu, p, c, th):
-
 
     if len(X) == 0:
         return True
