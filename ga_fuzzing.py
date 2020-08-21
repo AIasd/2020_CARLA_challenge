@@ -1537,7 +1537,6 @@ def run_nsga2_dt():
     y = None
     F = None
     objectives = None
-    bug_num = None
     labels = None
     hv = None
     estimator = None
@@ -1563,7 +1562,6 @@ def run_nsga2_dt():
             y = y_new
             F = F_new
             objectives = objectives_new
-            bug_num = bug_num_new
             hv = hv_new
 
         else:
@@ -1571,7 +1569,6 @@ def run_nsga2_dt():
             y = np.concatenate([y, y_new])
             F = np.concatenate([F, F_new])
             objectives = np.concatenate([objectives, objectives_new])
-            bug_num = np.concatenate([bug_num, bug_num_new])
             hv = np.concatenate([hv, hv_new])
 
 
