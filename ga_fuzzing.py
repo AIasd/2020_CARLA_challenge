@@ -1,22 +1,28 @@
 '''
 python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 24 --pop_size 100 -r 'town01_left_0'
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 24 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05'
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 24 --pop_size 100 -r 'town05_front_0' -c 'two_leading_cars_town05'
+
 python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 24 --pop_size 100 -r 'town04_front_0' -c 'two_pedestrians_cross_street_town04'
+
+
+
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 24 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05'
+
+python ga_fuzzing.py -p 2027 2030 -s 8797 -d 8798 --n_gen 24 --pop_size 100 -r 'town07_front_0'
+
+python ga_fuzzing.py -p 2033 2036 -s 8800 -d 8801 --n_gen 24 --pop_size 100 -r 'town03_front_0'
 
 
 TBD:
 
-
+* find another scenario that may have out-of-road violations
 
 * adjust objective weights
 
-* currently emcmc and use_unique_bugs are tangled; they need to be disentangled
-
-
-* nsga3 for more candidates in selection i.e. tournament? less greedy when doing survival, emcmc?
 
 * integrate dt and support new interface; dt performance for unique bugs
+
+* support random
 
 
 * number of bugs for each category
@@ -322,7 +328,7 @@ parser.add_argument('--use_unique_bugs',
 parser.add_argument('--emcmc',
                       type=eval,
                       choices=[True, False],
-                      default='True')
+                      default='False')
 arguments = parser.parse_args()
 
 
@@ -695,6 +701,8 @@ class MyProblem(Problem):
 
 
 
+
+
             # record time elapsed and bug numbers
             self.time_list.append(time_elapsed)
             self.bug_num_list.append(self.num_of_bugs)
@@ -729,6 +737,9 @@ class MyProblem(Problem):
             print('\n'*10)
             print('+'*100)
             mean_objectives_this_generation = np.mean(np.array(self.objectives_list[-X.shape[0]:]), axis=0)
+
+            np.array(self.objectives_list)[np.array(self.unique_bugs_inds_list)]
+
 
             print(self.counter, time_elapsed, self.num_of_bugs, self.num_of_unique_bugs, self.num_of_collisions, self.num_of_offroad, self.num_of_wronglane, mean_objectives_this_generation)
             print(self.bugs_inds_list)
@@ -1104,7 +1115,7 @@ class MySampling(Sampling):
                 X.append(x)
         X = np.stack(X)
 
-        print('\n'*3, 'We sampled', X.shape[0], '/', n_samples, 'samples', 'by samping', sample_time, 'times' '\n'*3)
+        print('\n'*3, 'We sampled', X.shape[0], '/', n_samples, 'samples', 'by sampling', sample_time, 'times' '\n'*3)
         return X
 
 

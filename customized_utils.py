@@ -216,17 +216,17 @@ def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_
             vehicle_initial_speed_i = x[ind+4]
             vehicle_trigger_distance_i = x[ind+5]
 
-            targeted_speed_i = x[ind+6]
-            waypoint_follower_i = bool(x[ind+7])
+            vehicle_targeted_speed_i = x[ind+6]
+            vehicle_waypoint_follower_i = bool(x[ind+7])
 
-            targeted_waypoint_i = create_transform(x[ind+8], x[ind+9], 0, 0, 0, 0)
+            vehicle_targeted_waypoint_i = create_transform(x[ind+8], x[ind+9], 0, 0, 0, 0)
 
             vehicle_avoid_collision_i = bool(x[ind+10])
             vehicle_dist_to_travel_i = x[ind+11]
             vehicle_target_yaw_i = x[ind+12]
             x_dir = np.cos(np.deg2rad(vehicle_target_yaw_i))
             y_dir = np.sin(np.deg2rad(vehicle_target_yaw_i))
-            target_direction_i = carla.Vector3D(x_dir, y_dir, 0)
+            vehicle_target_direction_i = carla.Vector3D(x_dir, y_dir, 0)
 
             vehicle_color_i = vehicle_colors[int(x[ind+13])]
 
@@ -239,10 +239,10 @@ def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_
                 vehicle_waypoints_perturbation_i.append([dx, dy])
                 ind += 2
 
-            vehicle_i = Vehicle(model=vehicle_type_i, spawn_transform=vehicle_transform_i, avoid_collision=vehicle_avoid_collision_i, initial_speed=vehicle_initial_speed_i, trigger_distance=vehicle_trigger_distance_i, waypoint_follower=waypoint_follower_i, targeted_waypoint=targeted_waypoint_i, dist_to_travel=vehicle_dist_to_travel_i,
-            target_direction=target_direction_i,
-            targeted_speed=targeted_speed_i, after_trigger_behavior='stop', color=vehicle_color_i, waypoints_perturbation=vehicle_waypoints_perturbation_i)
-
+            vehicle_i = Vehicle(model=vehicle_type_i, spawn_transform=vehicle_transform_i, avoid_collision=vehicle_avoid_collision_i, initial_speed=vehicle_initial_speed_i, trigger_distance=vehicle_trigger_distance_i, waypoint_follower=vehicle_waypoint_follower_i, targeted_waypoint=vehicle_targeted_waypoint_i, dist_to_travel=vehicle_dist_to_travel_i,
+            target_direction=vehicle_target_direction_i,
+            targeted_speed=vehicle_targeted_speed_i, after_trigger_behavior='stop', color=vehicle_color_i, waypoints_perturbation=vehicle_waypoints_perturbation_i)
+            # print('\n'*3, 'vehicle', i, vehicle_transform_i, vehicle_avoid_collision_i, vehicle_initial_speed_i, vehicle_trigger_distance_i, vehicle_waypoint_follower_i, vehicle_targeted_waypoint_i, vehicle_dist_to_travel_i, vehicle_target_direction_i, vehicle_targeted_speed_i, '\n'*3)
             vehicle_list.append(vehicle_i)
         else:
             ind += 14 + waypoints_num_limit*2
@@ -390,7 +390,7 @@ def setup_bounds_mask_labels_distributions_stage2(fixed_hyperparameters, paramet
 
 
     vehicle_general_min = [0, -20, -20, 0, 0, 0, 0, 0, -20, -20, 0, 0, 0, 0]
-    vehicle_general_max = [fixed_hyperparameters['num_of_vehicle_types']-1, 20, 20, 360, 15, 50, 15, 1, 20, 20, 1, 50, 360, fixed_hyperparameters['num_of_vehicle_colors']-1]
+    vehicle_general_max = [fixed_hyperparameters['num_of_vehicle_types']-1, 20, 20, 360, 10, 50, 10, 1, 20, 20, 1, 50, 360, fixed_hyperparameters['num_of_vehicle_colors']-1]
     vehicle_mask = ['int'] + ['real']*6 + ['int'] + ['real']*2 + ['int'] + ['real']*2 + ['int']
 
 
@@ -563,11 +563,11 @@ customized_bounds_and_distributions = {
     },
 
 
-    'two_leading_cars_town05': {'customized_parameters_bounds':{
+    'change_lane_town05': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
-        'num_of_static_max': 0,
+        'num_of_static_max': 1,
         'num_of_pedestrians_min': 0,
-        'num_of_pedestrians_max': 2,
+        'num_of_pedestrians_max': 1,
         'num_of_vehicles_min': 1,
         'num_of_vehicles_max': 3,
 
@@ -707,12 +707,6 @@ customized_routes = {
     'route_id': 0,
     'location_list': [(89.1, 300.8), (110.4, 330.5)]
     },
-    'town03_front_0': {
-    'town_name': 'Town03',
-    'direction': 'front',
-    'route_id': 0,
-    'location_list': [(9, -105), (9, -155)]
-    },
     # pick: go through non-signalized intersection, town
     'town04_front_0': {
     'town_name': 'Town04',
@@ -720,13 +714,7 @@ customized_routes = {
     'route_id': 0,
     'location_list': [(258, -230), (258, -270)]
     },
-    # change lane, highway, error: other cars are not moving
-    'town04_front_1': {
-    'town_name': 'Town04',
-    'direction': 'front',
-    'route_id': 1,
-    'location_list': [(8, 256), (11, 216)]
-    },
+
     # pick: change lane, town
     'town05_front_0': {
     'town_name': 'Town05',
@@ -741,12 +729,27 @@ customized_routes = {
     'route_id': 0,
     'location_list': [(-120, 30), (-103, 4)]
     },
-    # go through non-signalized intersection, rural
+    # pick: go through non-signalized intersection, rural
     'town07_front_0': {
     'town_name': 'Town07',
     'direction': 'front',
     'route_id': 0,
     'location_list': [(-151, -60), (-151, -15)]
+    },
+    # pick: go through signalized crossroad
+    'town03_front_0': {
+    'town_name': 'Town03',
+    'direction': 'front',
+    'route_id': 0,
+    'location_list': [(9, -105), (9, -155)]
+    },
+
+    # change lane, city
+    'town10HD_front_0': {
+    'town_name': 'Town10HD',
+    'direction': 'front',
+    'route_id': 0,
+    'location_list': [(-35, 138), (-17, 143)]
     },
     # go through non-signalized intersection, rural, error: other cars are not moving
     'town07_left_0': {
@@ -755,13 +758,14 @@ customized_routes = {
     'route_id': 0,
     'location_list': [(-75, -64), (-102, -42)]
     },
-    # change lane, city
-    'town10HD_front_0': {
-    'town_name': 'Town10HD',
+    # change lane, highway, error: other cars are not moving
+    'town04_front_1': {
+    'town_name': 'Town04',
     'direction': 'front',
-    'route_id': 0,
-    'location_list': [(-35, 138), (-17, 143)]
+    'route_id': 1,
+    'location_list': [(8, 256), (11, 216)]
     },
+
 }
 
 
