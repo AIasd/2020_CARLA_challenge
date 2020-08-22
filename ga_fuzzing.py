@@ -12,16 +12,28 @@ python ga_fuzzing.py -p 2033 2036 -s 8800 -d 8801 --n_gen 24 --pop_size 100 -r '
 
 
 
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
+experiment 1
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
 
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2
+
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
+
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --outer_iterations 2 --n_gen 2 --pop_size 2 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt
 
 
 
 
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model auto_pilot
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
 
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model pid_agent
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
+
+
+
+
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model auto_pilot
+
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model pid_agent
 
 
 
@@ -352,7 +364,7 @@ global_pop_size = arguments.pop_size
 # only used when algorithm_name is nsga2-dt
 global_outer_iterations = arguments.outer_iterations
 
-if algorithm_name in ['nsga2-un', 'nsga2-un-emcmc']:
+if algorithm_name in ['nsga2-un', 'nsga2-un-emcmc', 'nsga2-dt-un']:
     use_unique_bugs = True
 else:
     use_unique_bugs = False
@@ -720,12 +732,14 @@ class MyProblem(Problem):
             specific_bugs = np.array(self.bugs)[chosen_bugs]
             specific_bugs_inds_list = np.array(self.bugs_inds_list)[chosen_bugs]
 
-            unique_sepcific_bugs, sepcific_distinct_inds = get_distinct_data_points(specific_bugs, self.mask, self.xl, self.xu, self.p, self.c, self.th)
+            unique_specific_bugs, specific_distinct_inds = get_distinct_data_points(specific_bugs, self.mask, self.xl, self.xu, self.p, self.c, self.th)
 
 
-            unique_specific_bugs_inds_list = list(specific_bugs_inds_list[sepcific_distinct_inds])
+            unique_specific_bugs_inds_list = specific_bugs_inds_list[specific_distinct_inds]
 
-            return unique_sepcific_bugs, unique_specific_bugs_inds_list, len(unique_sepcific_bugs)
+            print(bug_ind, specific_distinct_inds, specific_bugs_inds_list, unique_specific_bugs_inds_list)
+
+            return list(unique_specific_bugs), unique_specific_bugs_inds_list, len(unique_specific_bugs)
 
 
 
@@ -762,7 +776,7 @@ class MyProblem(Problem):
             unique_offroad_bugs, unique_offroad_bugs_inds_list, unique_offroad_num = process_specific_bug(2)
             unique_wronglane_bugs, unique_wronglane_bugs_inds_list, unique_wronglane_num = process_specific_bug(3)
 
-
+            print(unique_collision_bugs, unique_offroad_bugs, unique_wronglane_bugs, type(unique_collision_bugs))
             self.unique_bugs = unique_collision_bugs + unique_offroad_bugs + unique_wronglane_bugs
             unique_bugs_inds_list = unique_collision_bugs_inds_list + unique_offroad_bugs_inds_list + unique_wronglane_bugs_inds_list
 
@@ -1621,6 +1635,8 @@ def run_nsga2_dt():
 
     pth = os.path.join(parent_folder, dt_save_file)
     np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, labels=labels, hv=hv, has_run_list=has_run_list, route_type=route_type, scenario_type=scenario_type)
+
+    print('npz saved')
 
 
 

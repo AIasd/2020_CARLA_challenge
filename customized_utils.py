@@ -614,7 +614,7 @@ customized_bounds_and_distributions = {
         'vehicle_x_min_0': -4,
         'vehicle_x_max_0': -3,
         'vehicle_y_min_0': -15,
-        'vehicle_y_max_0': -8,
+        'vehicle_y_max_0': 15,
         'vehicle_yaw_min_0': 270,
         'vehicle_yaw_max_0': 270,
         'vehicle_initial_speed_min_0': 3,
@@ -739,19 +739,12 @@ customized_bounds_and_distributions = {
 
 
 customized_routes = {
-    # pick: turn left non-siginalized intersection, town
-    'town01_left_0': {
-    'town_name': 'Town01',
-    'direction': 'left',
+    # pick: right turn + leading car stops / slow down, town
+    'town05_right_0': {
+    'town_name': 'Town05',
+    'direction': 'right',
     'route_id': 0,
-    'location_list': [(89.1, 300.8), (110.4, 330.5)]
-    },
-    # pick: go through non-signalized intersection, town
-    'town04_front_0': {
-    'town_name': 'Town04',
-    'direction': 'front',
-    'route_id': 0,
-    'location_list': [(258, -230), (258, -270)]
+    'location_list': [(-120, 30), (-103, 4)]
     },
 
     # pick: change lane, town
@@ -761,13 +754,15 @@ customized_routes = {
     'route_id': 0,
     'location_list': [(-120, 60), (-124, 26)]
     },
-    # pick: right turn + leading car stops / slow down, town
-    'town05_right_0': {
-    'town_name': 'Town05',
-    'direction': 'right',
+
+    # pick: turn left non-siginalized intersection, town
+    'town01_left_0': {
+    'town_name': 'Town01',
+    'direction': 'left',
     'route_id': 0,
-    'location_list': [(-120, 30), (-103, 4)]
+    'location_list': [(89.1, 300.8), (110.4, 330.5)]
     },
+
     # pick: go through non-signalized intersection, rural
     'town07_front_0': {
     'town_name': 'Town07',
@@ -775,6 +770,18 @@ customized_routes = {
     'route_id': 0,
     'location_list': [(-151, -60), (-151, -15)]
     },
+
+    # pick: go through non-signalized intersection, town
+    'town04_front_0': {
+    'town_name': 'Town04',
+    'direction': 'front',
+    'route_id': 0,
+    'location_list': [(258, -230), (258, -270)]
+    },
+
+
+
+
     # pick: go through signalized crossroad
     'town03_front_0': {
     'town_name': 'Town03',
@@ -782,6 +789,9 @@ customized_routes = {
     'route_id': 0,
     'location_list': [(9, -105), (9, -155)]
     },
+
+
+
 
     # change lane, city
     'town10HD_front_0': {
@@ -920,7 +930,7 @@ def is_similar(x_1, x_2, mask, xl, xu, p, c, th, verbose=False, labels=[]):
 
     real_diff_raw = np.abs(x_1[real_inds] - x_2[real_inds]) / (np.abs(xu - xl) + eps)[real_inds]
 
-    real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > 0.15)
+    real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > 0.1)
 
     diff = np.concatenate([int_diff, real_diff])
 
