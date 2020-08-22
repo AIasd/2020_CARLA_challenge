@@ -13,13 +13,13 @@ python ga_fuzzing.py -p 2033 2036 -s 8800 -d 8801 --n_gen 24 --pop_size 100 -r '
 
 
 experiment 1
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
 
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2
 
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
 
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --outer_iterations 2 --n_gen 2 --pop_size 2 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --outer_iterations 3 --n_gen 5 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt
 
 
 
@@ -549,7 +549,7 @@ class MyProblem(Problem):
 
         self.p = 0
         self.c = 1
-        self.th = int(len(self.labels) // 2)
+        self.th = int(len(self.labels) * 0.5)
         self.check_unique_coeff = (self.p, self.c, self.th)
 
         self.launch_server = True
@@ -739,7 +739,7 @@ class MyProblem(Problem):
 
             print(bug_ind, specific_distinct_inds, specific_bugs_inds_list, unique_specific_bugs_inds_list)
 
-            return list(unique_specific_bugs), unique_specific_bugs_inds_list, len(unique_specific_bugs)
+            return list(unique_specific_bugs), list(unique_specific_bugs_inds_list), len(unique_specific_bugs)
 
 
 
@@ -776,7 +776,7 @@ class MyProblem(Problem):
             unique_offroad_bugs, unique_offroad_bugs_inds_list, unique_offroad_num = process_specific_bug(2)
             unique_wronglane_bugs, unique_wronglane_bugs_inds_list, unique_wronglane_num = process_specific_bug(3)
 
-            print(unique_collision_bugs, unique_offroad_bugs, unique_wronglane_bugs, type(unique_collision_bugs))
+            print(unique_collision_bugs, unique_offroad_bugs, unique_wronglane_bugs, type(unique_collision_bugs), type(unique_offroad_bugs), type(unique_wronglane_bugs))
             self.unique_bugs = unique_collision_bugs + unique_offroad_bugs + unique_wronglane_bugs
             unique_bugs_inds_list = unique_collision_bugs_inds_list + unique_offroad_bugs_inds_list + unique_wronglane_bugs_inds_list
 
@@ -1375,7 +1375,6 @@ class NSGA2_DT(NSGA2):
 
 
 
-
 class ClipRepair(Repair):
     """
     A dummy class which can be used to simply do no repair.
@@ -1488,48 +1487,6 @@ def customized_minimize(problem,
              resume_run,
              termination=None,
              **kwargs):
-    """
-
-    Minimization of function of one or more variables, objectives and constraints.
-
-    This is used as a convenience function to execute several algorithms with default settings which turned
-    out to work for a test single. However, evolutionary computations utilizes the idea of customizing a
-    meta-algorithm. Customizing the algorithm using the object oriented interface is recommended to improve the
-    convergence.
-
-    Parameters
-    ----------
-
-    problem : :class:`~pymoo.model.problem.Problem`
-        A problem object which is defined using pymoo.
-
-    algorithm : :class:`~pymoo.model.algorithm.Algorithm`
-        The algorithm object that should be used for the optimization.
-
-    termination : :class:`~pymoo.model.termination.Termination` or tuple
-        The termination criterion that is used to stop the algorithm.
-
-    seed : integer
-        The random seed to be used.
-
-    verbose : bool
-        Whether output should be printed or not.
-
-    display : :class:`~pymoo.util.display.Display`
-        Each algorithm has a default display object for printouts. However, it can be overwritten if desired.
-
-    callback : :class:`~pymoo.model.callback.Callback`
-        A callback object which is called each iteration of the algorithm.
-
-    save_history : bool
-        Whether the history should be stored or not.
-
-    Returns
-    -------
-    res : :class:`~pymoo.model.result.Result`
-        The optimization result represented as an object.
-
-    """
     # create a copy of the algorithm object to ensure no side-effects
     algorithm = copy.deepcopy(algorithm)
 
@@ -1644,15 +1601,6 @@ def run_nsga2_dt():
 
 def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, dt_time_str=None, dt_iter=None, cumulative_info=None):
 
-    if call_from_dt:
-        termination_condition = 'generations'
-        if dt and len(list(X)) == 0:
-            print('No critical leaves!!! Start from random sampling!!!')
-            dt = False
-    else:
-        termination_condition = global_termination_condition
-
-
     scheduler_port = global_scheduler_port
     dashboard_address = global_dashboard_address
     ports = global_ports
@@ -1664,6 +1612,20 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     scenario_type = global_scenario_type
     ego_car_model = global_ego_car_model
     objective_weights = global_objective_weights
+
+    if call_from_dt:
+        termination_condition = 'generations'
+        if dt and len(list(X)) == 0:
+            print('No critical leaves!!! Start from random sampling!!!')
+            dt = False
+
+        if dt:
+            n_gen += 1
+    else:
+        termination_condition = global_termination_condition
+
+
+
 
 
 
