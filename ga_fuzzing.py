@@ -13,11 +13,11 @@ python ga_fuzzing.py -p 2033 2036 -s 8800 -d 8801 --n_gen 24 --pop_size 100 -r '
 
 
 experiment 1
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 2 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
 
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2
 
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random --has_display 1
 
 python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --outer_iterations 3 --n_gen 5 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt
 
@@ -269,7 +269,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_volate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions
 
 
 from collections import deque
@@ -468,8 +468,6 @@ class MyProblem(Problem):
 
         self.bug_folder = bug_parent_folder
         self.non_bug_folder = non_bug_parent_folder
-        if not os.path.exists(self.bug_folder):
-            os.mkdir(self.bug_folder)
 
 
         self.town_name = town_name
@@ -600,7 +598,7 @@ class MyProblem(Problem):
 
 
         def fun(x, launch_server, counter):
-            if (dt and not is_critical_region(x[:-1], estimator, critical_unique_leaves)) or if_volate_constraints(x, customized_constraints, labels):
+            if (dt and not is_critical_region(x[:-1], estimator, critical_unique_leaves)) or if_violate_constraints(x, customized_constraints, labels):
                 objectives = default_objectives
                 F = np.array(objectives[:objective_weights.shape[0]]) * objective_weights
                 return F, None, None, None, objectives, 0, None
@@ -737,7 +735,7 @@ class MyProblem(Problem):
 
             unique_specific_bugs_inds_list = specific_bugs_inds_list[specific_distinct_inds]
 
-            print(bug_ind, specific_distinct_inds, specific_bugs_inds_list, unique_specific_bugs_inds_list)
+            # print(bug_ind, specific_distinct_inds, specific_bugs_inds_list, unique_specific_bugs_inds_list)
 
             return list(unique_specific_bugs), list(unique_specific_bugs_inds_list), len(unique_specific_bugs)
 
@@ -776,7 +774,7 @@ class MyProblem(Problem):
             unique_offroad_bugs, unique_offroad_bugs_inds_list, unique_offroad_num = process_specific_bug(2)
             unique_wronglane_bugs, unique_wronglane_bugs_inds_list, unique_wronglane_num = process_specific_bug(3)
 
-            print(unique_collision_bugs, unique_offroad_bugs, unique_wronglane_bugs, type(unique_collision_bugs), type(unique_offroad_bugs), type(unique_wronglane_bugs))
+            # print(unique_collision_bugs, unique_offroad_bugs, unique_wronglane_bugs, type(unique_collision_bugs), type(unique_offroad_bugs), type(unique_wronglane_bugs))
             self.unique_bugs = unique_collision_bugs + unique_offroad_bugs + unique_wronglane_bugs
             unique_bugs_inds_list = unique_collision_bugs_inds_list + unique_offroad_bugs_inds_list + unique_wronglane_bugs_inds_list
 
@@ -794,10 +792,10 @@ class MyProblem(Problem):
             num_of_wronglane = np.sum(np.array(self.bugs_type_list)==3)
 
 
-            print(unique_collision_bugs, unique_offroad_bugs, unique_wronglane_bugs)
-            print(unique_collision_bugs_inds_list, unique_offroad_bugs_inds_list, unique_wronglane_bugs_inds_list)
-            print(unique_collision_num, unique_offroad_num, unique_wronglane_num)
-            print()
+            # print(unique_collision_bugs, unique_offroad_bugs, unique_wronglane_bugs)
+            # print(unique_collision_bugs_inds_list, unique_offroad_bugs_inds_list, unique_wronglane_bugs_inds_list)
+            # print(unique_collision_num, unique_offroad_num, unique_wronglane_num)
+            # print()
 
             print(self.counter, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_collisions, num_of_offroad, num_of_wronglane, mean_objectives_this_generation, unique_collision_num, unique_offroad_num, unique_wronglane_num)
             print(self.bugs_inds_list)
@@ -1170,7 +1168,8 @@ class MySampling(Sampling):
                         val = rand_real(rng, lower, upper)
                     val = np.clip(val, lower, upper)
                 x.append(val)
-            if not if_volate_constraints(x, problem.customized_constraints, problem.labels) and (not self.use_unique_bugs or is_distinct(x, X, mask, xl, xu, p, c, th)):
+            # print(if_violate_constraints(x, problem.customized_constraints, problem.labels), use_unique_bugs, is_distinct(x, X, mask, xl, xu, p, c, th))
+            if not if_violate_constraints(x, problem.customized_constraints, problem.labels) and (not self.use_unique_bugs or is_distinct(x, X, mask, xl, xu, p, c, th)):
                 x = np.array(x).astype(float)
                 X.append(x)
         X = np.stack(X)
@@ -1244,7 +1243,7 @@ class MyMating(Mating):
 
             # eliminate the duplicates - disabled if it is NoRepair
             if self.use_unique_bugs:
-                _off, no_duplicate, _ = self.eliminate_duplicates.do(_off, problem.unique_bugs, return_indices=True, to_itself=True)
+                _off, no_duplicate, _ = self.eliminate_duplicates.do(_off, problem.unique_bugs, off, return_indices=True, to_itself=True)
                 _parents = _parents[no_duplicate]
                 assert len(_parents)==len(_off)
 
@@ -1319,17 +1318,26 @@ class NSGA2_DT(NSGA2):
             # do the mating using the current population
             self.off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
 
+        if len(self.off) < self.n_offsprings:
+            remaining_num = self.n_offsprings - len(self.off)
+            remaining_off = self.initialization.do(self.problem, remaining_num, algorithm=self)
+            remaining_parrents = remaining_off
+
+            self.off = Population.merge(self.off, remaining_off)
+            parents = Population.merge(parents, remaining_parrents)
 
         self.off.set("n_gen", self.n_gen)
         # if the mating could not generate any new offspring (duplicate elimination might make that happen)
         if len(self.off) == 0:
             self.termination.force_termination = True
+            print("Mating cannot generate new springs, terminate earlier.")
             return
 
         # if not the desired number of offspring could be created
         elif len(self.off) < self.n_offsprings:
             if self.verbose:
                 print("WARNING: Mating could not produce the required number of (unique) offsprings!")
+
 
         # evaluate the offspring
         self.evaluator.eval(self.problem, self.off, algorithm=self)
@@ -1588,7 +1596,7 @@ def run_nsga2_dt():
     unique_bugs_num_list = cumulative_info['unique_bugs_num_list']
 
 
-    dt_save_file = '_'.join([route_type, scenario_type, ego_car_model, str(n_gen), str(pop_size), str(outer_iterations), dt_time_str])
+    dt_save_file = '_'.join([algorithm_name, route_type, scenario_type, ego_car_model, str(n_gen), str(pop_size), str(outer_iterations), dt_time_str])
 
     pth = os.path.join(parent_folder, dt_save_file)
     np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, labels=labels, hv=hv, has_run_list=has_run_list, route_type=route_type, scenario_type=scenario_type)
@@ -1795,7 +1803,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     # save another data npz for easy comparison with dt results
 
 
-    non_dt_save_file = '_'.join([route_type, scenario_type, ego_car_model, str(n_gen), str(pop_size)])
+    non_dt_save_file = '_'.join([algorithm_name, route_type, scenario_type, ego_car_model, str(n_gen), str(pop_size)])
     pth = os.path.join(bug_parent_folder, non_dt_save_file)
 
     np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, has_run_list=has_run_list, labels=labels, hv=hv, mask=mask, xl=xl, xu=xu, p=p, c=c, th=th, route_type=route_type, scenario_type=scenario_type)

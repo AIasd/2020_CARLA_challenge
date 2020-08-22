@@ -565,22 +565,22 @@ customized_bounds_and_distributions = {
 
     'leading_car_braking_town05': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
-        'num_of_static_max': 0,
+        'num_of_static_max': 1,
         'num_of_pedestrians_min': 0,
-        'num_of_pedestrians_max': 5,
+        'num_of_pedestrians_max': 2,
         'num_of_vehicles_min': 1,
         'num_of_vehicles_max': 2,
 
         'vehicle_x_min_0': -0.5,
         'vehicle_x_max_0': 0.5,
-        'vehicle_y_min_0': -10,
-        'vehicle_y_max_0': -5,
+        'vehicle_y_min_0': -15,
+        'vehicle_y_max_0': -8,
 
         'vehicle_initial_speed_min_0': 3,
         'vehicle_initial_speed_max_0': 6,
         'vehicle_targeted_speed_min_0': 0,
         'vehicle_targeted_speed_max_0': 3,
-        'vehicle_trigger_distance_min_0': 7,
+        'vehicle_trigger_distance_min_0': 3,
         'vehicle_trigger_distance_max_0': 15,
 
         'vehicle_dist_to_travel_min_0': 5,
@@ -821,7 +821,7 @@ customized_routes = {
 
 
 
-def if_volate_constraints(x, customized_constraints, labels):
+def if_violate_constraints(x, customized_constraints, labels):
     labels_to_id = {label:i for i, label in enumerate(labels)}
 
     keywords = ['coefficients', 'labels', 'value']
@@ -919,7 +919,7 @@ def parse_route_and_scenario(location_list, town_name, scenario, direction, rout
 
 
 
-def is_similar(x_1, x_2, mask, xl, xu, p, c, th, verbose=False, labels=[]):
+def is_similar(x_1, x_2, mask, xl, xu, p, c, th, verbose=False, labels=[], diff_th=0.1):
 
     eps = 1e-8
 
@@ -930,7 +930,7 @@ def is_similar(x_1, x_2, mask, xl, xu, p, c, th, verbose=False, labels=[]):
 
     real_diff_raw = np.abs(x_1[real_inds] - x_2[real_inds]) / (np.abs(xu - xl) + eps)[real_inds]
 
-    real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > 0.1)
+    real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > 0.15)
 
     diff = np.concatenate([int_diff, real_diff])
 
@@ -953,7 +953,7 @@ def is_similar(x_1, x_2, mask, xl, xu, p, c, th, verbose=False, labels=[]):
     return equal
 
 
-def is_distinct(x, X, mask, xl, xu, p, c, th):
+def is_distinct(x, X, mask, xl, xu, p, c, th, diff_th=0.1):
 
     if len(X) == 0:
         return True
@@ -964,7 +964,7 @@ def is_distinct(x, X, mask, xl, xu, p, c, th):
         x = np.array(x)
         X = np.stack(X)
         for x_i in X:
-            similar = is_similar(x, x_i, mask_arr, xl_arr, xu_arr, p, c, th)
+            similar = is_similar(x, x_i, mask_arr, xl_arr, xu_arr, p, c, th, diff_th)
             if similar:
                 # print('similar\n')
                 return False
@@ -972,7 +972,7 @@ def is_distinct(x, X, mask, xl, xu, p, c, th):
 
 
 
-def get_distinct_data_points(data_points, mask, xl, xu, p, c, th):
+def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1):
 
     # ['forward', 'backward']
     order = 'forward'
@@ -992,7 +992,7 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th):
                 similar = False
                 for j in range(i+1, len(data_points)):
 
-                    similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th)
+                    similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th, diff_th)
                     if similar:
                         # print(i, j)
                         break
@@ -1004,7 +1004,7 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th):
             for i in range(1, len(data_points)):
                 similar = False
                 for j in distinct_inds:
-                    similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th)
+                    similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th, diff_th)
                     if similar:
                         # print(i, j)
                         break
