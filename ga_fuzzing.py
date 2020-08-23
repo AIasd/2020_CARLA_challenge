@@ -32,19 +32,17 @@ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r '
 
 
 
-experiment 2: try number of fields: 10%, margin: 5%
+experiment 2: try number of fields: 50%, margin: 10%
 scene 3
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-un --check_unique_coeff 0 0.05 0.1
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-un --check_unique_coeff 0 0.1 0.5
 
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name random --check_unique_coeff 0 0.05 0.1
-
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2 --check_unique_coeff 0 0.05 0.1
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name random --check_unique_coeff 0 0.1 0.5
 
 
 scene 1
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --check_unique_coeff 0 0.05 0.1
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05'
 
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random --check_unique_coeff 0 0.05 0.1
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05'
 
 
 
@@ -1570,7 +1568,7 @@ def customized_minimize(problem,
 
 
 def run_nsga2_dt():
-    end_when_no_critical_region = False
+    end_when_no_critical_region = True
     cumulative_info = None
 
     X_filtered = None
@@ -1715,13 +1713,13 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
     # deal with real and int separately
     crossover = MixedVariableCrossover(problem.mask, {
-        "real": get_crossover("real_sbx", prob=0.6, eta=20),
-        "int": get_crossover("int_sbx", prob=0.6, eta=20)
+        "real": get_crossover("real_sbx", prob=0.9, eta=2),
+        "int": get_crossover("int_sbx", prob=0.9, eta=2)
     })
 
     mutation = MixedVariableMutation(problem.mask, {
-        "real": get_mutation("real_pm", eta=20.0, prob=1/problem.n_var),
-        "int": get_mutation("int_pm", eta=20.0, prob=1/problem.n_var)
+        "real": get_mutation("real_pm", eta=2, prob=1/problem.n_var),
+        "int": get_mutation("int_pm", eta=2, prob=1/problem.n_var)
     })
 
 

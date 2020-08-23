@@ -154,47 +154,31 @@ def plot_each_bug_num_and_objective_num_over_generations(generation_data_paths):
     plt.savefig('bug_num_and_objective_num_over_generations')
 
 
-def check_unique_bug_num(folder, path):
-    f_list = []
-    for f in os.listdir(folder):
-        if os.path.isdir(folder+'/'+f):
-            f_list.append(f)
-    bug_counters = sorted([int(f) for f in f_list])
+def check_unique_bug_num(folder, path1, path2):
 
-    d = np.load(path, allow_pickle=True)
+    from customized_utils import  get_distinct_data_points
+
+    d = np.load(folder+'/'+path1, allow_pickle=True)
+    xl = d['xl']
+    xu = d['xu']
+    mask = d['mask']
+
+    d = np.load(folder+'/'+path2, allow_pickle=True)
     all_X = d['X']
     all_y = d['y']
-    cutoffs = [100*i for i in range(1, 13)]
+    cutoffs = [100*i for i in range(1, 15)]
 
 
     def subroutine(cutoff):
         X = all_X[:cutoff]
         y = all_y[:cutoff]
 
-        bugs = X[y==1]
+        bugs = X[y>0]
 
-        from customized_utils import get_distinct_data_points, customized_bounds_and_distributions, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters
-
-        scenario_type = 'leading_car_braking'
-        customized_config = customized_bounds_and_distributions[scenario_type]
-        customized_parameters_bounds = customized_config['customized_parameters_bounds']
-
-
-        fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels = setup_bounds_mask_labels_distributions_stage1()
-        customize_parameters(parameters_min_bounds, customized_parameters_bounds)
-        customize_parameters(parameters_max_bounds, customized_parameters_bounds)
-
-
-        _, parameters_min_bounds, parameters_max_bounds, mask, labels, _, _ = setup_bounds_mask_labels_distributions_stage2(fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels)
-        customize_parameters(parameters_min_bounds, customized_parameters_bounds)
-        customize_parameters(parameters_max_bounds, customized_parameters_bounds)
 
         p = 0
-        c = 1
-        th = 48
-
-        xl = [pair[1] for pair in parameters_min_bounds.items()]
-        xu = [pair[1] for pair in parameters_max_bounds.items()]
+        c = 0.1
+        th = int(len(mask)*0.5)
 
         filtered_bugs, inds = get_distinct_data_points(bugs, mask, xl, xu, p, c, th)
         print(cutoff, len(filtered_bugs), len(bugs))
@@ -207,9 +191,9 @@ def check_unique_bug_num(folder, path):
         num_of_unique_bugs.append(num)
     print(inds)
     # print(bug_counters)
-    counter_inds = np.array(bug_counters)[inds] - 1
-    print(all_X[counter_inds[-2]])
-    print(all_X[counter_inds[-1]])
+    # counter_inds = np.array(bug_counters)[inds] - 1
+    # print(all_X[counter_inds[-2]])
+    # print(all_X[counter_inds[-1]])
 
     plt.plot(cutoffs, num_of_unique_bugs)
     plt.xlabel('num of simulations')
@@ -365,4 +349,14 @@ if __name__ == '__main__':
     # plot_each_bug_num_and_objective_num_over_generations(generation_data_paths)
 
 
-    check_unique_bug_num('data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective', 'data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective/Town05_Scenario12_right_0_leading_car_braking_12_100_all_objectives_2020_08_16_00_53_08.npz')
+    # check_unique_bug_num('data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective', 'data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective/Town05_Scenario12_right_0_leading_car_braking_12_100_all_objectives_2020_08_16_00_53_08.npz')
+
+
+
+    check_unique_bug_num('data_for_analysis/', 'new_town05_right_50_10/2020_08_22_02_59_38_nsga2/bugs/town05_right_0_leading_car_braking_town05_lbc_15_100.npz', 'new_town05_right_50_10/2020_08_22_02_59_38_nsga2/bugs/town05_right_0_leading_car_braking_town05_lbc_15_100.npz')
+
+    check_unique_bug_num('data_for_analysis/', 'new_town05_right_50_10/2020_08_22_02_59_38_nsga2/bugs/town05_right_0_leading_car_braking_town05_lbc_15_100.npz', 'new_town05_right_50_10/2020_08_22_03_00_00_nsga2_dt/town05_right_0_leading_car_braking_town05_lbc_5_100_3_2020_08_22_03_00_00.npz')
+
+    # check_unique_bug_num('data_for_analysis/', 'new_town05_right_50_10//2020_08_22_03_00_00_nsga2_dt/town05_right_0_leading_car_braking_town05_lbc_5_100_3_2020_08_22_03_00_00.npz')
+    #
+    # check_unique_bug_num('data_for_analysis/', 'new_town05_right_50_10//2020_08_22_03_00_00_nsga2-un/town05_right_0_leading_car_braking_town05_lbc_15_100.npz')
