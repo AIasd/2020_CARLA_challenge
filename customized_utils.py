@@ -578,9 +578,9 @@ customized_bounds_and_distributions = {
 
     'leading_car_braking_town05': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
-        'num_of_static_max': 1,
+        'num_of_static_max': 0,
         'num_of_pedestrians_min': 0,
-        'num_of_pedestrians_max': 2,
+        'num_of_pedestrians_max': 1,
         'num_of_vehicles_min': 1,
         'num_of_vehicles_max': 2,
 

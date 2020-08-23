@@ -405,7 +405,8 @@ root_folder = arguments.root_folder
 
 
 episode_max_time = arguments.episode_max_time
-n_gen = arguments.n_gen
+global_n_gen = arguments.n_gen
+
 pop_size = arguments.pop_size
 # only used when algorithm_name is nsga2-dt
 outer_iterations = arguments.outer_iterations
@@ -1640,7 +1641,7 @@ def run_nsga2_dt():
 
 def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, dt_time_str=None, dt_iter=None, cumulative_info=None):
 
-
+    n_gen = global_n_gen
 
     if call_from_dt:
         termination_condition = 'generations'
