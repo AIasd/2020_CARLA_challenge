@@ -11,8 +11,9 @@ python ga_fuzzing.py -p 2033 2036 -s 8800 -d 8801 --n_gen 24 --pop_size 100 -r '
 
 
 
-
+default number of fields: 50%, margin: 15%
 experiment 1
+scene 1
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
 
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
@@ -20,11 +21,39 @@ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r '
 python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2
 
 
-
-experiment 2
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 2 --pop_size 2 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_display 1
+scene 2
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un
 
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name random
+
+
+
+
+scene 3
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-un
+
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name random
+
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2
+
+
+experiment 2: try number of fields: 10%, margin: 5%
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --check_unique_coeff=[0, 0.05, 0.1]
+
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name random --check_unique_coeff=[0, 0.05, 0.1]
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -352,31 +381,33 @@ parser.add_argument("--n_gen", type=int, default=12)
 parser.add_argument("--pop_size", type=int, default=100)
 parser.add_argument("--outer_iterations", type=int, default=3)
 parser.add_argument('--objective_weights', nargs='+', type=float, default=[-1, 1, 1, 1, -1])
+parser.add_argument('--check_unique_coeff', nargs='+', type=float, default=[0, 0.15, 0.5])
+
 arguments = parser.parse_args()
 
 
-global_ports = arguments.ports
-global_scheduler_port = arguments.scheduler_port
-global_dashboard_address = arguments.dashboard_address
+ports = arguments.ports
+scheduler_port = arguments.scheduler_port
+dashboard_address = arguments.dashboard_address
 
 # ['town01_left_0', 'town03_front_0', 'town05_front_0', 'town05_right_0']
-global_route_type = arguments.route_type
+route_type = arguments.route_type
 # ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
-global_scenario_type = arguments.scenario_type
+scenario_type = arguments.scenario_type
 # [random', 'nsga2', 'nsga2-dt', 'nsga2-emcmc', 'nsga2-un', 'nsga2-un-emcmc']
 algorithm_name = arguments.algorithm_name
 # ['lbc', 'auto_pilot', 'pid_agent']
-global_ego_car_model = arguments.ego_car_model
+ego_car_model = arguments.ego_car_model
 
 os.environ['HAS_DISPLAY'] = arguments.has_display
 root_folder = arguments.root_folder
 
 
 episode_max_time = arguments.episode_max_time
-global_n_gen = arguments.n_gen
-global_pop_size = arguments.pop_size
+n_gen = arguments.n_gen
+pop_size = arguments.pop_size
 # only used when algorithm_name is nsga2-dt
-global_outer_iterations = arguments.outer_iterations
+outer_iterations = arguments.outer_iterations
 
 if algorithm_name in ['nsga2-un', 'nsga2-un-emcmc', 'nsga2-dt-un']:
     use_unique_bugs = True
@@ -390,7 +421,9 @@ else:
 
 # [ego_linear_speed, closest_dist, offroad_d, wronglane_d, dev_dist]
 # objective_weights = np.array([-1, 1, 1, 1, -1])
-global_objective_weights = np.array(arguments.objective_weights)
+objective_weights = np.array(arguments.objective_weights)
+
+check_unique_coeff = arguments.check_unique_coeff
 
 
 
@@ -436,12 +469,6 @@ default_objectives = [0, 7, 7, 7, 0, 0, 0, 0]
 
 
 
-
-
-
-
-
-
 '''
 for customizing weather choices, static_types, pedestrian_types, vehicle_types, and vehicle_colors, make changes to object_types.py
 '''
@@ -450,7 +477,7 @@ for customizing weather choices, static_types, pedestrian_types, vehicle_types, 
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, cumulative_info=None, objective_weights=np.array([0, 0, 1, 1, -1])):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, cumulative_info=None, objective_weights=np.array([0, 0, 1, 1, -1]), check_unique_coeff=[0, 0.15, 0.5]):
 
         customized_parameters_bounds = customized_config['customized_parameters_bounds']
         customized_parameters_distributions = customized_config['customized_parameters_distributions']
@@ -558,10 +585,8 @@ class MyProblem(Problem):
         self.parameters_distributions = parameters_distributions
         self.customized_center_transforms = customized_center_transforms
 
-
-        self.p = 0
-        self.c = 1
-        self.th = int(len(self.labels) * 0.5)
+        self.p, self.c, th = check_unique_coeff
+        self.th = int(len(self.labels) * th)
         self.check_unique_coeff = (self.p, self.c, self.th)
 
         self.launch_server = True
@@ -1541,16 +1566,7 @@ def customized_minimize(problem,
 
 
 def run_nsga2_dt():
-    print('run_nsga2_dt')
     end_when_no_critical_region = False
-
-    route_type = global_route_type
-    scenario_type = global_scenario_type
-    ego_car_model = global_ego_car_model
-    outer_iterations = global_outer_iterations
-    n_gen = global_n_gen
-    pop_size = global_pop_size
-
     cumulative_info = None
 
     X_filtered = None
@@ -1623,17 +1639,7 @@ def run_nsga2_dt():
 
 def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critical_unique_leaves=None, dt_time_str=None, dt_iter=None, cumulative_info=None):
 
-    scheduler_port = global_scheduler_port
-    dashboard_address = global_dashboard_address
-    ports = global_ports
-    n_gen = global_n_gen
 
-
-    pop_size = global_pop_size
-    route_type = global_route_type
-    scenario_type = global_scenario_type
-    ego_car_model = global_ego_car_model
-    objective_weights = global_objective_weights
 
     if call_from_dt:
         termination_condition = 'generations'
@@ -1697,7 +1703,8 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
     else:
         problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, non_bug_parent_folder=non_bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, scenario_file=scenario_file, ego_car_model=ego_car_model, scheduler_port=scheduler_port, dashboard_address=dashboard_address, customized_config=customized_d, ports=ports, episode_max_time=episode_max_time,
-        call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, cumulative_info=cumulative_info, objective_weights=objective_weights)
+        call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, cumulative_info=cumulative_info, objective_weights=objective_weights,
+        check_unique_coeff=check_unique_coeff)
 
 
 

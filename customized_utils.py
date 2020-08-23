@@ -90,7 +90,7 @@ def specify_args():
     parser.add_argument('--record', type=str, default='',
                         help='Use CARLA recording feature to create a recording of the scenario')
     # modification: 30->15
-    parser.add_argument('--timeout', default="8.0",
+    parser.add_argument('--timeout', default="15.0",
                         help='Set the CARLA client timeout value in seconds')
 
     # simulation setup
@@ -137,7 +137,7 @@ class arguments_info:
         self.debug = 0
         self.spectator = True
         self.record = ''
-        self.timeout = '8.0'
+        self.timeout = '15.0'
         self.challenge_mode = True
         self.routes = None
         self.scenarios = 'leaderboard/data/all_towns_traffic_scenarios_public.json'
@@ -926,11 +926,11 @@ def is_similar(x_1, x_2, mask, xl, xu, p, c, th, verbose=False, labels=[], diff_
     int_inds = mask == 'int'
     real_inds = mask == 'real'
     int_diff_raw = np.abs(x_1[int_inds] - x_2[int_inds])
-    int_diff = c * np.ones(int_diff_raw.shape) * (int_diff_raw > eps)
+    int_diff = np.ones(int_diff_raw.shape) * (int_diff_raw > eps)
 
     real_diff_raw = np.abs(x_1[real_inds] - x_2[real_inds]) / (np.abs(xu - xl) + eps)[real_inds]
 
-    real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > 0.15)
+    real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > c)
 
     diff = np.concatenate([int_diff, real_diff])
 
