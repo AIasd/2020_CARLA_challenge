@@ -1713,13 +1713,13 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
     # deal with real and int separately
     crossover = MixedVariableCrossover(problem.mask, {
-        "real": get_crossover("real_sbx", prob=0.9, eta=2),
-        "int": get_crossover("int_sbx", prob=0.9, eta=2)
+        "real": get_crossover("real_sbx", prob=0.8, eta=5),
+        "int": get_crossover("int_sbx", prob=0.8, eta=5)
     })
 
     mutation = MixedVariableMutation(problem.mask, {
-        "real": get_mutation("real_pm", eta=2, prob=1/problem.n_var),
-        "int": get_mutation("int_pm", eta=2, prob=1/problem.n_var)
+        "real": get_mutation("real_pm", eta=5, prob=int(0.05*problem.n_var)),
+        "int": get_mutation("int_pm", eta=5, prob=int(0.05*problem.n_var))
     })
 
 
