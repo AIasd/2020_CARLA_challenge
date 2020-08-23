@@ -587,14 +587,14 @@ customized_bounds_and_distributions = {
         'vehicle_x_min_0': -0.5,
         'vehicle_x_max_0': 0.5,
         'vehicle_y_min_0': -15,
-        'vehicle_y_max_0': -8,
+        'vehicle_y_max_0': -7,
 
         'vehicle_initial_speed_min_0': 3,
         'vehicle_initial_speed_max_0': 6,
         'vehicle_targeted_speed_min_0': 0,
         'vehicle_targeted_speed_max_0': 3,
         'vehicle_trigger_distance_min_0': 3,
-        'vehicle_trigger_distance_max_0': 15,
+        'vehicle_trigger_distance_max_0': 12,
 
         'vehicle_dist_to_travel_min_0': 5,
         'vehicle_dist_to_travel_max_0': 30,
@@ -603,7 +603,7 @@ customized_bounds_and_distributions = {
     },
     'customized_parameters_distributions':{
         'vehicle_x_0': ('normal', None, 0.5),
-        'vehicle_y_0': ('normal', None, 5)
+        'vehicle_y_0': ('normal', None, 7)
     },
     'customized_center_transforms':{
         'vehicle_center_transform_0': ('waypoint_ratio', 0)
