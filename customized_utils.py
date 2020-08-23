@@ -562,6 +562,19 @@ customized_bounds_and_distributions = {
     'customized_center_transforms':{},
     'customized_constraints':[]},
 
+    'low_traffic': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 1,
+        'num_of_pedestrians_min': 0,
+        'num_of_pedestrians_max': 1,
+        'num_of_vehicles_min': 0,
+        'num_of_vehicles_max': 1,
+    },
+    'customized_parameters_distributions':{},
+    'customized_center_transforms':{},
+    'customized_constraints': []
+    },
+
 
     'leading_car_braking_town05': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
