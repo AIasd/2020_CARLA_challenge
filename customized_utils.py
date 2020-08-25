@@ -578,23 +578,36 @@ customized_bounds_and_distributions = {
 
     'leading_car_braking_town05': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
-        'num_of_static_max': 0,
-        'num_of_pedestrians_min': 0,
+        'num_of_static_max': 1,
+        'num_of_pedestrians_min': 1,
         'num_of_pedestrians_max': 1,
         'num_of_vehicles_min': 1,
-        'num_of_vehicles_max': 2,
+        'num_of_vehicles_max': 1,
+
+        'static_x_min_0': -10,
+        'static_x_max_0': 10,
+        'static_y_min_0': -10,
+        'static_y_max_0': 10,
+
+        'pedestrian_x_min_0': -10,
+        'pedestrian_x_max_0': 10,
+        'pedestrian_y_min_0': -10,
+        'pedestrian_y_max_0': 10,
 
         'vehicle_x_min_0': -0.5,
         'vehicle_x_max_0': 0.5,
-        'vehicle_y_min_0': -15,
-        'vehicle_y_max_0': -7,
+        'vehicle_y_min_0': -10,
+        'vehicle_y_max_0': -5,
 
-        'vehicle_initial_speed_min_0': 3,
-        'vehicle_initial_speed_max_0': 6,
+        'vehicle_initial_speed_min_0': 1,
+        'vehicle_initial_speed_max_0': 5,
         'vehicle_targeted_speed_min_0': 0,
         'vehicle_targeted_speed_max_0': 3,
-        'vehicle_trigger_distance_min_0': 3,
-        'vehicle_trigger_distance_max_0': 12,
+        'vehicle_trigger_distance_min_0': 5,
+        'vehicle_trigger_distance_max_0': 10,
+
+        'vehicle_avoid_collision_min_0': 1,
+        'vehicle_avoid_collision_max_0': 1,
 
         'vehicle_dist_to_travel_min_0': 5,
         'vehicle_dist_to_travel_max_0': 30,
@@ -603,13 +616,16 @@ customized_bounds_and_distributions = {
     },
     'customized_parameters_distributions':{
         'vehicle_x_0': ('normal', None, 0.5),
-        'vehicle_y_0': ('normal', None, 7)
+        'vehicle_y_0': ('normal', None, 3)
     },
     'customized_center_transforms':{
         'vehicle_center_transform_0': ('waypoint_ratio', 0)
     },
-    'customized_constraints': [{'coefficients': [1, 1],
-    'labels': ['vehicle_trigger_distance_0', 'vehicle_y_0'],
+    'customized_constraints': [{'coefficients': [-1, 1],
+    'labels': ['vehicle_initial_speed_0', 'vehicle_targeted_speed_0'],
+    'value': 0},
+    {'coefficients': [1, 1],
+    'labels': ['vehicle_y_0', 'vehicle_trigger_distance_0'],
     'value': 0}
     ]
     },
