@@ -323,8 +323,8 @@ def filter_critical_regions(X, y):
     print('+'*100, 'filter_critical_regions', '+'*100)
 
     min_samples_split = np.max([int(0.1*X.shape[0]), 2])
-    estimator = tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0.01, random_state=0)
-    # estimator = tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0.0001, random_state=0)
+    # estimator = tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0.01, random_state=0)
+    estimator = tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0.0001, random_state=0)
     print(X.shape, y.shape, X, y)
     estimator = estimator.fit(X, y)
 
