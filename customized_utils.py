@@ -626,12 +626,7 @@ customized_bounds_and_distributions = {
     'customized_center_transforms':{
         'vehicle_center_transform_0': ('waypoint_ratio', 0)
     },
-    'customized_constraints': [{'coefficients': [-1, 1],
-    'labels': ['vehicle_initial_speed_0', 'vehicle_targeted_speed_0'],
-    'value': 0},
-    {'coefficients': [1, 1],
-    'labels': ['vehicle_y_0', 'vehicle_trigger_distance_0'],
-    'value': 0}
+    'customized_constraints': [
     ]
     },
 
