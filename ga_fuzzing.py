@@ -44,7 +44,7 @@ python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r '
 
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-un
 
-
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 10 --n_gen 5 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-dt
 
 
 
@@ -60,10 +60,16 @@ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r '
 python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2
 
 
+
+
 new-scene 1:
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
++ python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
 
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
+
++ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2
+
+* python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --outer_iterations 10 --n_gen 5 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt
 
 
 
@@ -76,6 +82,8 @@ python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r '
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2
 
 * python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 3 --n_gen 5 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-dt
+
+
 
 
 scene 2:
@@ -92,26 +100,44 @@ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r '
 
 
 
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --outer_iterations 3 --n_gen 5 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt
 
 
 
 
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
-
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
 
 
 
 
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model auto_pilot
 
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model pid_agent
+
+
+
+
+two partial objectives for change lane:
+
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights -1 1 0 0 0
+
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights 0 0 1 1 -1
+
+
+the other two controllers:
+
+
+
+* python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model auto_pilot
+
+* python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model pid_agent
+
+
+
+
 
 
 
 
 TBD:
+* fix self.counter
+
 * unique bug count for dt; run dt performance for unique bugs
 
 * find another scenario that may have out-of-road violations
@@ -387,6 +413,11 @@ from pymoo.model.mating import Mating
 
 from dask.distributed import Client, LocalCluster
 
+from pymoo.model.initialization import Initialization
+from pymoo.model.duplicate import NoDuplicateElimination
+from pymoo.model.individual import Individual
+from pymoo.operators.sampling.random_sampling import FloatRandomSampling
+
 
 
 
@@ -529,6 +560,7 @@ class MyProblem(Problem):
         self.x_list = []
         self.y_list = []
         self.F_list = []
+
 
 
         self.scheduler_port = scheduler_port
@@ -744,7 +776,7 @@ class MyProblem(Problem):
                 F, loc, object_type, info, objectives, has_run, all_final_generated_transforms_i = job.result()
                 all_final_generated_transforms_list.append(all_final_generated_transforms_i)
 
-
+                self.has_run_list.append(has_run)
                 self.has_run += has_run
                 # record bug
                 if check_bug(objectives):
@@ -854,7 +886,7 @@ class MyProblem(Problem):
 
             self.bugs_num_list.append(num_of_bugs)
             self.unique_bugs_num_list.append(num_of_unique_bugs)
-            self.has_run_list.append(self.has_run)
+
 
 
             num_of_collisions = np.sum(np.array(self.bugs_type_list)==1)
@@ -867,7 +899,7 @@ class MyProblem(Problem):
             # print(unique_collision_num, unique_offroad_num, unique_wronglane_num)
             # print()
 
-            print(self.counter, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_collisions, num_of_offroad, num_of_wronglane, mean_objectives_this_generation, unique_collision_num, unique_offroad_num, unique_wronglane_num)
+            print(self.counter, self.has_run, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_collisions, num_of_offroad, num_of_wronglane, mean_objectives_this_generation, unique_collision_num, unique_offroad_num, unique_wronglane_num)
             print(self.bugs_inds_list)
             print(unique_bugs_inds_list)
 
@@ -1212,39 +1244,48 @@ class MySampling(Sampling):
         parameters_distributions = problem.parameters_distributions
         max_sample_times = n_samples*500
 
-        sample_time = 0
+
 
         X = []
+        def subroutine(disable_unique_bugs=False):
+            sample_time = 0
+            while sample_time < max_sample_times and len(X) < n_samples:
+                sample_time += 1
+                x = []
+                for i, dist in enumerate(parameters_distributions):
+                    typ = mask[i]
+                    lower = xl[i]
+                    upper = xu[i]
+                    assert lower <= upper, problem.labels[i]+','+str(lower)+'>'+str(upper)
+                    label = labels[i]
+                    if typ == 'int':
+                        val = rng.integers(lower, upper+1)
+                    elif typ == 'real':
+                        if dist[0] == 'normal':
+                            if dist[1] == None:
+                                mean = (lower+upper)/2
+                            else:
+                                mean = dist[1]
+                            val = rng.normal(mean, dist[2], 1)[0]
+                        else: # default is uniform
+                            val = rand_real(rng, lower, upper)
+                        val = np.clip(val, lower, upper)
+                    x.append(val)
+                # print(if_violate_constraints(x, problem.customized_constraints, problem.labels), use_unique_bugs, is_distinct(x, X, mask, xl, xu, p, c, th))
+                if not if_violate_constraints(x, problem.customized_constraints, problem.labels) and (disable_unique_bugs or not self.use_unique_bugs or is_distinct(x, X, mask, xl, xu, p, c, th)):
+                    x = np.array(x).astype(float)
+                    X.append(x)
 
-        while sample_time < max_sample_times and len(X) < n_samples:
-            sample_time += 1
-            x = []
-            for i, dist in enumerate(parameters_distributions):
-                typ = mask[i]
-                lower = xl[i]
-                upper = xu[i]
-                assert lower <= upper, problem.labels[i]+','+str(lower)+'>'+str(upper)
-                label = labels[i]
-                if typ == 'int':
-                    val = rng.integers(lower, upper+1)
-                elif typ == 'real':
-                    if dist[0] == 'normal':
-                        if dist[1] == None:
-                            mean = (lower+upper)/2
-                        else:
-                            mean = dist[1]
-                        val = rng.normal(mean, dist[2], 1)[0]
-                    else: # default is uniform
-                        val = rand_real(rng, lower, upper)
-                    val = np.clip(val, lower, upper)
-                x.append(val)
-            # print(if_violate_constraints(x, problem.customized_constraints, problem.labels), use_unique_bugs, is_distinct(x, X, mask, xl, xu, p, c, th))
-            if not if_violate_constraints(x, problem.customized_constraints, problem.labels) and (not self.use_unique_bugs or is_distinct(x, X, mask, xl, xu, p, c, th)):
-                x = np.array(x).astype(float)
-                X.append(x)
+            return sample_time
+
+        sample_time_1 = subroutine()
+        print(len(X), 'samples after first round of sampling')
+        sample_time_2 = subroutine(True)
+        print(len(X), 'samples after second round of sampling')
+
         X = np.stack(X)
 
-        print('\n'*3, 'We sampled', X.shape[0], '/', n_samples, 'samples', 'by sampling', sample_time, 'times' '\n'*3)
+        print('\n'*3, 'We sampled', X.shape[0], '/', n_samples, 'samples', 'by sampling', sample_time_1+sample_time_2, 'times' '\n'*3)
         return X
 
 
@@ -1369,13 +1410,18 @@ class MyMating(Mating):
 
 
 class NSGA2_DT(NSGA2):
-    def __init__(self, dt=False, X=None, F=None, emcmc=False, algorithm_name='nsga2-un', **kwargs):
+    def __init__(self, dt=False, X=None, F=None, emcmc=False, plain_sampling=None, sampling=None, algorithm_name='nsga2-un', **kwargs):
         self.dt = dt
         self.X = X
         self.F = F
         self.emcmc = emcmc
         self.algorithm_name = algorithm_name
+        self.sampling = sampling
+
         super().__init__(**kwargs)
+
+        self.plain_initialization = Initialization(plain_sampling, individual=Individual(), repair=self.repair, eliminate_duplicates= NoDuplicateElimination())
+
 
         # heuristic: we keep up about 2 times of each generation's population
         self.survival_size = self.pop_size * 2
@@ -1388,13 +1434,29 @@ class NSGA2_DT(NSGA2):
             # do the mating using the current population
             self.off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
 
-        if len(self.off) < self.n_offsprings:
-            remaining_num = self.n_offsprings - len(self.off)
-            remaining_off = self.initialization.do(self.problem, remaining_num, algorithm=self)
-            remaining_parrents = remaining_off
+            print('\n'*3, 'len 0', len(self.off), '\n'*3)
 
-            self.off = Population.merge(self.off, remaining_off)
-            parents = Population.merge(parents, remaining_parrents)
+            if len(self.off) < self.n_offsprings:
+                remaining_num = self.n_offsprings - len(self.off)
+                remaining_off = self.initialization.do(self.problem, remaining_num, algorithm=self)
+                remaining_parrents = remaining_off
+
+                self.off = Population.merge(self.off, remaining_off)
+                parents = Population.merge(parents, remaining_parrents)
+
+                print('\n'*3, 'len 1', len(self.off), '\n'*3)
+
+            if len(self.off) < self.n_offsprings:
+                remaining_num = self.n_offsprings - len(self.off)
+                remaining_off = self.plain_initialization.do(self.problem, remaining_num, algorithm=self)
+                remaining_parrents = remaining_off
+
+                self.off = Population.merge(self.off, remaining_off)
+                parents = Population.merge(parents, remaining_parrents)
+
+                print('\n'*3, 'len 2', len(self.off), '\n'*3)
+
+
 
         self.off.set("n_gen", self.n_gen)
         # if the mating could not generate any new offspring (duplicate elimination might make that happen)
@@ -1434,6 +1496,7 @@ class NSGA2_DT(NSGA2):
 
 
 
+
     def _initialize(self):
         if self.dt:
             X_list = list(self.X)
@@ -1441,14 +1504,35 @@ class NSGA2_DT(NSGA2):
             pop = Population(len(X_list), individual=Individual())
             pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen, "CV", [0 for _ in range(len(X_list))], "feasible", [[True] for _ in range(len(X_list))])
 
-            self.evaluator.eval(self.problem, pop, algorithm=self)
 
-            if self.survival:
-                pop = self.survival.do(self.problem, pop, len(pop), algorithm=self, n_min_infeas_survive=self.min_infeas_pop_size)
-
-            self.pop, self.off = pop, pop
         else:
-            super()._initialize()
+            # create the initial population
+            pop = Population(0, individual=self.individual)
+            pop = self.sampling.do(self.problem, pop_size, pop=pop, algorithm=self)
+            pop = self.repair.do(self.problem, pop, algorithm=self)
+
+            if len(pop) < self.pop_size:
+                remaining_num = self.pop_size - len(pop)
+                remaining_pop = self.plain_initialization.do(self.problem, remaining_num, algorithm=self)
+                pop = Population.merge(pop, remaining_pop)
+            pop.set("n_gen", self.n_gen)
+
+
+
+
+        # then evaluate using the objective function
+        self.evaluator.eval(self.problem, pop, algorithm=self)
+
+        # that call is a dummy survival to set attributes that are necessary for the mating selection
+        if self.survival:
+            pop = self.survival.do(self.problem, pop, len(pop), algorithm=self, n_min_infeas_survive=self.min_infeas_pop_size)
+
+        self.pop, self.off = pop, pop
+
+
+
+
+
 
 
 
@@ -1775,9 +1859,11 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
     sampling = MySampling(use_unique_bugs=use_unique_bugs, check_unique_coeff=problem.check_unique_coeff)
 
+    plain_sampling = MySampling(use_unique_bugs=False, check_unique_coeff=problem.check_unique_coeff)
+
     # TBD: customize mutation and crossover to better fit our problem. e.g.
     # might deal with int and real separately
-    algorithm = NSGA2_DT(dt=dt, X=X, F=F, emcmc=emcmc, algorithm_name=algorithm_name,
+    algorithm = NSGA2_DT(dt=dt, X=X, F=F, emcmc=emcmc, plain_sampling=plain_sampling, algorithm_name=algorithm_name,
                       pop_size=pop_size,
                       sampling=sampling,
                       crossover=crossover,

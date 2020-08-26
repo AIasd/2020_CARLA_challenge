@@ -580,9 +580,9 @@ customized_bounds_and_distributions = {
         'num_of_static_min': 0,
         'num_of_static_max': 1,
         'num_of_pedestrians_min': 1,
-        'num_of_pedestrians_max': 1,
+        'num_of_pedestrians_max': 2,
         'num_of_vehicles_min': 1,
-        'num_of_vehicles_max': 1,
+        'num_of_vehicles_max': 2,
 
         'static_x_min_0': -10,
         'static_x_max_0': 10,
@@ -594,9 +594,14 @@ customized_bounds_and_distributions = {
         'pedestrian_y_min_0': -10,
         'pedestrian_y_max_0': 10,
 
+        'pedestrian_x_min_1': -10,
+        'pedestrian_x_max_1': 10,
+        'pedestrian_y_min_1': -10,
+        'pedestrian_y_max_1': 10,
+
         'vehicle_x_min_0': -0.5,
         'vehicle_x_max_0': 0.5,
-        'vehicle_y_min_0': -10,
+        'vehicle_y_min_0': -12,
         'vehicle_y_max_0': -5,
 
         'vehicle_initial_speed_min_0': 1,
@@ -604,7 +609,7 @@ customized_bounds_and_distributions = {
         'vehicle_targeted_speed_min_0': 0,
         'vehicle_targeted_speed_max_0': 3,
         'vehicle_trigger_distance_min_0': 5,
-        'vehicle_trigger_distance_max_0': 10,
+        'vehicle_trigger_distance_max_0': 12,
 
         'vehicle_avoid_collision_min_0': 1,
         'vehicle_avoid_collision_max_0': 1,
@@ -616,7 +621,7 @@ customized_bounds_and_distributions = {
     },
     'customized_parameters_distributions':{
         'vehicle_x_0': ('normal', None, 0.5),
-        'vehicle_y_0': ('normal', None, 3)
+        'vehicle_y_0': ('normal', None, 5)
     },
     'customized_center_transforms':{
         'vehicle_center_transform_0': ('waypoint_ratio', 0)
@@ -854,6 +859,7 @@ def if_violate_constraints(x, customized_constraints, labels):
     labels_to_id = {label:i for i, label in enumerate(labels)}
 
     keywords = ['coefficients', 'labels', 'value']
+    extra_keywords = ['power']
 
     for constraint in customized_constraints:
         for k in keywords:
@@ -862,11 +868,15 @@ def if_violate_constraints(x, customized_constraints, labels):
 
         ids = [labels_to_id[label] for label in constraint['labels']]
         x_ids = [x[id] for id in ids]
+        if 'powers' in constraint:
+            powers = np.array(constraint['powers'])
+        else:
+            powers = np.array([1 for _ in range(len(ids))])
 
         coeff = np.array(constraint['coefficients'])
         features = np.array(x_ids)
 
-        if_violate = np.sum(coeff * features) > constraint['value']
+        if_violate = np.sum(coeff * np.power(features, powers)) > constraint['value']
         if if_violate:
             return True
     return False

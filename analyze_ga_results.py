@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter
 from sklearn.manifold import TSNE
 from dt import filter_critical_regions
-
+from customized_utils import  get_distinct_data_points
 
 
 def draw_hv(bug_res_path, save_folder):
@@ -154,51 +154,7 @@ def plot_each_bug_num_and_objective_num_over_generations(generation_data_paths):
     plt.savefig('bug_num_and_objective_num_over_generations')
 
 
-def check_unique_bug_num(folder, path1, path2):
 
-    from customized_utils import  get_distinct_data_points
-
-    d = np.load(folder+'/'+path1, allow_pickle=True)
-    xl = d['xl']
-    xu = d['xu']
-    mask = d['mask']
-
-    d = np.load(folder+'/'+path2, allow_pickle=True)
-    all_X = d['X']
-    all_y = d['y']
-    cutoffs = [100*i for i in range(1, 15)]
-
-
-    def subroutine(cutoff):
-        X = all_X[:cutoff]
-        y = all_y[:cutoff]
-
-        bugs = X[y>0]
-
-
-        p = 0
-        c = 0.1
-        th = int(len(mask)*0.5)
-
-        filtered_bugs, inds = get_distinct_data_points(bugs, mask, xl, xu, p, c, th)
-        print(cutoff, len(filtered_bugs), len(bugs))
-        return len(filtered_bugs), inds
-
-
-    num_of_unique_bugs = []
-    for cutoff in cutoffs:
-        num, inds = subroutine(cutoff)
-        num_of_unique_bugs.append(num)
-    print(inds)
-    # print(bug_counters)
-    # counter_inds = np.array(bug_counters)[inds] - 1
-    # print(all_X[counter_inds[-2]])
-    # print(all_X[counter_inds[-1]])
-
-    plt.plot(cutoffs, num_of_unique_bugs)
-    plt.xlabel('num of simulations')
-    plt.ylabel('num of unique bugs')
-    plt.savefig('num_of_unique_bugs')
 
 
 
@@ -242,14 +198,44 @@ def analyze_data(pickle_path):
         # TBD: tree diversity
 
 
+
+def unique_bug_num(all_X, all_y, mask, xl, xu, cutoff):
+    if cutoff == 0:
+        return 0, []
+    X = all_X[:cutoff]
+    y = all_y[:cutoff]
+
+    bug_inds = np.where(y>0)
+    bugs = X[bug_inds]
+
+
+    p = 0
+    c = 0.15
+    th = int(len(mask)*0.5)
+
+    # TBD: count different bugs separately
+    filtered_bugs, unique_bug_inds = get_distinct_data_points(bugs, mask, xl, xu, p, c, th)
+
+
+    print(cutoff, len(filtered_bugs), len(bugs))
+    return len(filtered_bugs), np.array(unique_bug_inds), bug_inds
+
 # plot two tsne plots for bugs VS normal and data points across generations
-def apply_tsne(pickle_path, n_gen, pop_size):
-    with open(pickle_path, 'rb') as f_out:
-        d = pickle.load(f_out)
-        X = d['X']
-        y = d['y']
-        F = d['F']
-        objectives = d['objectives']
+def apply_tsne(path, n_gen, pop_size):
+    d = np.load(path, allow_pickle=True)
+    X = d['X']
+    y = d['y']
+    mask = d['mask']
+    xl = d['xl']
+    xu = d['xu']
+
+
+    cutoff = n_gen * pop_size
+    _, unique_bug_inds, bug_inds = unique_bug_num(X, y, mask, xl, xu, cutoff)
+
+    y[bug_inds] = 1
+    y[unique_bug_inds] = 2
+
 
     generations = []
     for i in range(n_gen):
@@ -257,13 +243,10 @@ def apply_tsne(pickle_path, n_gen, pop_size):
 
 
     X_embedded = TSNE(n_components=2).fit_transform(X)
-    fig = plt.figure(figsize=(18, 9))
 
-
-    plt.suptitle("tSNE of sampled/generated data points", fontsize=14)
-
-
-    ax = fig.add_subplot(121)
+    fig = plt.figure(figsize=(9, 9))
+    plt.suptitle("tSNE of bugs and unique bugs", fontsize=14)
+    ax = fig.add_subplot(111)
     scatter_bug = plt.scatter(X_embedded[:, 0], X_embedded[:, 1], s=5, c=y, cmap=plt.cm.rainbow)
     plt.title("bugs VS normal")
     ax.xaxis.set_major_formatter(NullFormatter())
@@ -271,13 +254,27 @@ def apply_tsne(pickle_path, n_gen, pop_size):
     plt.axis('tight')
     plt.legend(handles=scatter_bug.legend_elements()[0], labels=['normal', 'bugs'])
 
-    ax = fig.add_subplot(122)
-    scatter_gen = plt.scatter(X_embedded[:, 0], X_embedded[:, 1], s=5, c=generations, cmap=plt.cm.rainbow)
-    plt.title("different generations")
-    ax.xaxis.set_major_formatter(NullFormatter())
-    ax.yaxis.set_major_formatter(NullFormatter())
-    plt.axis('tight')
-    plt.legend(handles=scatter_gen.legend_elements()[0], labels=[str(i) for i in range(n_gen)])
+
+    # fig = plt.figure(figsize=(18, 9))
+    #
+    # plt.suptitle("tSNE of sampled/generated data points", fontsize=14)
+    #
+    #
+    # ax = fig.add_subplot(121)
+    # scatter_bug = plt.scatter(X_embedded[:, 0], X_embedded[:, 1], s=5, c=y, cmap=plt.cm.rainbow)
+    # plt.title("bugs VS normal")
+    # ax.xaxis.set_major_formatter(NullFormatter())
+    # ax.yaxis.set_major_formatter(NullFormatter())
+    # plt.axis('tight')
+    # plt.legend(handles=scatter_bug.legend_elements()[0], labels=['normal', 'bugs'])
+    #
+    # ax = fig.add_subplot(122)
+    # scatter_gen = plt.scatter(X_embedded[:, 0], X_embedded[:, 1], s=5, c=generations, cmap=plt.cm.rainbow)
+    # plt.title("different generations")
+    # ax.xaxis.set_major_formatter(NullFormatter())
+    # ax.yaxis.set_major_formatter(NullFormatter())
+    # plt.axis('tight')
+    # plt.legend(handles=scatter_gen.legend_elements()[0], labels=[str(i) for i in range(n_gen)])
 
     plt.savefig('tsne')
 
@@ -295,6 +292,148 @@ def compare_with_dt(file):
     # print(d['X'][0])
     # print(d['X'][1])
     # print(np.sum(d['X'][0] - d['X'][1]))
+
+
+
+def check_unique_bug_num(folder, path1, path2):
+    d = np.load(folder+'/'+path1, allow_pickle=True)
+    xl = d['xl']
+    xu = d['xu']
+    mask = d['mask']
+
+    d = np.load(folder+'/'+path2, allow_pickle=True)
+    all_X = d['X']
+    all_y = d['y']
+    cutoffs = [100*i for i in range(0, 15)]
+
+
+    def subroutine(cutoff):
+        if cutoff == 0:
+            return 0, []
+        X = all_X[:cutoff]
+        y = all_y[:cutoff]
+
+        bugs = X[y>0]
+
+
+        p = 0
+        c = 0.15
+        th = int(len(mask)*0.5)
+
+        filtered_bugs, inds = get_distinct_data_points(bugs, mask, xl, xu, p, c, th)
+        print(cutoff, len(filtered_bugs), len(bugs))
+        return len(filtered_bugs), inds
+
+
+    num_of_unique_bugs = []
+    for cutoff in cutoffs:
+        num, inds = subroutine(cutoff)
+        num_of_unique_bugs.append(num)
+    print(inds)
+    # print(bug_counters)
+    # counter_inds = np.array(bug_counters)[inds] - 1
+    # print(all_X[counter_inds[-2]])
+    # print(all_X[counter_inds[-1]])
+
+    plt.plot(cutoffs, num_of_unique_bugs)
+    plt.xlabel('num of simulations')
+    plt.ylabel('num of unique bugs')
+    plt.savefig('num_of_unique_bugs')
+
+def calculate_pairwise_dist(path_list):
+    for i, (label, pth) in enumerate(path_list):
+        d = np.load(pth, allow_pickle=True)
+        xl = d['xl']
+        xu = d['xu']
+        mask = d['mask']
+        all_X = d['X']
+        all_y = d['y']
+        cutoffs = [100*i for i in range(0, 16)]
+
+        int_inds = mask == 'int'
+        real_inds = mask == 'real'
+        eps = 1e-8
+
+        p = 0
+        c = 0.15
+        th = int(len(mask)*0.5)
+
+
+        def pair_dist(x_1, x_2):
+            int_diff_raw = np.abs(x_1[int_inds] - x_2[int_inds])
+            int_diff = np.ones(int_diff_raw.shape) * (int_diff_raw > eps)
+
+            real_diff_raw = np.abs(x_1[real_inds] - x_2[real_inds]) / (np.abs(xu - xl) + eps)[real_inds]
+
+            real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > c)
+
+            diff = np.concatenate([int_diff, real_diff])
+
+            diff_norm = np.linalg.norm(diff, p)
+            print(diff_norm)
+
+
+
+        dist_list = []
+        for i in range(len(all_X)-1):
+            if i % 200 == 0:
+                print(i)
+            for j in range(i+1, len(all_X)):
+                dist_list.append(pair_dist(all_X[i], all_X[j]))
+        print(np.mean(dist_list))
+
+
+def draw_unique_bug_num_over_simulations(path_list):
+    fig = plt.figure()
+    axes = fig.add_subplot(1,1,1)
+    line_style = ['-', ':', '--', '-.']
+    for i, (label, pth) in enumerate(path_list):
+        d = np.load(pth, allow_pickle=True)
+        xl = d['xl']
+        xu = d['xu']
+        mask = d['mask']
+        all_X = d['X']
+        all_y = d['y']
+        cutoffs = [100*i for i in range(0, 16)]
+
+
+        def subroutine(cutoff):
+            if cutoff == 0:
+                return 0, []
+            X = all_X[:cutoff]
+            y = all_y[:cutoff]
+
+            bugs = X[y>0]
+
+
+            p = 0
+            c = 0.15
+            th = int(len(mask)*0.5)
+
+            filtered_bugs, inds = get_distinct_data_points(bugs, mask, xl, xu, p, c, th)
+            print(cutoff, len(filtered_bugs), len(bugs))
+            return len(filtered_bugs), inds
+
+
+        num_of_unique_bugs = []
+        for cutoff in cutoffs:
+            num, inds = subroutine(cutoff)
+            num_of_unique_bugs.append(num)
+        print(inds)
+        # print(bug_counters)
+        # counter_inds = np.array(bug_counters)[inds] - 1
+        # print(all_X[counter_inds[-2]])
+        # print(all_X[counter_inds[-1]])
+
+        axes.plot(cutoffs, num_of_unique_bugs, label=label, linewidth=5, linestyle=line_style[i])
+
+    axes.legend(loc=2, prop={'size': 18}, fancybox=True, framealpha=0.2)
+    axes.set_xlabel('num of simulations', fontsize=23)
+    axes.set_ylabel('num of unique bugs', fontsize=23)
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+    fig.tight_layout()
+    fig.savefig('num_of_unique_bugs')
 
 if __name__ == '__main__':
     # nsga2
@@ -353,10 +492,35 @@ if __name__ == '__main__':
 
 
 
-    check_unique_bug_num('data_for_analysis/', 'new_town05_right_50_10/2020_08_22_02_59_38_nsga2/bugs/town05_right_0_leading_car_braking_town05_lbc_15_100.npz', 'new_town05_right_50_10/2020_08_22_02_59_38_nsga2/bugs/town05_right_0_leading_car_braking_town05_lbc_15_100.npz')
-
-    check_unique_bug_num('data_for_analysis/', 'new_town05_right_50_10/2020_08_22_02_59_38_nsga2/bugs/town05_right_0_leading_car_braking_town05_lbc_15_100.npz', 'new_town05_right_50_10/2020_08_22_03_00_00_nsga2_dt/town05_right_0_leading_car_braking_town05_lbc_5_100_3_2020_08_22_03_00_00.npz')
-
-    # check_unique_bug_num('data_for_analysis/', 'new_town05_right_50_10//2020_08_22_03_00_00_nsga2_dt/town05_right_0_leading_car_braking_town05_lbc_5_100_3_2020_08_22_03_00_00.npz')
+    # check_unique_bug_num('data_for_analysis/', 'new_town05_right_50_10/2020_08_22_02_59_38_nsga2/bugs/town05_right_0_leading_car_braking_town05_lbc_15_100.npz', 'new_town05_right_50_10/2020_08_22_02_59_38_nsga2/bugs/town05_right_0_leading_car_braking_town05_lbc_15_100.npz')
     #
-    # check_unique_bug_num('data_for_analysis/', 'new_town05_right_50_10//2020_08_22_03_00_00_nsga2-un/town05_right_0_leading_car_braking_town05_lbc_15_100.npz')
+    # check_unique_bug_num('data_for_analysis/', 'new_town05_right_50_10/2020_08_22_02_59_38_nsga2/bugs/town05_right_0_leading_car_braking_town05_lbc_15_100.npz', 'new_town05_right_50_10/2020_08_22_03_00_00_nsga2_dt/town05_right_0_leading_car_braking_town05_lbc_5_100_3_2020_08_22_03_00_00.npz')
+
+
+    # check_unique_bug_num('data_for_analysis/', 'new_town07_front_50_10/2020_08_23_03_24_33_nsga2-un/bugs/nsga2-un_town07_front_0_low_traffic_lbc_15_100.npz', 'new_town07_front_50_10/2020_08_23_03_24_33_nsga2-un/bugs/nsga2-un_town07_front_0_low_traffic_lbc_15_100.npz')
+
+
+    # check_unique_bug_num('data_for_analysis/', 'new_nsga2-un_town07_front_50_10/2020_08_23_03_24_29_random/bugs/random_town07_front_0_low_traffic_lbc_15_100.npz', 'new_nsga2-un_town07_front_50_10/2020_08_23_03_24_29_random/bugs/random_town07_front_0_low_traffic_lbc_15_100.npz')
+
+
+
+
+
+
+    # town07
+    calculate_pairwise_dist([('random', 'data_for_analysis/new_nsga2-un_town07_front_50_15/2020_08_23_03_24_29_random_50_10/bugs/random_town07_front_0_low_traffic_lbc_15_100.npz'), ('NSGA2', 'data_for_analysis/new_nsga2-un_town07_front_50_15/2020_08_23_11_58_10_nsga2_50_15/bugs/nsga2_town07_front_0_low_traffic_lbc_15_100.npz'), ('NSGA2-UN', 'data_for_analysis/new_nsga2-un_town07_front_50_15/2020_08_23_11_58_24_nsga2-un_50_15/bugs/nsga2-un_town07_front_0_low_traffic_lbc_15_100.npz')])
+
+
+
+
+    # town07
+    # draw_unique_bug_num_over_simulations([('random', 'data_for_analysis/new_nsga2-un_town07_front_50_15/2020_08_23_03_24_29_random_50_10/bugs/random_town07_front_0_low_traffic_lbc_15_100.npz'), ('NSGA2', 'data_for_analysis/new_nsga2-un_town07_front_50_15/2020_08_23_11_58_10_nsga2_50_15/bugs/nsga2_town07_front_0_low_traffic_lbc_15_100.npz'), ('NSGA2-UN', 'data_for_analysis/new_nsga2-un_town07_front_50_15/2020_08_23_11_58_24_nsga2-un_50_15/bugs/nsga2-un_town07_front_0_low_traffic_lbc_15_100.npz')])
+
+    # town 01
+    # draw_unique_bug_num_over_simulations([('random', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_23_20_59_53_random/bugs/random_town01_left_0_default_lbc_15_100.npz'), ('NSGA2', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_24_11_37_12_nsga2/bugs/nsga2_town01_left_0_default_lbc_15_100.npz'), ('NSGA2-UN', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_23_20_59_46_nsga2-un/bugs/nsga2-un_town01_left_0_default_lbc_15_100.npz')])
+
+    # town 05 front
+    # draw_unique_bug_num_over_simulations([('random', 'data_for_analysis/new_nsga2-un_town05_front_50_15/2020_08_24_01_35_09_random/bugs/random_town05_front_0_change_lane_town05_lbc_15_100.npz'), ('NSGA2', 'data_for_analysis/new_nsga2-un_town05_front_50_15/2020_08_24_11_37_14_nsga2/bugs/nsga2_town05_front_0_change_lane_town05_lbc_15_100.npz'), ('NSGA2-UN', 'data_for_analysis/new_nsga2-un_town05_front_50_15/2020_08_23_21_42_33_nsga2-un/bugs/nsga2-un_town05_front_0_change_lane_town05_lbc_15_100.npz')])
+
+
+    # apply_tsne('data_for_analysis/new_nsga2-un_town05_front_50_15/2020_08_23_21_42_33_nsga2-un/bugs/nsga2-un_town05_front_0_change_lane_town05_lbc_15_100.npz', 15, 100)
