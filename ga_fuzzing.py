@@ -432,6 +432,7 @@ parser.add_argument("--root_folder", type=str, default='run_results')
 parser.add_argument("--episode_max_time", type=int, default=50)
 parser.add_argument("--n_gen", type=int, default=12)
 parser.add_argument("--pop_size", type=int, default=100)
+parser.add_argument("--has_run_num", type=int, default=1500)
 parser.add_argument("--outer_iterations", type=int, default=3)
 parser.add_argument('--objective_weights', nargs='+', type=float, default=[-1, 1, 1, 1, -1])
 parser.add_argument('--check_unique_coeff', nargs='+', type=float, default=[0, 0.15, 0.5])
@@ -479,6 +480,8 @@ objective_weights = np.array(arguments.objective_weights)
 
 check_unique_coeff = arguments.check_unique_coeff
 
+has_run_num = arguments.has_run_num
+finish_after_has_run = True
 
 
 
@@ -1452,7 +1455,7 @@ class NSGA2_DT(NSGA2):
 
         self.off.set("n_gen", self.n_gen)
         # if the mating could not generate any new offspring (duplicate elimination might make that happen)
-        if len(self.off) == 0:
+        if len(self.off) == 0 or (not self.problem.call_from_dt and finish_after_has_run and self.problem.has_run >= has_run_num):
             self.termination.force_termination = True
             print("Mating cannot generate new springs, terminate earlier.")
             return
@@ -1698,6 +1701,9 @@ def run_nsga2_dt():
         if i == 0 or np.sum(y)==0:
             dt = False
         X_new, y_new, F_new, objectives_new, labels, hv_new, parent_folder, cumulative_info = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, dt_time_str_i, i, cumulative_info)
+
+        if finish_after_has_run and cumulative_info['has_run'] > has_run_num:
+            break
 
         if len(X_new) == 0:
             break
