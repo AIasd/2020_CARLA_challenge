@@ -44,7 +44,7 @@ python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r '
 
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-un
 
-* python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 10 --n_gen 5 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-dt
+* python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-dt --has_run_num 1500
 
 
 
@@ -81,7 +81,7 @@ python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r '
 
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2
 
-* python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 3 --n_gen 5 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-dt
++ python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-dt --has_run_num 1500
 
 
 
@@ -105,9 +105,9 @@ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r '
 
 two partial objectives for change lane:
 
-+ python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --has_run_num 1400
++++ python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --has_run_num 1500
 
-+ python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights -1 1 0 0 0 --has_run_num 700
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights -1 1 0 0 0 --has_run_num 700
 
 + python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights 0 0 1 1 -1 --has_run_num 700
 
@@ -116,9 +116,9 @@ the other two controllers:
 
 
 
-* python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model auto_pilot
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model auto_pilot --has_run_num 1500
 
-* python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 2 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model pid_agent
++ python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model pid_agent --has_run_num 1500
 
 
 
@@ -913,6 +913,23 @@ class MyProblem(Problem):
             print('\n'*10)
             # os.system('sudo chmod -R 777 '+self.bug_folder)
 
+
+
+            # save intermediate results
+            if len(self.x_list) > 0:
+                X = np.stack(self.x_list)
+                F = np.stack(self.F_list)
+                objectives = np.stack(self.objectives_list)
+            else:
+                X = []
+                F = []
+                objectives = []
+
+            non_dt_save_file = '_'.join([algorithm_name, route_type, scenario_type, ego_car_model, str(global_n_gen), str(pop_size)])
+            pth = os.path.join(self.bug_folder, non_dt_save_file)
+
+            np.savez(pth, X=X, y=np.array(self.y_list), F=F, objectives=objectives, time_list=np.array(self.time_list), bugs_num_list=np.array(self.bugs_num_list), unique_bugs_num_list=np.array(self.unique_bugs_num_list), has_run_list=self.has_run_list, labels=self.labels, mask=self.mask, xl=self.xl, xu=self.xu, p=self.p, c=self.c, th=self.th, route_type=route_type, scenario_type=scenario_type)
+            print('npz saved')
 
 
         out["F"] = np.row_stack(job_results)
