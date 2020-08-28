@@ -44,7 +44,7 @@ python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r '
 
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-un
 
-* python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-dt --has_run_num 1500
+python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-dt --has_run_num 1500
 
 
 
@@ -63,13 +63,13 @@ python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r '
 
 
 new-scene 1:
-+ python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
 
-* python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
+* python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random --has_run_num 1500
 
-* python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2
+* python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2 --has_run_num 1500
 
-* python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --outer_iterations 10 --n_gen 5 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt
+* python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt --has_run_num 1500
 
 
 
@@ -81,7 +81,7 @@ python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r '
 
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2
 
-+ python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-dt --has_run_num 1500
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-dt --has_run_num 1500
 
 
 
@@ -93,23 +93,43 @@ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r '
 
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2
 
-* python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --outer_iterations 3 --n_gen 5 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-dt
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-dt --has_run_num 1500
 
 
 
+scene 5:
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name nsga2-un --has_run_num 1500
 
++ python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name nsga2 --has_run_num 1500
 
++ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name random --has_run_num 1500
+
+* python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name nsga2-dt --has_run_num 1500
 
 
 
 
 two partial objectives for change lane:
 
-+++ python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --has_run_num 1500
+python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --has_run_num 1500
 
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights -1 1 0 0 0 --has_run_num 700
 
-+ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights 0 0 1 1 -1 --has_run_num 700
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights 0 0 1 1 -1 --has_run_num 700
+
+
+
+
+* python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 1500 --objective_weights -1 1 1 1 -1
+
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 0 0 0
+
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 700 --objective_weights 0 0 1 1 -1
+
+
+
+
+
 
 
 the other two controllers:
@@ -118,16 +138,26 @@ the other two controllers:
 
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model auto_pilot --has_run_num 1500
 
-+ python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model pid_agent --has_run_num 1500
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model pid_agent --has_run_num 1500
 
 
 
+
+sensitivity
+
+
++local python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 6 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-un --check_unique_coeff 0 0.225 0.25 --has_run_num 300
+
++ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 6 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-un --check_unique_coeff 0 0.075 0.25 --has_run_num 300
+
++ python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 6 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-un --check_unique_coeff 0 0.075 0.50 --has_run_num 300
 
 
 
 
 
 TBD:
+* random seed when rerun a scenario
 * fix repeating cases before each submit_and_run_jobs
 
 * fix self.counter
@@ -446,7 +476,7 @@ ports = arguments.ports
 scheduler_port = arguments.scheduler_port
 dashboard_address = arguments.dashboard_address
 
-# ['town01_left_0', 'town03_front_0', 'town05_front_0', 'town05_right_0']
+# ['town01_left_0', 'town07_front_0', 'town05_front_0', 'town05_right_0']
 route_type = arguments.route_type
 # ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
 scenario_type = arguments.scenario_type
@@ -1075,6 +1105,7 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
     'scenario':scenario,
     'direction':direction,
     'route_str':route_str,
+    'route_type':route_type,
     'ego_car_model':ego_car_model}
 
 
@@ -1082,6 +1113,13 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
         is_bug = check_bug(objectives)
         if is_bug:
             print('\n'*3, 'rerun also causes a bug!!! will not save this', '\n'*3)
+            try:
+                # use this version to merge into the existing folder
+                from distutils.dir_util import copy_tree
+                copy_tree(save_path, rerun_folder)
+            except:
+                print('fail to copy from', save_path)
+                traceback.print_exc()
         else:
             assert rerun_folder
             try:
@@ -1963,7 +2001,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     non_dt_save_file = '_'.join([algorithm_name, route_type, scenario_type, ego_car_model, str(n_gen), str(pop_size)])
     pth = os.path.join(bug_parent_folder, non_dt_save_file)
 
-    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, has_run_list=has_run_list, labels=labels, hv=hv, mask=mask, xl=xl, xu=xu, p=p, c=c, th=th, route_type=route_type, scenario_type=scenario_type)
+    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, has_run=has_run, has_run_list=has_run_list, labels=labels, hv=hv, mask=mask, xl=xl, xu=xu, p=p, c=c, th=th, route_type=route_type, scenario_type=scenario_type)
     print('npz saved')
 
 
