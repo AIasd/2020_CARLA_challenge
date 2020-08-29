@@ -1,7 +1,15 @@
 ## Introduction
-This repo consists of code accompanying the submission "AutoFuzz: Grammar-Based Fuzzing forSelf-Driving Car Controller".
+This repo consists of code accompanying the submission "AutoFuzz: Grammar-Based Fuzzing forSelf-Driving Car Controller". AutoFuzz is a grammar-based input fuzzing tool for self-driving car, which analyzes CARLA specification to generate semantically and temporally valid test scenario.
+
 
 ## Setup
+### Requirements
+* OS: Ubuntu 18.04
+* CPU: at least 8 cores
+* GPU: at least 8GB memory
+* Carla 0.9.9 (for installation details, see below)
+* Python 3.7 with packages listed in `requirements.yml`
+
 ### Cloning this Repository
 
 Clone this repo with all its submodules
@@ -10,7 +18,7 @@ Clone this repo with all its submodules
 git clone https://github.com/AIasd/2020_CARLA_challenge.git --recursive
 ```
 
-All python packages used are specified in `carla_project/requirements.txt`.
+All python packages used are specified in `requirements.yml`.
 
 This code uses CARLA 0.9.9.
 
