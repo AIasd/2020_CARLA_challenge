@@ -157,6 +157,7 @@ sensitivity
 
 
 TBD:
+* when sampling multiple agents, should avoid the places that already generate agents and illegal areas.
 * random seed when rerun a scenario
 * fix repeating cases before each submit_and_run_jobs
 
