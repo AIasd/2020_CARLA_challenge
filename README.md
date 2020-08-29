@@ -1,4 +1,8 @@
-## Installation
+## Introduction
+This repo consists of code accompanying the submission "AutoFuzz: Grammar-Based Fuzzing forSelf-Driving Car Controller".
+
+## Setup
+### Cloning this Repository
 
 Clone this repo with all its submodules
 
@@ -15,7 +19,7 @@ See [link](https://github.com/carla-simulator/carla/releases/tag/0.9.9) for more
 
 
 
-## Installation of Carla 0.9.9
+### Installation of Carla 0.9.9
 The following commands can be used to install carla 0.9.9
 
 Create a new conda environment:
@@ -44,44 +48,27 @@ cd ../../..
 ```
 A window should pop up.
 
-
-## Run an autopilot model
-comment out the pretrained model lines in run_agent.sh and modify the paths inside.
-
-Spin up a CARLA server
-
-```
-./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
-```
-
-then run the agent in a separate window.
-
-```
-./run_agent.sh
-```
-
-## Run a pretrained model
-
+### Download a LBC pretrained model
 Download the checkpoint from [Wandb project](https://app.wandb.ai/bradyz/2020_carla_challenge_lbc).
 
 Navigate to one of the runs, like https://app.wandb.ai/bradyz/2020_carla_challenge_lbc/runs/command_coefficient=0.01_sample_by=even_stage2/files
 
-Go to the "files" tab, and download the model weights, named "epoch=24.ckpt", and pass in the file path as the `TEAM_CONFIG` in `run_agent.sh`. comment out the autopilot model lines in `run_agent.sh` and modify the paths inside.
+Go to the "files" tab, and download the model weights, named "epoch=24.ckpt", and pass in the file path as the `TEAM_CONFIG` in `run_agent.sh`. Move this model's checkpoint to the `models` folder.
 
-Spin up a CARLA server
 
+
+## Run Fuzzing
 ```
-./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
+python ga_fuzzing.py
 ```
+For more API information, checkout `ga_fuzzing.py`.
 
-then run the agent in a separate window.
 
-```
-./run_agent.sh
-```
 
-## Check out maps and coordinates
-Check out the coordinates of each path by spinning up a CARLA server
+
+
+## Check out maps and find coordinates
+Check out the map details by spinning up a CARLA server
 
 ```
 ./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
@@ -92,62 +79,26 @@ python inspect_routes.py
 ```
 Also see the corresponding birdview layout [here](https://carla.readthedocs.io/en/latest/core_map/) for direction and traffic lights information.
 
-## Fuzzing
-Spin up a CARLA server
+Note to switch town map, one can change the corresponding variable inside this script.
 
-```
-./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
-```
-
-then run the agent in a separate window.
-
-```
-./run_fuzzing.sh
-```
-
-## Genetic Fuzzing (Searching for error scenario)
-```
-sudo -E <absolute_path_to_python> ga_fuzzing.py
-```
-In order to visualize the running simulations, one need to do the following steps:
-
-In ga_fuzzing.py, for the line
-```
-os.environ['HAS_DISPLAY'] = '0'
-```
-replace `'0'` with `'1'`.
-
-## Analyze results of Genetic Fuzzing
-```
-python analyze_ga_results.py
-```
 
 
 ## Retrain model from scratch
-The retraining code only supports single-GPU training.
-Download dataset [here](https://drive.google.com/file/d/1dwt9_EvXB1a6ihlMVMyYx0Bw0mN27SLy/view).
+Note: the retraining code only supports single-GPU training.
+Download dataset [here](https://drive.google.com/file/d/1dwt9_EvXB1a6ihlMVMyYx0Bw0mN27SLy/view). Add the extra data got from fuzzing into the folder of the dataset and then run stage 1 and stage 2.
 
-Stage 1 (~23 hrs on 2080Ti):
+Stage 1 (~24 hrs on 2080Ti):
 ```
 CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir path/to/data
 ```
 
-Stage 2:
+Stage 2 (~36 hrs on 2080Ti):
 ```
 CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model --dataset_dir path/to/data --teacher_path path/to/model/from/stage1
 ```
 
-Note: if retraining is wanted, add the extra data into the folder of the dataset and then run stage 1 and stage 2.
 
 
-## Demo Routes
-Town01-Scenario12-left-00
-
-Town03-Scenario12-front-00
-
-Town05-Scenario12-front-00
-
-Town05-Scenario12-right-00
 
 # Reference
 This repo is built on top of [here](https://github.com/bradyz/2020_CARLA_challenge) and [here](https://github.com/msu-coinlab/pymoo)

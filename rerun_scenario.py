@@ -1,6 +1,3 @@
-'''
-sudo -E /home/zhongzzy9/anaconda3/envs/carla99/bin/python rerun_scenario.py
-'''
 import os
 from ga_fuzzing import run_simulation
 from object_types import pedestrian_types, vehicle_types, static_types, vehicle_colors

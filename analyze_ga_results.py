@@ -710,56 +710,7 @@ def draw_unique_bug_num_over_simulations(path_list, filename='num_of_unique_bugs
     fig.savefig(filename)
 
 if __name__ == '__main__':
-    # nsga2
-    # folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town03/Scenario12/right/01/2020_08_01_01_59_32'
-    # bug_res_path = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town03/Scenario12/right/01/2020_08_01_01_59_32/res_0.pkl'
-    # folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town01/Scenario12/left/00/2020_08_02_00_47_04'
-    # bug_res_path = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town01/Scenario12/left/00/2020_08_02_00_47_04/res_0.pkl'
-    # total_num = 1000
-    # pop_size = 100
-
-    # random
-    # folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town03/Scenario12/right/01/2020_08_01_15_16_26'
-    # bug_res_path = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/Town03/Scenario12/right/01/2020_08_01_15_16_26/res_0.pkl'
-    # total_num = 180
-    # pop_size = 30
-
-    # save_folder = 'plots'
-    # if not os.path.exists(save_folder):
-    #     os.mkdir(save_folder)
-    #
-    # analyze_causes(folder, save_folder, total_num, pop_size)
-    # draw_hv(bug_res_path, save_folder)
-    # draw_performance(bug_res_path, save_folder)
-
-
-
-
-    # path = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/True/nsga2/Town05/Scenario12/right/00/2020_08_08_21_36_51/res_0.pkl'
-    # analyze_data(path)
-    # apply_tsne(path, 5, 20)
-
-
-
-    # list_bug_categories_with_numbers('/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/bugs/False/nsga2/Town03/Scenario12/front/00/2020_08_08_16_17_53')
-
-
-
-
-
-    # compare_with_dt('dt_data/Town03_Scenario12_front_0_default_1st.npz')
-    # compare_with_dt('non_dt_data/Town03_Scenario12_front_0_leading_car_braking_4_50_2020_08_12_20_50_00.npz')
-
-    # generation_data_paths = [('all', 'data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective/Town05_Scenario12_right_0_leading_car_braking_12_100_all_objectives_2020_08_16_00_53_08.npz'),
-    # ('out-of-road', 'data_for_analysis/2020_08_16_18_18_52_6_100_leading_car_out_of_road_objective/Town05_Scenario12_right_0_leading_car_braking_6_100_out_of_road_objective_2020_08_16_22_29_33.npz'),
-    # ('collision', 'data_for_analysis/2020_08_17_00_40_54_6_100_leading_car_collision_objective/Town05_Scenario12_right_0_leading_car_braking_6_100_collision_objective_2020_08_17_04_56_20.npz')]
-
-
-    # generation_data_paths = [('all', 'data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective/mean_objectives_across_generations.txt'),
-    # ('out-of-road', 'data_for_analysis/2020_08_16_18_18_52_6_100_leading_car_out_of_road_objective/mean_objectives_across_generations.txt'),
-    # ('collision', 'data_for_analysis/2020_08_17_00_40_54_6_100_leading_car_collision_objective/mean_objectives_across_generations.txt')]
-    #
-    # plot_each_bug_num_and_objective_num_over_generations(generation_data_paths)
+    
 
 
     # check_unique_bug_num('data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective', 'data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective/Town05_Scenario12_right_0_leading_car_braking_12_100_all_objectives_2020_08_16_00_53_08.npz')
