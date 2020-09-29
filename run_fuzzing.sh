@@ -27,7 +27,10 @@ export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI
 export PYTHONPATH=$PYTHONPATH:leaderboard
 export PYTHONPATH=$PYTHONPATH:leaderboard/team_code
 export PYTHONPATH=$PYTHONPATH:scenario_runner
-
+export PYTHONPATH=$PYTHONPATH:carla_project
+export PYTHONPATH=$PYTHONPATH:carla_project/src
+export PYTHONPATH=$PYTHONPATH:carla_project/src/utils
+export PYTHONPATH=$PYTHONPATH:carla_project/src/utils/heatmap
 
 
 

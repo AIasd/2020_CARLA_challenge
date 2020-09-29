@@ -17,6 +17,10 @@ from leaderboard.utils.route_parser import RouteParser
 
 import json
 from sklearn import tree
+import shlex
+import subprocess
+import time
+import re
 
 def visualize_route(route):
     n = len(route)
@@ -295,7 +299,7 @@ def is_port_in_use(port):
         return s.connect_ex(('localhost', port)) == 0
 
 
-def exit_handler(ports, bug_folder, scenario_file):
+def exit_handler(ports):
     for port in ports:
         while is_port_in_use(port):
             try:
@@ -303,7 +307,7 @@ def exit_handler(ports, bug_folder, scenario_file):
                 print('-'*20, 'kill server at port', port)
             except:
                 continue
-    # os.remove(scenario_file)
+
 
 def get_angle(x1, y1, x2, y2):
     angle = np.arctan2(x1*y2-y1*x2, x1*x2+y1*y2)
@@ -1082,6 +1086,12 @@ def parse_route_and_scenario(location_list, town_name, scenario, direction, rout
 
     # Parse Scenario
     x_0, y_0 = location_list[0]
+    parse_scenario(scenario_file, town_name, route_str, x_0, y_0)
+
+
+
+def parse_scenario(scenario_file, town_name, route_str, x_0, y_0):
+    # Parse Scenario
     x_0_str = str(x_0)
     y_0_str = str(y_0)
 
@@ -1120,8 +1130,41 @@ def parse_route_and_scenario(location_list, town_name, scenario, direction, rout
         annotation_dict = json.dump(new_scenario, f_out, indent=4)
 
 
+def parse_route_file(route_filename):
+    def l2_dist(x, y, prev_x, prev_y):
+        return np.sqrt((x-prev_x)**2+(y-prev_y)**2)
+
+    config_list = []
+    tree = ET.parse(route_filename)
+
+    for route in tree.iter("route"):
+        route_id = int(route.attrib['id'])
+        town_name = route.attrib['town']
+
+        transform_list = []
+        first_waypoint = True
+        d = 0
+        for waypoint in route.iter('waypoint'):
+            x, y, z = float(waypoint.attrib['x']), float(waypoint.attrib['y']), float(waypoint.attrib['z'])
+            pitch, yaw, roll = float(waypoint.attrib['pitch']), float(waypoint.attrib['yaw']), float(waypoint.attrib['roll'])
 
 
+            if first_waypoint:
+                first_waypoint = False
+            else:
+                d += l2_dist(x, y, prev_x, prev_y)
+
+            transform_list.append((x, y, z, pitch, yaw, roll))
+            if d > 50:
+                first_waypoint = True
+                d = 0
+                config_list.append([route_id, town_name, transform_list])
+                transform_list = []
+
+            prev_x, prev_y = x, y
+
+
+    return config_list
 
 def is_similar(x_1, x_2, mask, xl, xu, p, c, th, verbose=False, labels=[], diff_th=0.1):
 
@@ -1221,3 +1264,115 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1):
 def check_bug(objectives):
     # speed needs to be large than 0.2 to avoid false positive
     return objectives[0] > 0.2 or objectives[5] or objectives[6]
+
+
+def start_server(port):
+    # hack: this heavily relies on the relative path of carla
+    cmd_list = shlex.split('sh ../carla_0994_no_rss/CarlaUE4.sh -opengl -carla-rpc-port='+str(port)+' -carla-streaming-port=0')
+    while is_port_in_use(int(port)):
+        try:
+            subprocess.run('kill $(lsof -t -i :'+str(port)+')', shell=True)
+            print('-'*20, 'kill server at port', port)
+            time.sleep(2)
+        except:
+            continue
+    subprocess.Popen(cmd_list)
+    print('-'*20, 'start server at port', port)
+    # 10s is usually enough
+    time.sleep(10)
+
+
+
+
+
+def port_to_gpu(port):
+    gpu = port % 2
+    return gpu
+
+
+
+
+
+
+
+def estimate_objectives(save_path, default_objectives):
+
+    events_path = os.path.join(save_path, 'events.txt')
+    deviations_path = os.path.join(save_path, 'deviations.txt')
+
+    # hack: threshold to avoid too large influence
+    ego_linear_speed = 0
+    min_d = 7
+    offroad_d = 7
+    wronglane_d = 7
+    dev_dist = 0
+
+    is_offroad = 0
+    is_wrong_lane = 0
+    is_run_red_light = 0
+
+
+    with open(deviations_path, 'r') as f_in:
+        for line in f_in:
+            type, d = line.split(',')
+            d = float(d)
+            if type == 'min_d':
+                min_d = np.min([min_d, d])
+            elif type == 'offroad_d':
+                offroad_d = np.min([offroad_d, d])
+            elif type == 'wronglane_d':
+                wronglane_d = np.min([wronglane_d, d])
+            elif type == 'dev_dist':
+                dev_dist = np.max([dev_dist, d])
+
+    x = None
+    y = None
+    object_type = None
+
+    infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane', 'off_road']
+
+    try:
+        with open(events_path) as json_file:
+            events = json.load(json_file)
+    except:
+        print('events_path', events_path, 'is not found')
+        return default_objectives, (None, None), None
+    print(json_file, events)
+    infractions = events['_checkpoint']['records'][0]['infractions']
+    status = events['_checkpoint']['records'][0]['status']
+
+    for infraction_type in infraction_types:
+        for infraction in infractions[infraction_type]:
+            if 'collisions' in infraction_type:
+                typ = re.search('.*with type=(.*) and id.*', infraction)
+                print(infraction, typ)
+                if typ:
+                    object_type = typ.group(1)
+                loc = re.search('.*x=(.*), y=(.*), z=(.*), ego_linear_speed=(.*), other_actor_linear_speed=(.*)\)', infraction)
+                if loc:
+                    x = float(loc.group(1))
+                    y = float(loc.group(2))
+                    ego_linear_speed = float(loc.group(4))
+                    other_actor_linear_speed = float(loc.group(5))
+
+            elif infraction_type == 'off_road':
+                loc = re.search('.*x=(.*), y=(.*), z=(.*)\)', infraction)
+                if loc:
+                    x = float(loc.group(1))
+                    y = float(loc.group(2))
+                    is_offroad = 1
+            else:
+                if infraction_type == 'wrong_lane':
+                    is_wrong_lane = 1
+                elif infraction_type == 'red_light':
+                    is_run_red_light = 1
+                loc = re.search('.*x=(.*), y=(.*), z=(.*)[\),]', infraction)
+                if loc:
+                    x = float(loc.group(1))
+                    y = float(loc.group(2))
+
+    # limit impact of too large values
+    ego_linear_speed = np.min([ego_linear_speed, 7])
+    dev_dist = np.min([dev_dist, 7])
+
+    return [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light], (x, y), object_type

@@ -28,7 +28,11 @@ export PYTHONPATH=$PYTHONPATH:leaderboard/team_code
 export PYTHONPATH=$PYTHONPATH:scenario_runner
 
 export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI
-
+export PYTHONPATH=$PYTHONPATH:leaderboard
+export PYTHONPATH=$PYTHONPATH:leaderboard/team_code
+export PYTHONPATH=$PYTHONPATH:scenario_runner
+export PYTHONPATH=$PYTHONPATH:carla_project
+export PYTHONPATH=$PYTHONPATH:carla_project/src
 
 
 
@@ -50,6 +54,6 @@ python leaderboard/leaderboard/leaderboard_evaluator.py \
 --checkpoint=${CHECKPOINT_ENDPOINT} \
 --port=${PORT} \
 --weather-index=${WEATHER_INDEX} \
---save_folder=${SAVE_FOLDER}
+--save-folder=${SAVE_FOLDER}
 
 echo "Done. See $CHECKPOINT_ENDPOINT for detailed results."

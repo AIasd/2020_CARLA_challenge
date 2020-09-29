@@ -5,6 +5,172 @@
 # resource.setrlimit(resource.RLIMIT_NOFILE, (131072, 131072))
 # print("getrlimit:", resource.getrlimit(resource.RLIMIT_NOFILE))
 
+'''
+python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 24 --pop_size 100 -r 'town01_left_0'
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 24 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05'
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 24 --pop_size 100 -r 'town04_front_0' -c 'two_pedestrians_cross_street_town04'
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 24 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05'
+python ga_fuzzing.py -p 2027 2030 -s 8797 -d 8798 --n_gen 24 --pop_size 100 -r 'town07_front_0'
+python ga_fuzzing.py -p 2033 2036 -s 8800 -d 8801 --n_gen 24 --pop_size 100 -r 'town03_front_0'
+default number of fields: 50%, margin: 15%
+experiment 1
+scene 1
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2
+scene 2
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name random
+experiment 2: try number of fields: 50%, margin: 10%
+scene 3
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-un --check_unique_coeff 0 0.1 0.5
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name random --check_unique_coeff 0 0.1 0.5
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-un
+python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-dt --has_run_num 1500
+scene 1
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2
+new-scene 1:
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
+* python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random --has_run_num 1500
+* python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2 --has_run_num 1500
+* python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt --has_run_num 1500
+scene 4:
+python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-un
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name random
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-dt --has_run_num 1500
+scene 2:
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name random
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-dt --has_run_num 1500
+scene 5:
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name nsga2-un --has_run_num 1500
++ python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name nsga2 --has_run_num 1500
++ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name random --has_run_num 1500
+* python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name nsga2-dt --has_run_num 1500
+two partial objectives for change lane:
+python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --has_run_num 1500
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights -1 1 0 0 0 --has_run_num 700
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights 0 0 1 1 -1 --has_run_num 700
+* python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 1500 --objective_weights -1 1 1 1 -1
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 0 0 0
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 700 --objective_weights 0 0 1 1 -1
+the other two controllers:
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model auto_pilot --has_run_num 1500
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model pid_agent --has_run_num 1500
+sensitivity
++local python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 6 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-un --check_unique_coeff 0 0.225 0.25 --has_run_num 300
++ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 6 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-un --check_unique_coeff 0 0.075 0.25 --has_run_num 300
++ python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 6 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-un --check_unique_coeff 0 0.075 0.50 --has_run_num 300
+
+
+TBD:
+* max time for new interface
+* extend/modify ga_fuzzing to customize scenario for these routes (basically to make collision happen more frequently). Potential need to modify ga_fuzzing mechanism to make responsibility lie more on the ego car.
+
+
+* think about how to apply causal inference
+* collect data from 75 routes(with changing weather/lighting) using autopilot and train a new/better lbc model
+
+* when sampling multiple agents, should avoid the places that already generate agents and illegal areas.
+* random seed when rerun a scenario
+* fix repeating cases before each submit_and_run_jobs
+* fix self.counter
+* unique bug count for dt; run dt performance for unique bugs
+* find another scenario that may have out-of-road violations
+* adjust objective weights
+* record high resolution image
+* debug vehicles not moving
+* tsne (rescaling, count discrete difference as 1), decision tree volume
+* random seed
+* no static objects on route
+* interface for selecting route
+* unified interface
+* algorithm selection interface (integrate dt into ga_fuzzing)
+* avoid generation of other objects very close to the ego-car (this can also be achieved by customized constraints)
+* save state to continue
+* all objective 12 gen VS collision 6 gen + wrong route 6 gen VS all objective dt 3 * 4 gen: check average objectives and error numbers/types distributions, data t-sne visualization across generations and bug VS non-bug and different types of bugs, decision tree volumes
+* estimate single thread time
+* more exact time for dt
+* mating critical region for dt
+* route completion bug
+* explore generation blocking issue and might consider to pre-run a map and save legit regions
+* fix rgb with car high resolution
+* more routes
+* multi-objective search VS 3 single-objective search and compare results
+* need to bound the projection / add_dist process when keep trying to generate an actor to within the bounds
+* allow user to specify a region that actors cannot be generated within such that we can avoid spawning of static on route (a variable to control)
+* diversity of bugs
+* fix x afterwards when original setup cannot generate actors properly
+* analyze dt results(visualization, show leaves results)
+* hd image saving
+* save intermediate results to avoid crash
+* analyze visualization across generations
+* parametrize in start / end location of each route
+* estimate bug diversity via tree diversity
+* fix stage2 model training
+* debug nsga2-dt
+* emcmc
+* clustering+tsne(need to label different bugs first), bug category over generation plot
+* stage 1 map model
+* maybe make the validity checking static before each simulation (this needs extra knowledge of the map)
+* limit generation of objects in a certain area
+* decision tree feature importance analysis and bug diversity analysis
+* seed selection (add constraints to input space) to search for particular pre-crash scene bugs
+* continuous objective of wronglane/offroad when violation happens
+* record rgb_with_car for pid_controller and auto_pilot
+* the birdview window currently does not appear even when os.environ['HAS_DISPLAY'] = '1'
+* need to improve diversity of bugs
+* maybe not allowed to generate static objects directly on routes
+* better way for determining and eliminating duplicates
+* remove some very small static objects from the options (collision with them should not be considered as bug)
+* evolutionary MCMC
+* check diversity of generated scenes
+* mutation cannot be picklized
+* Traceback (most recent call last):
+  File "ga_fuzzing.py", line 1017, in <module>
+    main()
+  File "ga_fuzzing.py", line 1005, in main
+    np.savez(problem.bug_folder+'/'+'res'+'_'+ind, res=res, algorithm_name=algorithm_name, time_bug_num_list=problem.time_bug_num_list)
+  File "<__array_function__ internals>", line 6, in savez
+  File "/home/zhongzzy9/anaconda3/envs/carla99/lib/python3.7/site-packages/numpy/lib/npyio.py", line 645, in savez
+    _savez(file, args, kwds, False)
+  File "/home/zhongzzy9/anaconda3/envs/carla99/lib/python3.7/site-packages/numpy/lib/npyio.py", line 754, in _savez
+    pickle_kwargs=pickle_kwargs)
+  File "/home/zhongzzy9/anaconda3/envs/carla99/lib/python3.7/site-packages/numpy/lib/format.py", line 676, in write_array
+    pickle.dump(array, fp, protocol=3, **pickle_kwargs)
+_pickle.PicklingError: Can't pickle <class '__main__.MySampling'>: it's not the same object as __main__.MySampling
+-------------------------------
+* need to consider static objects or avoid generating static objects on the way for autopilot and pid controller
+* modify API of PID controller to make it run
+* fix OSError: [Errno 24] Too many open files: '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized/Town03/Scenario12/right/route_01_16/events.txt'
+RuntimeError: Resource temporarily unavailable
+* change to a more reliable controller
+* scenario that can run successfully when no other objects are added
+* focus on important parameter perturbation (e.g. waypoints perturbation are not very important but take too much dimensions.) If we reduce dimensions to e.g. less than 20, we might consider to apply out-of-box bayes optimization method on github.
+* understand n_gen |  n_eval |  n_nds  | delta_ideal  | delta_nadir  |   delta_f in the stdout
+* reproduce bug scenario
+* offsprings seem to be similar. need to be fixed.
+* save and resume_run a training after each generation
+* narrow down the range of other actors and limit the time length of each run
+* free-view window of the map
+check number of opened files:
+lsof -p p_id | wc -l
+check max number of opened files:
+ulimit -n
+https://superuser.com/questions/1200539/cannot-increase-open-file-limit-past-4096-ubuntu
+su zhongzzy9
+Run genertic algorithm for fuzzing:
+python ga_fuzzing.py
+Retrain model from scratch (stage 1):
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir '/home/zhongzzy9/Documents/self-driving-car/LBC_data/CARLA_challenge_autopilot' --max_epochs 25
+Retrain model from scratch (stage 2):
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir '../LBC_data/CARLA_challenge_autopilot' --teacher_path '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage1_retrain_9_50_leading_car_25_1hz_epoch=18.ckpt' --max_epochs 25
+'''
 
 import sys
 import os
@@ -45,7 +211,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives
 
 
 from collections import deque
@@ -747,7 +913,7 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
         # collect signals for estimating objectives
 
 
-        objectives, loc, object_type = estimate_objectives(save_path)
+        objectives, loc, object_type = estimate_objectives(save_path, default_objectives)
 
 
 
@@ -789,90 +955,7 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
 
 
 
-def estimate_objectives(save_path):
-    events_path = os.path.join(save_path, 'events.txt')
-    deviations_path = os.path.join(save_path, 'deviations.txt')
 
-    # hack: threshold to avoid too large influence
-    ego_linear_speed = 0
-    min_d = 7
-    offroad_d = 7
-    wronglane_d = 7
-    dev_dist = 0
-
-    is_offroad = 0
-    is_wrong_lane = 0
-    is_run_red_light = 0
-
-
-    with open(deviations_path, 'r') as f_in:
-        for line in f_in:
-            type, d = line.split(',')
-            d = float(d)
-            if type == 'min_d':
-                min_d = np.min([min_d, d])
-            elif type == 'offroad_d':
-                offroad_d = np.min([offroad_d, d])
-            elif type == 'wronglane_d':
-                wronglane_d = np.min([wronglane_d, d])
-            elif type == 'dev_dist':
-                dev_dist = np.max([dev_dist, d])
-
-
-
-
-
-    x = None
-    y = None
-    object_type = None
-
-    infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane', 'off_road']
-
-    try:
-        with open(events_path) as json_file:
-            events = json.load(json_file)
-    except:
-        print('events_path', events_path, 'is not found')
-        return default_objectives, (None, None), None
-
-    infractions = events['_checkpoint']['records'][0]['infractions']
-    status = events['_checkpoint']['records'][0]['status']
-
-    for infraction_type in infraction_types:
-        for infraction in infractions[infraction_type]:
-            if 'collisions' in infraction_type:
-                typ = re.search('.*with type=(.*) and id.*', infraction)
-                print(infraction, typ)
-                if typ:
-                    object_type = typ.group(1)
-                loc = re.search('.*x=(.*), y=(.*), z=(.*), ego_linear_speed=(.*), other_actor_linear_speed=(.*)\)', infraction)
-                if loc:
-                    x = float(loc.group(1))
-                    y = float(loc.group(2))
-                    ego_linear_speed = float(loc.group(4))
-                    other_actor_linear_speed = float(loc.group(5))
-
-            elif infraction_type == 'off_road':
-                loc = re.search('.*x=(.*), y=(.*), z=(.*)\)', infraction)
-                if loc:
-                    x = float(loc.group(1))
-                    y = float(loc.group(2))
-                    is_offroad = 1
-            else:
-                if infraction_type == 'wrong_lane':
-                    is_wrong_lane = 1
-                elif infraction_type == 'red_light':
-                    is_run_red_light = 1
-                loc = re.search('.*x=(.*), y=(.*), z=(.*)[\),]', infraction)
-                if loc:
-                    x = float(loc.group(1))
-                    y = float(loc.group(2))
-
-    # limit impact of too large values
-    ego_linear_speed = np.min([ego_linear_speed, 7])
-    dev_dist = np.min([dev_dist, 7])
-
-    return [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light], (x, y), object_type
 
 
 
@@ -1593,7 +1676,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
 
 
     # close simulator(s)
-    atexit.register(exit_handler, ports, problem.bug_folder, scenario_file)
+    atexit.register(exit_handler, ports)
 
     # TypeError: can't pickle _asyncio.Task objects when save_history = True
     # verbose has to be set to False to avoid an error when algorithm_name=random

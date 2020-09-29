@@ -118,7 +118,7 @@ if __name__ == '__main__':
         os.mkdir(scenario_folder)
     scenario_file = scenario_folder+'/'+'current_scenario_'+time_str+'.json'
 
-    atexit.register(exit_handler, [port], rerun_save_folder, scenario_file)
+    atexit.register(exit_handler, [port])
 
 
 
