@@ -20,19 +20,19 @@ export SAVE_FOLDER=/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challen
 
 
 export PYTHONPATH=$PYTHONPATH:.
-export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla
 export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.8-py3.5-linux-x86_64.egg           # 0.9.8
 export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg           # 0.9.9
-export PYTHONPATH=$PYTHONPATH:leaderboard
-export PYTHONPATH=$PYTHONPATH:leaderboard/team_code
-export PYTHONPATH=$PYTHONPATH:scenario_runner
-
+export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI/carla
 export PYTHONPATH=$PYTHONPATH:$CARLA_ROOT/PythonAPI
 export PYTHONPATH=$PYTHONPATH:leaderboard
 export PYTHONPATH=$PYTHONPATH:leaderboard/team_code
 export PYTHONPATH=$PYTHONPATH:scenario_runner
 export PYTHONPATH=$PYTHONPATH:carla_project
 export PYTHONPATH=$PYTHONPATH:carla_project/src
+export PYTHONPATH=$PYTHONPATH:carla_project/src/utils
+export PYTHONPATH=$PYTHONPATH:carla_project/src/utils/heatmap
+
+
 
 
 
@@ -45,7 +45,7 @@ else
     CHECKPOINT_ENDPOINT="$(dirname $TEAM_CONFIG)/$(basename $ROUTES .xml).txt"
 fi
 
-python leaderboard/leaderboard/leaderboard_evaluator.py \
+python leaderboard/leaderboard/fuzzing.py \
 --challenge-mode \
 --scenarios=leaderboard/data/all_towns_traffic_scenarios_public.json  \
 --agent=${TEAM_AGENT} \

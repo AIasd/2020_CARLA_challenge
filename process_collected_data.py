@@ -6,7 +6,7 @@ import numpy as np
 eps = 1e-12
 
 
-# ['collected_data', 'collected_data_autopilot']
+# ['collected_data', 'collected_data_autopilot', 'collected_data_customized']
 data_dir = 'collected_data'
 
 
@@ -19,7 +19,7 @@ weather_indexes = [15]
 routes = [i for i in range(76)]
 
 # infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane', 'vehicle_blocked']
-infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane']
+infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane', 'off_road']
 for weather_id in weather_indexes:
     for route in routes:
         print(route)

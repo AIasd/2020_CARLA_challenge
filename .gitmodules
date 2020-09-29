@@ -7,3 +7,6 @@
 [submodule "leaderboard"]
 	path = leaderboard
 	url = https://github.com/AIasd/leaderboard.git
+[submodule "pymoo"]
+	path = pymoo
+	url = https://github.com/AIasd/pymoo.git
