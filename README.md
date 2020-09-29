@@ -89,6 +89,15 @@ Also see the corresponding birdview layout [here](https://carla.readthedocs.io/e
 
 Note to switch town map, one can change the corresponding variable inside this script.
 
+## Extract short routes extracted from CARLA challenge routes
+```
+python generate_short_routes.py
+```
+
+## Run on short routes
+```
+python run_new_routes.py
+```
 
 
 ## Retrain model from scratch
