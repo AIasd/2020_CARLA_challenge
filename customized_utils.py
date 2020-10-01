@@ -182,6 +182,15 @@ def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_
     num_of_vehicles = int(x[4])
 
     ind = 5
+
+    # if use_fine_grained_weather:
+    if weather_index == -1:
+        fine_grained_weather = carla.WeatherParameters(x[ind], x[ind+1], x[ind+2], x[ind+3], x[ind+4], x[ind+5], x[ind+6], x[ind+7], x[ind+8], x[ind+9])
+        print('weather params:', x[ind], x[ind+1], x[ind+2], x[ind+3], x[ind+4], x[ind+5], x[ind+6], x[ind+7], x[ind+8], x[ind+9])
+        ind += 10
+    else:
+        fine_grained_weather = None
+
     # ego car
     ego_car_waypoints_perturbation = []
     for _ in range(waypoints_num_limit):
@@ -271,7 +280,8 @@ def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_
     'port': port,
     'customized_center_transforms': customized_center_transforms,
     'parameters_min_bounds': parameters_min_bounds,
-    'parameters_max_bounds': parameters_max_bounds}
+    'parameters_max_bounds': parameters_max_bounds,
+    'fine_grained_weather': fine_grained_weather}
 
 
     return customized_data
@@ -371,12 +381,14 @@ pedestrian_general_labels = ['num_of_pedestrian_types', 'pedestrian_x', 'pedestr
 
 vehicle_general_labels = ['num_of_vehicle_types', 'vehicle_x', 'vehicle_y', 'vehicle_yaw', 'vehicle_initial_speed', 'vehicle_trigger_distance', 'vehicle_targeted_speed', 'vehicle_waypoint_follower', 'vehicle_targeted_x', 'vehicle_targeted_y', 'vehicle_avoid_collision', 'vehicle_dist_to_travel', 'vehicle_targeted_yaw', 'num_of_vehicle_colors']
 
-def setup_bounds_mask_labels_distributions_stage1():
+def setup_bounds_mask_labels_distributions_stage1(use_fine_grained_weather=False):
 
     parameters_min_bounds = OrderedDict()
     parameters_max_bounds = OrderedDict()
     mask = []
     labels = []
+
+
 
     fixed_hyperparameters = {
         'num_of_weathers': len(WEATHERS),
@@ -394,6 +406,10 @@ def setup_bounds_mask_labels_distributions_stage1():
     general_labels = ['friction', 'num_of_weathers', 'num_of_static', 'num_of_pedestrians', 'num_of_vehicles']
 
 
+    if use_fine_grained_weather:
+        general_min[1] = -1
+        general_max[1] = -1
+
 
     # general
     mask.extend(general_mask)
@@ -406,6 +422,28 @@ def setup_bounds_mask_labels_distributions_stage1():
         labels.append(k)
         parameters_min_bounds[k_min] = general_min[j]
         parameters_max_bounds[k_max] = general_max[j]
+
+
+
+    if use_fine_grained_weather:
+        weather_min = [0, 0, 0, 0, 0, -90, 0, 0, 0, 0]
+        weather_max = [100, 80, 80, 50, 360, 90, 15, 100, 40, 2]
+        # [100, 100, 100, 100, 360, 90, 100, 100, inf, 5]
+        weather_mask = ['real']*10
+        weather_labels = ['cloudiness', 'precipitation', 'precipitation_deposits', 'wind_intensity', 'sun_azimuth_angle', 'sun_altitude_angle', 'fog_density', 'fog_distance', 'wetness', 'fog_falloff']
+
+        mask.extend(weather_mask)
+        for j in range(len(weather_labels)):
+            weather_label = weather_labels[j]
+            k_min = '_'.join([weather_label, 'min'])
+            k_max = '_'.join([weather_label, 'max'])
+            k = '_'.join([weather_label])
+
+            labels.append(k)
+            parameters_min_bounds[k_min] = weather_min[j]
+            parameters_max_bounds[k_max] = weather_max[j]
+
+
 
     return fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels
 
@@ -937,7 +975,51 @@ customized_bounds_and_distributions = {
     },
     'customized_parameters_distributions':{},
     'customized_center_transforms':{},
-    'customized_constraints':[]}
+    'customized_constraints':[]},
+
+
+
+    'one_pedestrians_cross_street_town05': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 1,
+        'num_of_pedestrians_max': 1,
+        'num_of_vehicles_min': 0,
+        'num_of_vehicles_max': 0,
+
+
+        'pedestrian_x_min_0': -10,
+        'pedestrian_x_max_0': 10,
+        'pedestrian_y_min_0': -10,
+        'pedestrian_y_max_0': 10,
+        'pedestrian_speed_min_0': 1,
+        'pedestrian_speed_max_0': 5,
+        'pedestrian_trigger_distance_min_0': 3,
+        'pedestrian_trigger_distance_max_0': 15,
+        'pedestrian_dist_to_travel_min_0': 5,
+        'pedestrian_dist_to_travel_max_0': 30,
+
+    },
+    'customized_parameters_distributions':{},
+    'customized_center_transforms':{
+        'pedestrian_center_transform_0': ('waypoint_ratio', 50),
+    },
+    'customized_constraints': []
+    },
+
+
+    'default_dense': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 5,
+        'num_of_pedestrians_min': 2,
+        'num_of_pedestrians_max': 10,
+        'num_of_vehicles_min': 2,
+        'num_of_vehicles_max': 10,
+    },
+    'customized_parameters_distributions':{},
+    'customized_center_transforms':{},
+    'customized_constraints': []
+    },
 }
 
 
@@ -1089,6 +1171,46 @@ def parse_route_and_scenario(location_list, town_name, scenario, direction, rout
     parse_scenario(scenario_file, town_name, route_str, x_0, y_0)
 
 
+def parse_route_and_scenario_plain(location_list, town_name, route_str, scenario_file):
+
+    # Parse Route
+    TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
+    <routes>
+    %s
+    </routes>"""
+
+
+
+    pitch = 0
+    roll = 0
+    yaw = 0
+    z = 0
+
+    start_str = '<route id="{}" town="{}">\n'.format(route_str, town_name)
+    waypoint_template = '\t<waypoint pitch="{}" roll="{}" x="{}" y="{}" yaw="{}" z="{}" />\n'
+    end_str = '</route>'
+
+    wp_str = ''
+
+    for x, y in location_list:
+        wp = waypoint_template.format(pitch, roll, x, y, yaw, z)
+        wp_str += wp
+
+    final_str = start_str+wp_str+end_str
+
+    folder = make_hierarchical_dir(['leaderboard/data/temporary_routes', town_name])
+    route_path = folder+'/route_{}.xml'.format(route_str)
+
+
+    pathlib.Path(route_path).write_text(TEMPLATE % final_str)
+
+
+    # Parse Scenario
+    x_0, y_0 = location_list[0]
+    parse_scenario(scenario_file, town_name, route_str, x_0, y_0)
+
+    return route_path
+
 
 def parse_scenario(scenario_file, town_name, route_str, x_0, y_0):
     # Parse Scenario
@@ -1136,6 +1258,7 @@ def parse_route_file(route_filename):
 
     config_list = []
     tree = ET.parse(route_filename)
+    route_length_lower_bound = 50
 
     for route in tree.iter("route"):
         route_id = int(route.attrib['id'])
@@ -1155,7 +1278,7 @@ def parse_route_file(route_filename):
                 d += l2_dist(x, y, prev_x, prev_y)
 
             transform_list.append((x, y, z, pitch, yaw, roll))
-            if d > 50:
+            if d > route_length_lower_bound:
                 first_waypoint = True
                 d = 0
                 config_list.append([route_id, town_name, transform_list])

@@ -37,7 +37,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, parse_scenario, parse_route_file, estimate_objectives
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, parse_scenario, parse_route_file, estimate_objectives, parse_route_and_scenario_plain
 
 
 from collections import deque
@@ -97,7 +97,7 @@ from pymoo.operators.sampling.random_sampling import FloatRandomSampling
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p','--ports', type=int, default=2003, help='TCP port to listen to (default: 2003)')
-
+parser.add_argument("-r", "--route_type", type=str, default='town05_right_0')
 parser.add_argument("-c", "--scenario_type", type=str, default='default')
 
 parser.add_argument("-m", "--ego_car_model", type=str, default='lbc')
@@ -112,7 +112,8 @@ arguments = parser.parse_args()
 ports = arguments.ports
 
 
-
+# ['none', 'town01_left_0', 'town07_front_0', 'town05_front_0', 'town05_right_0']
+route_type = arguments.route_type
 # ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
 scenario_type = arguments.scenario_type
 # ['lbc', 'auto_pilot', 'pid_agent']
@@ -127,8 +128,8 @@ episode_max_time = arguments.episode_max_time
 
 
 
-random_seeds = [10, 20, 30]
-rng = np.random.default_rng(random_seeds[0])
+random_seed = 0
+rng = np.random.default_rng(random_seed)
 
 now = datetime.now()
 time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
@@ -176,11 +177,12 @@ def run_simulation(customized_data, launch_server, episode_max_time, route_path,
     statistics_manager = StatisticsManager()
     # Fixed Hyperparameters
     sample_factor = 5
-    weather_index = customized_data['weather_index']
+
+
 
     # Laundry Stuff-------------------------------------------------------------
-    arguments.weather_index = weather_index
-    os.environ['WEATHER_INDEX'] = str(weather_index)
+    arguments.weather_index = customized_data['weather_index']
+    os.environ['WEATHER_INDEX'] = str(customized_data['weather_index'])
 
 
     # used to read scenario file
@@ -273,13 +275,13 @@ def sample_within_bounds(xl, xu, mask, labels, parameters_distributions, customi
 
 
 
-def get_bounds(customized_config):
+def get_bounds(customized_config, use_fine_grained_weather):
     customized_parameters_bounds = customized_config['customized_parameters_bounds']
     customized_parameters_distributions = customized_config['customized_parameters_distributions']
     customized_center_transforms = customized_config['customized_center_transforms']
     customized_constraints = customized_config['customized_constraints']
 
-    fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels = setup_bounds_mask_labels_distributions_stage1()
+    fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels = setup_bounds_mask_labels_distributions_stage1(use_fine_grained_weather)
     customize_parameters(parameters_min_bounds, customized_parameters_bounds)
     customize_parameters(parameters_max_bounds, customized_parameters_bounds)
 
@@ -301,13 +303,61 @@ def get_bounds(customized_config):
 
 
 
-def main():
-    route_folder = 'leaderboard/data/new_routes'
+def get_customized_data(port, scenario_type, route_type):
+    if route_type == 'none':
+        use_fine_grained_weather = False
+    else:
+        use_fine_grained_weather = True
+    customized_d = customized_bounds_and_distributions[scenario_type]
+    xl, xu, mask, labels, parameters_distributions, parameters_min_bounds, parameters_max_bounds, customized_center_transforms, customized_constraints = get_bounds(customized_d, use_fine_grained_weather)
+    x = sample_within_bounds(xl, xu, mask, labels, parameters_distributions, customized_constraints)
+
+
+    num_of_static_max = parameters_max_bounds['num_of_static_max']
+    num_of_pedestrians_max = parameters_max_bounds['num_of_pedestrians_max']
+    num_of_vehicles_max = parameters_max_bounds['num_of_vehicles_max']
+
+
+    x = np.append(x, port)
+
+    customized_data = convert_x_to_customized_data(x, waypoints_num_limit, num_of_static_max, num_of_pedestrians_max, num_of_vehicles_max, static_types, pedestrian_types, vehicle_types, vehicle_colors, customized_center_transforms, parameters_min_bounds, parameters_max_bounds)
+
+    return customized_data
+
+
+
+
+def run_one_route(port, scenario_type, route_type):
     launch_server = True
     episode_max_time = 50
-    port = 2003
 
-    for route_file in os.listdir(route_folder):
+    route_info = customized_routes[route_type]
+    town_name = route_info['town_name']
+    route = route_info['route_id']
+    location_list = route_info['location_list']
+
+    route_str = str(route)
+    if route < 10:
+        route_str = '0'+route_str
+
+    route_path = parse_route_and_scenario_plain(location_list, town_name, route_str, scenario_file)
+
+    customized_data = get_customized_data(port, scenario_type, route_type)
+
+    objectives, _, _, _ = run_simulation(customized_data, launch_server, episode_max_time, route_path, route_str, scenario_file, ego_car_model)
+
+
+def run_multiple_short_routes(port, scenario_type, route_type):
+
+    launch_server = True
+    episode_max_time = 50
+
+
+    route_folder = 'leaderboard/data/new_routes'
+
+
+    route_files = os.listdir(route_folder)
+    for route_file in route_files:
         print(route_file)
         if not route_file.endswith('xml'):
             continue
@@ -315,28 +365,14 @@ def main():
         route_path = os.path.join(route_folder, route_file)
         route_str = route_file[6:-4]
 
-        scenario_type = 'default'
-        customized_d = customized_bounds_and_distributions[scenario_type]
+
 
         route_id, town_name, transform_list = parse_route_file(route_path)[0]
         x_0, y_0 = transform_list[0][:2]
 
         parse_scenario(scenario_file, town_name, str(route_id), x_0, y_0)
 
-
-
-        xl, xu, mask, labels, parameters_distributions, parameters_min_bounds, parameters_max_bounds, customized_center_transforms, customized_constraints = get_bounds(customized_d)
-        x = sample_within_bounds(xl, xu, mask, labels, parameters_distributions, customized_constraints)
-
-
-        num_of_static_max = parameters_max_bounds['num_of_static_max']
-        num_of_pedestrians_max = parameters_max_bounds['num_of_pedestrians_max']
-        num_of_vehicles_max = parameters_max_bounds['num_of_vehicles_max']
-
-
-        x = np.append(x, port)
-
-        customized_data = convert_x_to_customized_data(x, waypoints_num_limit, num_of_static_max, num_of_pedestrians_max, num_of_vehicles_max, static_types, pedestrian_types, vehicle_types, vehicle_colors, customized_center_transforms, parameters_min_bounds, parameters_max_bounds)
+        customized_data = get_customized_data(port, scenario_type, route_type)
 
 
 
@@ -346,27 +382,41 @@ def main():
             launch_server = False
 
 
-        if check_bug(objectives):
-            bug_str = None
-            if objectives[0] > 0:
-                collision_types = {'pedestrian_collision':pedestrian_types, 'car_collision':car_types, 'motercycle_collision':motorcycle_types, 'cyclist_collision':cyclist_types, 'static_collision':static_types}
-                for k,v in collision_types.items():
-                    if object_type in v:
-                        bug_str = k
-                if not bug_str:
-                    bug_str = 'unknown_collision'+'_'+object_type
-                bug_type = 1
-            elif objectives[5]:
-                bug_str = 'offroad'
-                bug_type = 2
-            elif objectives[6]:
-                bug_str = 'wronglane'
-                bug_type = 3
-            else:
-                bug_str = 'unknown'
-                bug_type = 4
-            print(bug_str, bug_type)
+        # if check_bug(objectives):
+        #     bug_str = None
+        #     if objectives[0] > 0:
+        #         collision_types = {'pedestrian_collision':pedestrian_types, 'car_collision':car_types, 'motercycle_collision':motorcycle_types, 'cyclist_collision':cyclist_types, 'static_collision':static_types}
+        #         for k,v in collision_types.items():
+        #             if object_type in v:
+        #                 bug_str = k
+        #         if not bug_str:
+        #             bug_str = 'unknown_collision'+'_'+object_type
+        #         bug_type = 1
+        #     elif objectives[5]:
+        #         bug_str = 'offroad'
+        #         bug_type = 2
+        #     elif objectives[6]:
+        #         bug_str = 'wronglane'
+        #         bug_type = 3
+        #     else:
+        #         bug_str = 'unknown'
+        #         bug_type = 4
+        #     print(bug_str, bug_type)
 
 
 if __name__ == '__main__':
-    main()
+    port = 2003
+    atexit.register(exit_handler, [port])
+
+    scenario_type = 'one_pedestrians_cross_street_town05'
+    route_type = 'town05_right_0'
+
+    # scenario_type = 'default_dense'
+    # route_type = 'none'
+
+    os.environ['HAS_DISPLAY'] = '1'
+
+    if route_type == 'none':
+        run_multiple_short_routes(port, scenario_type, route_type)
+    else:
+        run_one_route(port, scenario_type, route_type)

@@ -69,11 +69,14 @@ sensitivity
 
 
 TBD:
-* max time for new interface
+* eliminate unnecessary parameters
+* avoid of generating objects too clost to ego car
+
+
 * extend/modify ga_fuzzing to customize scenario for these routes (basically to make collision happen more frequently). Potential need to modify ga_fuzzing mechanism to make responsibility lie more on the ego car.
 
 
-* think about how to apply causal inference
+
 * collect data from 75 routes(with changing weather/lighting) using autopilot and train a new/better lbc model
 
 * when sampling multiple agents, should avoid the places that already generate agents and illegal areas.
