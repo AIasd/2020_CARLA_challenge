@@ -21,6 +21,7 @@ import shlex
 import subprocess
 import time
 import re
+import math
 
 def visualize_route(route):
     n = len(route)
@@ -93,7 +94,7 @@ def specify_args():
     parser.add_argument('--spectator', type=bool, help='Switch spectator view on?', default=True)
     parser.add_argument('--record', type=str, default='',
                         help='Use CARLA recording feature to create a recording of the scenario')
-    # modification: 30->15
+    # modification: 30->40
     parser.add_argument('--timeout', default="15.0",
                         help='Set the CARLA client timeout value in seconds')
 
@@ -124,7 +125,8 @@ def specify_args():
     parser.add_argument("--weather-index", type=int, default=0, help="see WEATHER for reference")
     parser.add_argument("--save-folder", type=str, default='collected_data', help="Path to save simulation data")
     parser.add_argument("--deviations-folder", type=str, default='', help="Path to the folder that saves deviations data")
-
+    parser.add_argument("--save_action_based_measurements", type=int, default=0)
+    parser.add_argument("--changing_weather", type=int, default=0)
 
     arguments = parser.parse_args()
 
@@ -154,6 +156,9 @@ class arguments_info:
         self.weather_index = 19
         self.save_folder = 'collected_data_customized'
         self.deviations_folder = ''
+        self.background_vehicles = False
+        self.save_action_based_measurements = 0
+        self.changing_weather = False
 
 
 
@@ -169,6 +174,8 @@ def add_transform(transform1, transform2):
     yaw = transform1.rotation.yaw + transform2.rotation.yaw
     roll = transform1.rotation.roll + transform2.rotation.roll
     return create_transform(x, y, z, pitch, yaw, roll)
+
+
 
 
 def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_num_of_pedestrians, max_num_of_vehicles, static_types, pedestrian_types, vehicle_types, vehicle_colors, customized_center_transforms, parameters_min_bounds, parameters_max_bounds):
@@ -281,7 +288,8 @@ def convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_
     'customized_center_transforms': customized_center_transforms,
     'parameters_min_bounds': parameters_min_bounds,
     'parameters_max_bounds': parameters_max_bounds,
-    'fine_grained_weather': fine_grained_weather}
+    'fine_grained_weather': fine_grained_weather,
+    'tmp_travel_dist_file': 'tmp_travel_dist_file_'+str(port)+'.txt'}
 
 
     return customized_data
@@ -306,7 +314,7 @@ def make_hierarchical_dir(folder_names):
 
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('localhost', port)) == 0
+        return s.connect_ex(('localhost', int(port))) == 0
 
 
 def exit_handler(ports):
@@ -371,7 +379,12 @@ def filter_critical_regions(X, y):
     return estimator, inds, critical_unique_leaves
 
 # hack:
-waypoints_num_limit = 5
+general_labels = ['friction', 'num_of_weathers', 'num_of_static', 'num_of_pedestrians', 'num_of_vehicles']
+
+weather_labels = ['cloudiness', 'precipitation', 'precipitation_deposits', 'wind_intensity', 'sun_azimuth_angle', 'sun_altitude_angle', 'fog_density', 'fog_distance', 'wetness', 'fog_falloff']
+
+# number of waypoints to perturb
+waypoints_num_limit = 0
 
 waypoint_labels = ['perturbation_x', 'perturbation_y']
 
@@ -380,6 +393,11 @@ static_general_labels = ['num_of_static_types', 'static_x', 'static_y', 'static_
 pedestrian_general_labels = ['num_of_pedestrian_types', 'pedestrian_x', 'pedestrian_y', 'pedestrian_yaw', 'pedestrian_trigger_distance', 'pedestrian_speed', 'pedestrian_dist_to_travel']
 
 vehicle_general_labels = ['num_of_vehicle_types', 'vehicle_x', 'vehicle_y', 'vehicle_yaw', 'vehicle_initial_speed', 'vehicle_trigger_distance', 'vehicle_targeted_speed', 'vehicle_waypoint_follower', 'vehicle_targeted_x', 'vehicle_targeted_y', 'vehicle_avoid_collision', 'vehicle_dist_to_travel', 'vehicle_targeted_yaw', 'num_of_vehicle_colors']
+
+
+
+
+
 
 def setup_bounds_mask_labels_distributions_stage1(use_fine_grained_weather=False):
 
@@ -403,7 +421,7 @@ def setup_bounds_mask_labels_distributions_stage1(use_fine_grained_weather=False
     general_min = [0.5, 0, 0, 0, 0]
     general_max = [0.9, fixed_hyperparameters['num_of_weathers']-1, 2, 2, 2]
     general_mask = ['real', 'int', 'int', 'int', 'int']
-    general_labels = ['friction', 'num_of_weathers', 'num_of_static', 'num_of_pedestrians', 'num_of_vehicles']
+
 
 
     if use_fine_grained_weather:
@@ -430,7 +448,7 @@ def setup_bounds_mask_labels_distributions_stage1(use_fine_grained_weather=False
         weather_max = [100, 80, 80, 50, 360, 90, 15, 100, 40, 2]
         # [100, 100, 100, 100, 360, 90, 100, 100, inf, 5]
         weather_mask = ['real']*10
-        weather_labels = ['cloudiness', 'precipitation', 'precipitation_deposits', 'wind_intensity', 'sun_azimuth_angle', 'sun_altitude_angle', 'fog_density', 'fog_distance', 'wetness', 'fog_falloff']
+
 
         mask.extend(weather_mask)
         for j in range(len(weather_labels)):
@@ -464,13 +482,13 @@ def setup_bounds_mask_labels_distributions_stage2(fixed_hyperparameters, paramet
     static_general_max = [fixed_hyperparameters['num_of_static_types']-1, 20, 20, 360]
     static_mask = ['int'] + ['real']*3
 
-
-    pedestrian_general_min = [0, -20, -20, 0, 2, 0, 0]
+    # pedestrian activation threshold: 2->8
+    pedestrian_general_min = [0, -20, -20, 0, 10, 0, 0]
     pedestrian_general_max = [fixed_hyperparameters['num_of_pedestrian_types']-1, 20, 20, 360, 50, 4, 50]
     pedestrian_mask = ['int'] + ['real']*6
 
-
-    vehicle_general_min = [0, -20, -20, 0, 0, 0, 0, 0, -20, -20, 0, 0, 0, 0]
+    # vehicle activation threshold: 0->10
+    vehicle_general_min = [0, -20, -20, 0, 0, 10, 0, 0, -20, -20, 0, 0, 0, 0]
     vehicle_general_max = [fixed_hyperparameters['num_of_vehicle_types']-1, 20, 20, 360, 10, 50, 10, 1, 20, 20, 1, 50, 360, fixed_hyperparameters['num_of_vehicle_colors']-1]
     vehicle_mask = ['int'] + ['real']*6 + ['int'] + ['real']*2 + ['int'] + ['real']*2 + ['int']
 
@@ -667,6 +685,54 @@ customized_bounds_and_distributions = {
     ]
     },
 
+    'leading_car_braking_town05_fixed_npc_num': {'customized_parameters_bounds':{
+
+        'friction_min': 0.9,
+        'friction_max': 0.9,
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 1,
+        'num_of_pedestrians_max': 1,
+        'num_of_vehicles_min': 1,
+        'num_of_vehicles_max': 1,
+
+
+        'vehicle_x_min_0': -0.5,
+        'vehicle_x_max_0': 0.5,
+        'vehicle_y_min_0': -12,
+        'vehicle_y_max_0': -5,
+
+
+        'vehicle_initial_speed_min_0': 2,
+        'vehicle_initial_speed_max_0': 5,
+        'vehicle_targeted_speed_min_0': 0,
+        'vehicle_targeted_speed_max_0': 2,
+        'vehicle_trigger_distance_min_0': 5,
+        'vehicle_trigger_distance_max_0': 12,
+
+        'vehicle_avoid_collision_min_0': 1,
+        'vehicle_avoid_collision_max_0': 1,
+
+
+        'vehicle_dist_to_travel_min_0': 5,
+        'vehicle_dist_to_travel_max_0': 30,
+        'vehicle_yaw_min_0': 270,
+        'vehicle_yaw_max_0': 270
+    },
+    'customized_parameters_distributions':{
+        'vehicle_x_0': ('normal', None, 0.5),
+        'vehicle_y_0': ('normal', None, 4)
+    },
+    'customized_center_transforms':{
+        'vehicle_center_transform_0': ('waypoint_ratio', 0)
+    },
+    'customized_constraints': [
+    {'coefficients': [1, 1],
+    'labels': ['vehicle_y_0', 'vehicle_trigger_distance_0'],
+    'value': 0}
+    ]
+    },
+
 
     'change_lane_town05': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
@@ -700,9 +766,41 @@ customized_bounds_and_distributions = {
     },
 
 
+    'change_lane_town05_fixed_npc_num': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 1,
+        'num_of_pedestrians_max': 1,
+        'num_of_vehicles_min': 3,
+        'num_of_vehicles_max': 3,
+
+
+        'vehicle_x_min_0': -4,
+        'vehicle_x_max_0': -3,
+        'vehicle_y_min_0': -20,
+        'vehicle_y_max_0': 20,
+        'vehicle_yaw_min_0': 270,
+        'vehicle_yaw_max_0': 270,
+        'vehicle_initial_speed_min_0': 3,
+        'vehicle_initial_speed_max_0': 7,
+        'vehicle_trigger_distance_min_0': 0,
+        'vehicle_trigger_distance_max_0': 0,
+        'vehicle_dist_to_travel_min_0': 30,
+        'vehicle_dist_to_travel_max_0': 50,
+
+    },
+    'customized_parameters_distributions':{
+    },
+    'customized_center_transforms':{
+        'vehicle_center_transform_0': ('waypoint_ratio', 0)
+    },
+    'customized_constraints': []
+    },
+
+
     'pedestrians_cross_street_town04': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
-        'num_of_static_max': 1,
+        'num_of_static_max': 0,
         'num_of_pedestrians_min': 10,
         'num_of_pedestrians_max': 10,
         'num_of_vehicles_min': 10,
@@ -978,8 +1076,13 @@ customized_bounds_and_distributions = {
     'customized_constraints':[]},
 
 
-
     'one_pedestrians_cross_street_town05': {'customized_parameters_bounds':{
+        'num_of_weathers_min': 0,
+        'num_of_weathers_max': 0,
+
+        'num_of_pedestrian_types_min_0': 12,
+        'num_of_pedestrian_types_max_0': 12,
+
         'num_of_static_min': 0,
         'num_of_static_max': 0,
         'num_of_pedestrians_min': 1,
@@ -988,10 +1091,69 @@ customized_bounds_and_distributions = {
         'num_of_vehicles_max': 0,
 
 
-        'pedestrian_x_min_0': -10,
-        'pedestrian_x_max_0': 10,
-        'pedestrian_y_min_0': -10,
-        'pedestrian_y_max_0': 10,
+        'pedestrian_x_min_0': -8,
+        'pedestrian_x_max_0': 8,
+        'pedestrian_y_min_0': -8,
+        'pedestrian_y_max_0': 8,
+        'pedestrian_speed_min_0': 1,
+        'pedestrian_speed_max_0': 4,
+        'pedestrian_trigger_distance_min_0': 3,
+        'pedestrian_trigger_distance_max_0': 15,
+        'pedestrian_dist_to_travel_min_0': 30,
+        'pedestrian_dist_to_travel_max_0': 30,
+
+
+
+        'friction_min': 0.9,
+        'friction_max': 0.9,
+
+
+        'ego_car_perturbation_x_min_0': 0,
+        'ego_car_perturbation_x_max_0': 0,
+        'ego_car_perturbation_x_min_1': 0,
+        'ego_car_perturbation_x_max_1': 0,
+        'ego_car_perturbation_x_min_2': 0,
+        'ego_car_perturbation_x_max_2': 0,
+        'ego_car_perturbation_x_min_3': 0,
+        'ego_car_perturbation_x_max_3': 0,
+        'ego_car_perturbation_x_min_4': 0,
+        'ego_car_perturbation_x_max_4': 0,
+
+        'ego_car_perturbation_y_min_0': 0,
+        'ego_car_perturbation_y_max_0': 0,
+        'ego_car_perturbation_y_min_1': 0,
+        'ego_car_perturbation_y_max_1': 0,
+        'ego_car_perturbation_y_min_2': 0,
+        'ego_car_perturbation_y_max_2': 0,
+        'ego_car_perturbation_y_min_3': 0,
+        'ego_car_perturbation_y_max_3': 0,
+        'ego_car_perturbation_y_min_4': 0,
+        'ego_car_perturbation_y_max_4': 0,
+
+    },
+    'customized_parameters_distributions':{},
+    'customized_center_transforms':{
+        'pedestrian_center_transform_0': ('waypoint_ratio', 70),
+    },
+    'customized_constraints': []
+    },
+
+
+    'two_pedestrians_cross_street_town05': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 2,
+        'num_of_pedestrians_max': 2,
+        'num_of_vehicles_min': 0,
+        'num_of_vehicles_max': 0,
+
+        'num_of_weathers_min': 0,
+        'num_of_weathers_max': 0,
+
+        'pedestrian_x_min_0': -8,
+        'pedestrian_x_max_0': 8,
+        'pedestrian_y_min_0': -8,
+        'pedestrian_y_max_0': 8,
         'pedestrian_speed_min_0': 1,
         'pedestrian_speed_max_0': 5,
         'pedestrian_trigger_distance_min_0': 3,
@@ -999,10 +1161,49 @@ customized_bounds_and_distributions = {
         'pedestrian_dist_to_travel_min_0': 5,
         'pedestrian_dist_to_travel_max_0': 30,
 
+        'pedestrian_x_min_1': -8,
+        'pedestrian_x_max_1': 8,
+        'pedestrian_y_min_1': -8,
+        'pedestrian_y_max_1': 8,
+        'pedestrian_speed_min_1': 1,
+        'pedestrian_speed_max_1': 5,
+        'pedestrian_trigger_distance_min_1': 3,
+        'pedestrian_trigger_distance_max_1': 15,
+        'pedestrian_dist_to_travel_min_1': 5,
+        'pedestrian_dist_to_travel_max_1': 30,
+
+
+        'friction_min': 0.9,
+        'friction_max': 0.9,
+
+
+        'ego_car_perturbation_x_min_0': 0,
+        'ego_car_perturbation_x_max_0': 0,
+        'ego_car_perturbation_x_min_1': 0,
+        'ego_car_perturbation_x_max_1': 0,
+        'ego_car_perturbation_x_min_2': 0,
+        'ego_car_perturbation_x_max_2': 0,
+        'ego_car_perturbation_x_min_3': 0,
+        'ego_car_perturbation_x_max_3': 0,
+        'ego_car_perturbation_x_min_4': 0,
+        'ego_car_perturbation_x_max_4': 0,
+
+        'ego_car_perturbation_y_min_0': 0,
+        'ego_car_perturbation_y_max_0': 0,
+        'ego_car_perturbation_y_min_1': 0,
+        'ego_car_perturbation_y_max_1': 0,
+        'ego_car_perturbation_y_min_2': 0,
+        'ego_car_perturbation_y_max_2': 0,
+        'ego_car_perturbation_y_min_3': 0,
+        'ego_car_perturbation_y_max_3': 0,
+        'ego_car_perturbation_y_min_4': 0,
+        'ego_car_perturbation_y_max_4': 0,
+
     },
     'customized_parameters_distributions':{},
     'customized_center_transforms':{
-        'pedestrian_center_transform_0': ('waypoint_ratio', 50),
+        'pedestrian_center_transform_0': ('waypoint_ratio', 40),
+        'pedestrian_center_transform_1': ('waypoint_ratio', 40),
     },
     'customized_constraints': []
     },
@@ -1010,14 +1211,205 @@ customized_bounds_and_distributions = {
 
     'default_dense': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
-        'num_of_static_max': 5,
-        'num_of_pedestrians_min': 2,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 5,
         'num_of_pedestrians_max': 10,
-        'num_of_vehicles_min': 2,
+        'num_of_vehicles_min': 10,
         'num_of_vehicles_max': 10,
+
+        'friction_min': 0.9,
+        'friction_max': 0.9,
+
+        'vehicle_waypoint_follower_min_0': 1,
+        'vehicle_waypoint_follower_max_0': 1,
+        'vehicle_avoid_collision_min_0': 1,
+        'vehicle_avoid_collision_max_0': 1,
+        'vehicle_waypoint_follower_min_1': 1,
+        'vehicle_waypoint_follower_max_1': 1,
+        'vehicle_avoid_collision_min_1': 1,
+        'vehicle_avoid_collision_max_1': 1,
+        'vehicle_waypoint_follower_min_2': 1,
+        'vehicle_waypoint_follower_max_2': 1,
+        'vehicle_avoid_collision_min_2': 1,
+        'vehicle_avoid_collision_max_2': 1,
+        'vehicle_waypoint_follower_min_3': 1,
+        'vehicle_waypoint_follower_max_3': 1,
+        'vehicle_avoid_collision_min_3': 1,
+        'vehicle_avoid_collision_max_3': 1,
+        'vehicle_waypoint_follower_min_4': 1,
+        'vehicle_waypoint_follower_max_4': 1,
+        'vehicle_avoid_collision_min_4': 1,
+        'vehicle_avoid_collision_max_4': 1,
+        'vehicle_waypoint_follower_min_5': 1,
+        'vehicle_waypoint_follower_max_5': 1,
+        'vehicle_avoid_collision_min_5': 1,
+        'vehicle_avoid_collision_max_5': 1,
+        'vehicle_waypoint_follower_min_6': 1,
+        'vehicle_waypoint_follower_max_6': 1,
+        'vehicle_avoid_collision_min_6': 1,
+        'vehicle_avoid_collision_max_6': 1,
+        'vehicle_waypoint_follower_min_7': 1,
+        'vehicle_waypoint_follower_max_7': 1,
+        'vehicle_avoid_collision_min_7': 1,
+        'vehicle_avoid_collision_max_7': 1,
+        'vehicle_waypoint_follower_min_8': 1,
+        'vehicle_waypoint_follower_max_8': 1,
+        'vehicle_avoid_collision_min_8': 1,
+        'vehicle_avoid_collision_max_8': 1,
+        'vehicle_waypoint_follower_min_9': 1,
+        'vehicle_waypoint_follower_max_9': 1,
+        'vehicle_avoid_collision_min_9': 1,
+        'vehicle_avoid_collision_max_9': 1,
+        'vehicle_waypoint_follower_min_10': 1,
+        'vehicle_waypoint_follower_max_10': 1,
+        'vehicle_avoid_collision_min_10': 1,
+        'vehicle_avoid_collision_max_10': 1,
     },
     'customized_parameters_distributions':{},
     'customized_center_transforms':{},
+    'customized_constraints': []
+    },
+
+    'pedestrians_only': {'customized_parameters_bounds':{
+        'friction_min': 0.9,
+        'friction_max': 0.9,
+
+        'num_of_weathers_min': 0,
+        'num_of_weathers_max': 0,
+
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 5,
+        'num_of_pedestrians_max': 10,
+        'num_of_vehicles_min': 0,
+        'num_of_vehicles_max': 0,
+
+        'ego_car_perturbation_x_0_min': 0,
+        'ego_car_perturbation_x_0_max': 0,
+        'ego_car_perturbation_x_1_min': 0,
+        'ego_car_perturbation_x_1_max': 0,
+        'ego_car_perturbation_x_2_min': 0,
+        'ego_car_perturbation_x_2_max': 0,
+        'ego_car_perturbation_x_3_min': 0,
+        'ego_car_perturbation_x_3_max': 0,
+        'ego_car_perturbation_x_4_min': 0,
+        'ego_car_perturbation_x_4_max': 0,
+
+    },
+    'customized_parameters_distributions':{},
+    'customized_center_transforms':{},
+    'customized_constraints': []
+    },
+
+
+    'leading_car_braking_only_car_town05': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 0,
+        'num_of_pedestrians_max': 0,
+        'num_of_vehicles_min': 1,
+        'num_of_vehicles_max': 1,
+
+        'vehicle_x_min_0': -0.5,
+        'vehicle_x_max_0': 0.5,
+        'vehicle_y_min_0': -10,
+        'vehicle_y_max_0': -4,
+
+
+        'vehicle_initial_speed_min_0': 2,
+        'vehicle_initial_speed_max_0': 5,
+        'vehicle_targeted_speed_min_0': 0,
+        'vehicle_targeted_speed_max_0': 2,
+        'vehicle_trigger_distance_min_0': 4,
+        'vehicle_trigger_distance_max_0': 10,
+
+        'vehicle_avoid_collision_min_0': 1,
+        'vehicle_avoid_collision_max_0': 1,
+
+
+        'vehicle_dist_to_travel_min_0': 5,
+        'vehicle_dist_to_travel_max_0': 30,
+        'vehicle_yaw_min_0': 270,
+        'vehicle_yaw_max_0': 270
+    },
+    'customized_parameters_distributions':{
+        'vehicle_x_0': ('normal', None, 0.5),
+        'vehicle_y_0': ('normal', None, 4)
+    },
+    'customized_center_transforms':{
+        'vehicle_center_transform_0': ('waypoint_ratio', 0)
+    },
+    'customized_constraints': [
+    {'coefficients': [1, 1],
+    'labels': ['vehicle_y_0', 'vehicle_trigger_distance_0'],
+    'value': 0}
+    ]
+    },
+
+
+
+    'two_pedestrians_cross_street_straight_town05': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 6,
+        'num_of_pedestrians_max': 6,
+        'num_of_vehicles_min': 0,
+        'num_of_vehicles_max': 0,
+
+        'pedestrian_x_min_0': -7,
+        'pedestrian_x_max_0': 7,
+        'pedestrian_y_min_0': -10,
+        'pedestrian_y_max_0': -4,
+
+        'pedestrian_x_min_1': -7,
+        'pedestrian_x_max_1': 7,
+        'pedestrian_y_min_1': -10,
+        'pedestrian_y_max_1': -4,
+
+        'pedestrian_x_min_2': -7,
+        'pedestrian_x_max_2': 7,
+        'pedestrian_y_min_2': -10,
+        'pedestrian_y_max_2': -4,
+
+        'pedestrian_x_min_3': -7,
+        'pedestrian_x_max_3': 7,
+        'pedestrian_y_min_3': -10,
+        'pedestrian_y_max_3': -4,
+
+        'pedestrian_x_min_4': -7,
+        'pedestrian_x_max_4': 7,
+        'pedestrian_y_min_4': -10,
+        'pedestrian_y_max_4': -4,
+
+        'pedestrian_x_min_5': -7,
+        'pedestrian_x_max_5': 7,
+        'pedestrian_y_min_5': -10,
+        'pedestrian_y_max_5': -4,
+
+    },
+    'customized_parameters_distributions':{
+    },
+    'customized_center_transforms':{
+        'pedestrian_center_transform_0': ('waypoint_ratio', 0),
+        'pedestrian_center_transform_1': ('waypoint_ratio', 0)
+    },
+    'customized_constraints': []
+    },
+
+
+    'none': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 0,
+        'num_of_pedestrians_max': 0,
+        'num_of_vehicles_min': 0,
+        'num_of_vehicles_max': 0,
+
+    },
+    'customized_parameters_distributions':{
+    },
+    'customized_center_transforms':{
+    },
     'customized_constraints': []
     },
 }
@@ -1076,6 +1468,15 @@ customized_routes = {
     },
 
 
+    # go across street, town
+    'town05_front_1': {
+    'town_name': 'Town05',
+    'direction': 'front',
+    'route_id': 1,
+    'location_list': [(-120, 15), (-120, -20)]
+    },
+
+
 
 
     # change lane, city
@@ -1106,7 +1507,7 @@ customized_routes = {
 
 
 
-def if_violate_constraints(x, customized_constraints, labels):
+def if_violate_constraints(x, customized_constraints, labels, verbose=False):
     labels_to_id = {label:i for i, label in enumerate(labels)}
 
     keywords = ['coefficients', 'labels', 'value']
@@ -1129,7 +1530,14 @@ def if_violate_constraints(x, customized_constraints, labels):
 
         if_violate = np.sum(coeff * np.power(features, powers)) > constraint['value']
         if if_violate:
+            if verbose:
+                print('\n'*5, 'violate_constraints!!!!', '\n'*5)
+                print(coeff, features, powers, np.sum(coeff * np.power(features, powers)), constraint['value'], constraint['labels'])
             return True
+
+
+
+
     return False
 
 def parse_route_and_scenario(location_list, town_name, scenario, direction, route_str, scenario_file):
@@ -1252,13 +1660,15 @@ def parse_scenario(scenario_file, town_name, route_str, x_0, y_0):
         annotation_dict = json.dump(new_scenario, f_out, indent=4)
 
 
-def parse_route_file(route_filename):
+def parse_route_file(route_filename, route_length_lower_bound=50):
     def l2_dist(x, y, prev_x, prev_y):
         return np.sqrt((x-prev_x)**2+(y-prev_y)**2)
 
+
+
     config_list = []
     tree = ET.parse(route_filename)
-    route_length_lower_bound = 50
+
 
     for route in tree.iter("route"):
         route_id = int(route.attrib['id'])
@@ -1281,6 +1691,7 @@ def parse_route_file(route_filename):
             if d > route_length_lower_bound:
                 first_waypoint = True
                 d = 0
+
                 config_list.append([route_id, town_name, transform_list])
                 transform_list = []
 
@@ -1364,7 +1775,6 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1):
 
                     similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th, diff_th)
                     if similar:
-                        # print(i, j)
                         break
                 if not similar:
                     distinct_inds.append(i)
@@ -1376,7 +1786,6 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1):
                 for j in distinct_inds:
                     similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th, diff_th)
                     if similar:
-                        # print(i, j)
                         break
                 if not similar:
                     distinct_inds.append(i)
@@ -1386,7 +1795,7 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1):
 
 def check_bug(objectives):
     # speed needs to be large than 0.2 to avoid false positive
-    return objectives[0] > 0.2 or objectives[5] or objectives[6]
+    return objectives[0] > 0.2 or objectives[5] or objectives[6] or objectives[7]
 
 
 def start_server(port):
@@ -1394,10 +1803,25 @@ def start_server(port):
     cmd_list = shlex.split('sh ../carla_0994_no_rss/CarlaUE4.sh -opengl -carla-rpc-port='+str(port)+' -carla-streaming-port=0')
     while is_port_in_use(int(port)):
         try:
-            subprocess.run('kill $(lsof -t -i :'+str(port)+')', shell=True)
+            # show_ports_cmd = shlex.split('lsof -t -i:'+str(port))
+            # result = subprocess.run(show_ports_cmd, stdout=subprocess.PIPE)
+            # pids = result.stdout.decode("utf-8").strip().split('\n')
+            # own_pid = str(os.getpid())
+            #
+            # if own_pid in pids:
+            #     pids.remove(own_pid)
+            #     if len(pids) > 0:
+            #         pid_to_kill = pids[0]
+            #         print('pid_to_kill', pid_to_kill)
+            #         subprocess.run('kill -9 '+pid_to_kill, shell=True)
+            # else:
+            #     subprocess.run('kill $(lsof -t -i:'+str(port)+')', shell=True)
+            subprocess.run('kill $(lsof -t -i:'+str(port)+')', shell=True)
             print('-'*20, 'kill server at port', port)
             time.sleep(2)
         except:
+            import traceback
+            traceback.print_exc()
             continue
     subprocess.Popen(cmd_list)
     print('-'*20, 'start server at port', port)
@@ -1433,7 +1857,7 @@ def estimate_objectives(save_path, default_objectives):
     is_offroad = 0
     is_wrong_lane = 0
     is_run_red_light = 0
-
+    is_collision = 0
 
     with open(deviations_path, 'r') as f_in:
         for line in f_in:
@@ -1460,9 +1884,11 @@ def estimate_objectives(save_path, default_objectives):
     except:
         print('events_path', events_path, 'is not found')
         return default_objectives, (None, None), None
-    print(json_file, events)
     infractions = events['_checkpoint']['records'][0]['infractions']
     status = events['_checkpoint']['records'][0]['status']
+
+
+    route_completion = float(events['values'][1])
 
     for infraction_type in infraction_types:
         for infraction in infractions[infraction_type]:
@@ -1477,6 +1903,7 @@ def estimate_objectives(save_path, default_objectives):
                     y = float(loc.group(2))
                     ego_linear_speed = float(loc.group(4))
                     other_actor_linear_speed = float(loc.group(5))
+                is_collision = 1
 
             elif infraction_type == 'off_road':
                 loc = re.search('.*x=(.*), y=(.*), z=(.*)\)', infraction)
@@ -1498,4 +1925,120 @@ def estimate_objectives(save_path, default_objectives):
     ego_linear_speed = np.min([ego_linear_speed, 7])
     dev_dist = np.min([dev_dist, 7])
 
-    return [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light], (x, y), object_type
+    return [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, is_collision], (x, y), object_type, route_completion
+
+
+def norm_2d(loc_1, loc_2):
+    return np.sqrt((loc_1.x-loc_2.x)**2+(loc_1.y-loc_2.y)**2)
+
+def get_bbox(vehicle):
+    current_tra = vehicle.get_transform()
+    current_loc = current_tra.location
+
+    heading_vec = current_tra.get_forward_vector()
+    heading_vec.z = 0
+    heading_vec = heading_vec / math.sqrt(math.pow(heading_vec.x, 2) + math.pow(heading_vec.y, 2))
+    perpendicular_vec = carla.Vector3D(-heading_vec.y, heading_vec.x, 0)
+
+    extent = vehicle.bounding_box.extent
+    x_boundary_vector = heading_vec * extent.x
+    y_boundary_vector = perpendicular_vec * extent.y
+
+    bbox = [
+        current_loc + carla.Location(x_boundary_vector - y_boundary_vector),
+        current_loc + carla.Location(x_boundary_vector + y_boundary_vector),
+        current_loc + carla.Location(-1 * x_boundary_vector - y_boundary_vector),
+        current_loc + carla.Location(-1 * x_boundary_vector + y_boundary_vector)]
+
+    return bbox
+
+
+
+def correct_travel_dist(data, labels, tmp_travel_dist_file):
+    from collections import OrderedDict
+
+    if os.path.exists(tmp_travel_dist_file):
+        label_to_id = {label:i for i, label in enumerate(labels)}
+        # add label and value of resulting variables to x
+        id_to_label = {}
+        id_to_dist = {}
+        with open(tmp_travel_dist_file, 'r') as f_in:
+            for line in f_in:
+                tokens = line.strip().split(',')
+                if len(tokens) == 3:
+                    actor_id, general_actor_type, index  = tokens
+                    id_to_label[actor_id] = '_'.join([general_actor_type, 'dist_to_travel', index])
+                elif len(tokens) == 2:
+                    actor_id = tokens[0]
+                    dist = float(tokens[1])
+                    if actor_id not in id_to_dist or (actor_id in id_to_dist and dist > id_to_dist[actor_id]):
+                        id_to_dist[actor_id] = dist
+
+        for actor_id in id_to_label:
+            label = id_to_label[actor_id]
+            if actor_id in id_to_dist:
+                dist = id_to_dist[actor_id]
+            else:
+                dist = 0
+            entry_i = labels.index(label)
+            data[entry_i] = dist
+    else:
+        pass
+        # print('\n'*3, tmp_travel_dist_file, 'does not exist', '\n'*3)
+
+
+def angle_from_center_view_fov(target, ego, fov=90):
+    target_location = target.get_location()
+    ego_location = ego.get_location()
+    ego_orientation = ego.get_transform().rotation.yaw
+
+    target_vector = np.array([target_location.x - ego_location.x, target_location.y - ego_location.y])
+    norm_target = np.linalg.norm(target_vector)
+
+    if norm_target < 0.001:
+        return 0
+
+    forward_vector = np.array([math.cos(math.radians(ego_orientation)), math.sin(math.radians(ego_orientation))])
+
+    try:
+        d_angle = np.abs(math.degrees(math.acos(np.dot(forward_vector, target_vector) / norm_target)))
+    except:
+        print('\n'*3, 'np.dot(forward_vector, target_vector)', np.dot(forward_vector, target_vector), norm_target, '\n'*3)
+        d_angle = 0
+    d_angle_norm = np.clip((d_angle - fov / 2) / (180 - fov / 2), 0, 1)
+
+    return d_angle_norm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# analysis
+
+def draw_auc_roc_for_scores(scores, y_test):
+    inds_sorted = np.argsort(scores)
+    tp, fp = 0, 0
+    fpr_list, tpr_list = [], []
+    n = len(inds_sorted)
+    t = np.sum(y_test==1)
+    f = n - t
+    for ind in inds_sorted:
+        if y_test[ind] == 1:
+            tp += 1
+        else:
+            fp += 1
+        fpr_list.append(fp/f)
+        tpr_list.append(tp/t)
+    from matplotlib import pyplot as plt
+    plt.plot(fpr_list, tpr_list)
+    plt.plot(np.arange(0,1.2,0.2), np.arange(0,1.2,0.2))
+    plt.show()

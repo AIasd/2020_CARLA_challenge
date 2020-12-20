@@ -2,32 +2,27 @@ import os
 import json
 import re
 import numpy as np
+from collections import defaultdict
 
 eps = 1e-12
-
-
-# ['collected_data', 'collected_data_autopilot', 'collected_data_customized']
-data_dir = 'collected_data'
-
-
-# weather_indexes = [11, 19]
-# routes = [19, 29, 39, 49, 59, 69]
-# weather_indexes = [0]
-# routes = [11, 12, 13, 14, 15, 16]
-
-weather_indexes = [15]
-routes = [i for i in range(76)]
+route_folder = 'collected_data_customized/customized_lbc_nodebug'
+route_files = os.listdir(route_folder)
 
 # infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane', 'vehicle_blocked']
-infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane', 'off_road']
-for weather_id in weather_indexes:
-    for route in routes:
-        print(route)
-        route_str = str(route)
-        if route < 10:
-            route_str = '0'+route_str
+# infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'red_light', 'on_sidewalk', 'outside_lane_infraction', 'wrong_lane', 'off_road']
 
-        parent_folder = data_dir+'/'+'route_'+route_str+'_'+str(weather_id)
+infraction_types = ['collisions_layout', 'collisions_pedestrian', 'collisions_vehicle', 'wrong_lane', 'off_road', 'red_light']
+events_num = defaultdict(lambda:0)
+
+for route_file in sorted(route_files):
+    print('-'*100, route_file)
+
+    route_path = os.path.join(route_folder, route_file)
+    if os.path.isdir(route_path):
+        route_str = route_file[6:]
+
+
+        parent_folder = route_path
         events_path = parent_folder + '/' + 'events.txt'
         measurements_path = parent_folder + '/' + 'measurements.csv'
         measurements_loc_path = parent_folder + '/' + 'measurements_loc.csv'
@@ -41,19 +36,33 @@ for weather_id in weather_indexes:
         infractions = events['_checkpoint']['records'][0]['infractions']
         for infraction_type in infraction_types:
             for infraction in infractions[infraction_type]:
-                loc = re.search('.*x=(.*), y=(.*), z=(.*)', infraction)
-                if loc:
-                    x = float(loc.group(1))
-                    y = float(loc.group(2))
-                    events_list.append((x, y, infraction_type))
+                if 'collisions' in infraction_type:
+                    loc = re.search('.*x=(.*), y=(.*), z=(.*), ego_linear_speed=(.*), other_actor_linear_speed=(.*)\)', infraction)
+                    if loc:
+                        x = float(loc.group(1))
+                        y = float(loc.group(2))
+                        ego_linear_speed = float(loc.group(4))
+                        other_actor_linear_speed = float(loc.group(5))
+                        # if ego_linear_speed > 0.1 and other_actor_linear_speed >= 0:
+                        #     events_list.append((x, y, infraction_type))
+                        #     events_num[infraction_type] += 1
 
+                        events_list.append((x, y, infraction_type))
+                        events_num[infraction_type] += 1
+                else:
+                    loc = re.search('.*x=(.*), y=(.*), z=(.*)', infraction)
+                    if loc:
+                        x = float(loc.group(1))
+                        y = float(loc.group(2))
+                        events_list.append((x, y, infraction_type))
+                        events_num[infraction_type] += 1
         num_of_lines = 0
         with open(measurements_path, 'r') as f_in:
             with open(measurements_loc_path, 'r') as f_loc_in:
                 measurements = f_in.read().split('\n')
                 locations = f_loc_in.read().split('\n')
 
-        print('-'*100, route, weather_id, len(measurements), '-'*100)
+        print(len(measurements), '-'*100)
         misbehavior_list = []
         with open(new_measurements_path, 'w') as f_out:
             for i in range(len(measurements)):
@@ -94,3 +103,4 @@ for weather_id in weather_indexes:
                         vehicle_blocked_start = True
                     if j == len(misbehavior_list)-1:
                         print(misbehavior_name + ' ends', i)
+print(events_num)

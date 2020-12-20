@@ -20,9 +20,7 @@ git clone https://github.com/AIasd/2020_CARLA_challenge.git --recursive
 
 All python packages used are specified in `requirements.yml`.
 
-This code uses CARLA 0.9.9.
-
-You will also need to install CARLA 0.9.9, along with the additional maps.
+This code uses CARLA 0.9.9.4. You will need to first install CARLA 0.9.9.4, along with the additional maps.
 See [link](https://github.com/carla-simulator/carla/releases/tag/0.9.9) for more instructions.
 
 
@@ -111,9 +109,16 @@ CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir path/
 
 Stage 2 (~36 hrs on 2080Ti):
 ```
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model --dataset_dir path/to/data --teacher_path path/to/model/from/stage1
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir path/to/data --teacher_path path/to/model/from/stage1
 ```
 
+## Fixing
+
+
+Stage 2 finetuning:
+```
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir path/to/data --teacher_path path/to/model/from/stage1
+```
 
 
 

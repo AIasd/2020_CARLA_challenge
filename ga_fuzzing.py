@@ -14,51 +14,76 @@ python ga_fuzzing.py -p 2027 2030 -s 8797 -d 8798 --n_gen 24 --pop_size 100 -r '
 python ga_fuzzing.py -p 2033 2036 -s 8800 -d 8801 --n_gen 24 --pop_size 100 -r 'town03_front_0'
 default number of fields: 50%, margin: 15%
 experiment 1
+
 scene 1
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
 python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2
+
 scene 2
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name random
 experiment 2: try number of fields: 50%, margin: 10%
+
 scene 3
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-un --check_unique_coeff 0 0.1 0.5
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name random --check_unique_coeff 0 0.1 0.5
 python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-un
 python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-dt --has_run_num 1500
+
 scene 1
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
 python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2
+
 new-scene 1:
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
-* python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random --has_run_num 1500
-* python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2 --has_run_num 1500
-* python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt --has_run_num 1500
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random --has_run_num 1500
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2 --has_run_num 1500
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt --has_run_num 1500
+
 scene 4:
 python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-un
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name random
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-dt --has_run_num 1500
+
 scene 2:
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name random
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-dt --has_run_num 1500
+
 scene 5:
 python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name nsga2-un --has_run_num 1500
-+ python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name nsga2 --has_run_num 1500
-+ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name random --has_run_num 1500
-* python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name nsga2-dt --has_run_num 1500
-two partial objectives for change lane:
-python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --has_run_num 1500
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights -1 1 0 0 0 --has_run_num 700
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights 0 0 1 1 -1 --has_run_num 700
-* python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 1500 --objective_weights -1 1 1 1 -1
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 0 0 0
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 700 --objective_weights 0 0 1 1 -1
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name nsga2 --has_run_num 1500
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name random --has_run_num 1500
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name nsga2-dt --has_run_num 1500
+
+
+# two partial objectives for leading car braking:
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --has_run_num 1500 --objective_weights -1 1 1 1 -1 0 0 -1
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights -1 1 0 0 0 0 0 0 --has_run_num 700
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights 0 0 1 1 -1 0 0 0 --has_run_num 700
+
+# two partial objectives for changing lane:
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 1500 --objective_weights -1 1 1 1 -1 0 0 -1
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 0 0 0 0 0 0
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 700 --objective_weights 0 0 1 1 -1 0 0 0
+
+
+# compare single_objective VS multi-objectives
+python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 32 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --has_run_num 1500 --objective_weights -1 1 1 1 -1 0 0 -0.3 --use_single_objective 1
+
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 32 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --has_run_num 1500 --objective_weights -1 1 1 1 -1 0 0 -0.3 --use_single_objective 0
+
+
+
+
+
+
+
 the other two controllers:
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model auto_pilot --has_run_num 1500
 python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model pid_agent --has_run_num 1500
@@ -68,9 +93,190 @@ sensitivity
 + python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 6 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-un --check_unique_coeff 0 0.075 0.50 --has_run_num 300
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 TBD:
+***** finetune NN estimator and integrate NN estimator into pipeline
+
+-- scenario 1
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 8 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 400 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200
+
+
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 8 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 400 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200 --rank_mode nn
+
+
+-- scenario 2
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 20 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 1000 --objective_weights -1 1 1 1 -1 0 0 -1 0 --route_type 'town05_front_0' --n_offsprings 200
+
+
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 20 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 1000 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200 --rank_mode nn
+
+
+-- scenario 3
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 8 --pop_size 50 -r 'town04_front_0' -c 'pedestrians_cross_street_town04 --algorithm_name nsga2 --has_run_num 400 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200
+
+
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 8 --pop_size 50 -r 'town04_front_0' -c 'pedestrians_cross_street_town04 --algorithm_name nsga2 --has_run_num 400 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200 --rank_mode nn
+
+
+
+
+
+
+
+
+***** try adversary attack on configuration space
+***** try GAN (inversion model)
+
+
+
+
+
+*** retrain deafult model for 50 epochs with 0.01 to get a decent teacher model
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir 'rerun/bugs/train/partial_collision_finetune/town05_right_0_Scenario12_auto_pilot_00/rerun_non_bugs' --max_epochs 1 --lr 1e-5
+
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir 'rerun/bugs/train/partial_collision_finetune/town05_right_0_Scenario12_auto_pilot_00/rerun_non_bugs' --teacher_path 'models/stage1_0.01_augmented_epoch=13.ckpt' --save_dir 'checkpoints/stage2_0.01_augmented' --max_epochs 1 --lr 1e-5 --command_coefficient 0.01
+
+
+***** fix objectives do not move as expected bug (try regression on predicting those objectives to check if signal exists first; then print out survival's examples objectives to check if behaviors are as expected)
+
+***** check influence of population
+
+***** fix reproducibility
+
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 3 --pop_size 2 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 6 --objective_weights -1 1 1 1 -1 0 0 -1 0 --use_single_objective 1 --has_display '1'
+
+
+
+python ga_fuzzing.py -p 2021 -s 8794 -d 8795 --n_gen 1 --pop_size 1 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 1 --objective_weights -1 1 1 1 -1 0 0 -1 0 --use_single_objective 1 --has_display '1'
+
+*** debug radar 0 velocity
+
+
+***** debug when using single objective
+
+***** eliminate cases that are similar to previous found bugs
+**** add bug predictor into the existing pipeline
+
+
+
+**** ablation study on population size and generations 25*32, 50*16, 100*8, 200*4
+
+
+*** modify scenario to make random search harder to find errors
+
+*** probability analysis of the proposed creteria
+*** analysis of bug configs across models
+
+* better sampling
+
+
+* block error
+* lidar / radar
+* object detector
+
+
+
+
+
+
+
+
+
+* if single_objective supports smoother transaction (maybe nsga2 works but nsga2-un does not)
+
+
+
+
+
+
+* fix (run augment agent and try fixing it using finetuning)
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir 'rerun/bugs/train/partial_collision_finetune/town05_right_0_Scenario12_auto_pilot_00/rerun_non_bugs' --max_epochs 1 --lr 1e-5
+
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir 'run_results/random/town05_right_0/leading_car_braking_town05_fixed_npc_num/auto_pilot/100/non_bugs_finetune' --teacher_path 'models/stage1_default_50_epoch=16.ckpt' --save_dir 'checkpoints/stage2_pretrained' --max_epochs 1 --lr 1e-4 --command_coefficient 0.01
+
+
+
+
+auto_pilot rerun on bugs train,  45 / 118 bugs
+
+lbc rerun on bugs test, 86 / 117 bugs
+
+auto_pilot on bugs test, 44 / 118
+
+lbc after finetuning (autopilot successful rerun on bugs) on bugs test, 54 / 118 bugs
+
+lbc after finetuning (autopilot successful rerun on random) on bugs test, 53 / 118 bugs
+
+
+
+
+
+
+
+
+
+
+
+
+
+*** fixing case study
+
+*** manual driving when rerunning very difficult cases?
+
+
+* finish run regressions code
+
+
+
+
+
+
+* fixing: 600 (crossing first?)
+
+3 scenarios in rq2:
+
+3 runs
+
+augment training set with chosen previous failure (1Hz)
+performance on previous success / hold-out previous failure/avg objective
+
+
+only finetuning 1 epoch for stage2 ?
+finetuning 1 epoch for stage 1 and finetuning 1 epoch for stage 2
+
+
+ablation study: number of finetuning epoches, finetuning learning rate, finetuning only buggy or both buggy and original (their ratio?)
+
+overlapping bug found and cross search algorithm bug fix
+
+
+
+
+
+* speed up simulation
+* modify NSGA2 selection for better weighting
+
+
+
+
+
+* avoid of generating objects too closest to ego car
 * eliminate unnecessary parameters
-* avoid of generating objects too clost to ego car
+
+* refurbish API for collecting data / labeling misbehaviors
+* refurbish code for classifying misbehaviors
+* check out NPC car controllers' behavior
 
 
 * extend/modify ga_fuzzing to customize scenario for these routes (basically to make collision happen more frequently). Potential need to modify ga_fuzzing mechanism to make responsibility lie more on the ego car.
@@ -86,11 +292,10 @@ TBD:
 * unique bug count for dt; run dt performance for unique bugs
 * find another scenario that may have out-of-road violations
 * adjust objective weights
-* record high resolution image
 * debug vehicles not moving
 * tsne (rescaling, count discrete difference as 1), decision tree volume
 * random seed
-* no static objects on route
+* make sure no static objects on route
 * interface for selecting route
 * unified interface
 * algorithm selection interface (integrate dt into ga_fuzzing)
@@ -102,22 +307,17 @@ TBD:
 * mating critical region for dt
 * route completion bug
 * explore generation blocking issue and might consider to pre-run a map and save legit regions
-* fix rgb with car high resolution
 * more routes
-* multi-objective search VS 3 single-objective search and compare results
 * need to bound the projection / add_dist process when keep trying to generate an actor to within the bounds
 * allow user to specify a region that actors cannot be generated within such that we can avoid spawning of static on route (a variable to control)
 * diversity of bugs
 * fix x afterwards when original setup cannot generate actors properly
 * analyze dt results(visualization, show leaves results)
-* hd image saving
 * save intermediate results to avoid crash
 * analyze visualization across generations
 * parametrize in start / end location of each route
 * estimate bug diversity via tree diversity
 * fix stage2 model training
-* debug nsga2-dt
-* emcmc
 * clustering+tsne(need to label different bugs first), bug category over generation plot
 * stage 1 map model
 * maybe make the validity checking static before each simulation (this needs extra knowledge of the map)
@@ -126,7 +326,6 @@ TBD:
 * seed selection (add constraints to input space) to search for particular pre-crash scene bugs
 * continuous objective of wronglane/offroad when violation happens
 * record rgb_with_car for pid_controller and auto_pilot
-* the birdview window currently does not appear even when os.environ['HAS_DISPLAY'] = '1'
 * need to improve diversity of bugs
 * maybe not allowed to generate static objects directly on routes
 * better way for determining and eliminating duplicates
@@ -147,20 +346,17 @@ TBD:
   File "/home/zhongzzy9/anaconda3/envs/carla99/lib/python3.7/site-packages/numpy/lib/format.py", line 676, in write_array
     pickle.dump(array, fp, protocol=3, **pickle_kwargs)
 _pickle.PicklingError: Can't pickle <class '__main__.MySampling'>: it's not the same object as __main__.MySampling
--------------------------------
-* need to consider static objects or avoid generating static objects on the way for autopilot and pid controller
-* modify API of PID controller to make it run
+
 * fix OSError: [Errno 24] Too many open files: '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized/Town03/Scenario12/right/route_01_16/events.txt'
 RuntimeError: Resource temporarily unavailable
 * change to a more reliable controller
-* scenario that can run successfully when no other objects are added
+
 * focus on important parameter perturbation (e.g. waypoints perturbation are not very important but take too much dimensions.) If we reduce dimensions to e.g. less than 20, we might consider to apply out-of-box bayes optimization method on github.
-* understand n_gen |  n_eval |  n_nds  | delta_ideal  | delta_nadir  |   delta_f in the stdout
-* reproduce bug scenario
-* offsprings seem to be similar. need to be fixed.
 * save and resume_run a training after each generation
 * narrow down the range of other actors and limit the time length of each run
 * free-view window of the map
+
+
 check number of opened files:
 lsof -p p_id | wc -l
 check max number of opened files:
@@ -169,10 +365,13 @@ https://superuser.com/questions/1200539/cannot-increase-open-file-limit-past-409
 su zhongzzy9
 Run genertic algorithm for fuzzing:
 python ga_fuzzing.py
+
 Retrain model from scratch (stage 1):
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir '/home/zhongzzy9/Documents/self-driving-car/LBC_data/CARLA_challenge_autopilot' --max_epochs 25
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir '/home/zhongzzy9/Documents/self-driving-car/LBC_data/CARLA_challenge_autopilot' --max_epochs 20 --command_coefficient 0.01
+
 Retrain model from scratch (stage 2):
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir '../LBC_data/CARLA_challenge_autopilot' --teacher_path '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage1_retrain_9_50_leading_car_25_1hz_epoch=18.ckpt' --max_epochs 25
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir '../LBC_data/CARLA_challenge_autopilot' --teacher_path '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage1_0.01_augmented_epoch=13.ckpt' --max_epochs 20 --command_coefficient 0.01
+
 '''
 
 import sys
@@ -187,7 +386,9 @@ sys.path.append('leaderboard')
 sys.path.append('leaderboard/team_code')
 sys.path.append('scenario_runner')
 sys.path.append('scenario_runner')
+sys.path.append('carla_project')
 sys.path.append('carla_project/src')
+
 
 
 
@@ -198,7 +399,7 @@ from pymoo.model.crossover import Crossover
 from pymoo.model.mutation import Mutation
 from pymoo.model.duplicate import ElementwiseDuplicateElimination, NoDuplicateElimination
 
-from pymoo.model.population import Population
+from pymoo.model.population import Population, pop_from_array_or_individual
 from pymoo.model.evaluator import Evaluator
 
 from pymoo.algorithms.nsga2 import NSGA2, binary_tournament
@@ -214,7 +415,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist
 
 
 from collections import deque
@@ -235,7 +436,7 @@ import time
 from datetime import datetime
 
 import pathlib
-import shutil
+from distutils.dir_util import copy_tree
 import dill as pickle
 # import pickle
 import argparse
@@ -264,13 +465,14 @@ from pymoo.model.duplicate import NoDuplicateElimination
 from pymoo.model.individual import Individual
 from pymoo.operators.sampling.random_sampling import FloatRandomSampling
 
+from pymoo.model.survival import Survival
+
+from distutils.dir_util import copy_tree
 
 
-
-
-
-
-
+default_objective_weights = np.array([-1, 1, 1, 1, -1, -1, -1, -1, -1])
+default_objectives = [0, 7, 7, 7, 0, 0, 0, 0, 0]
+default_check_unique_coeff = [0, 0.15, 0.5]
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p','--ports', nargs='+', type=int, default=[2003, 2006], help='TCP port(s) to listen to (default: 2003 2006)')
@@ -283,13 +485,17 @@ parser.add_argument("-m", "--ego_car_model", type=str, default='lbc')
 parser.add_argument("--has_display", type=str, default='0')
 parser.add_argument("--root_folder", type=str, default='run_results')
 
-parser.add_argument("--episode_max_time", type=int, default=50)
-parser.add_argument("--n_gen", type=int, default=12)
+parser.add_argument("--episode_max_time", type=int, default=60)
+parser.add_argument("--n_gen", type=int, default=2)
 parser.add_argument("--pop_size", type=int, default=100)
-parser.add_argument("--has_run_num", type=int, default=1500)
+parser.add_argument("--n_offsprings", type=int, default=100)
+parser.add_argument("--has_run_num", type=int, default=1000)
 parser.add_argument("--outer_iterations", type=int, default=3)
-parser.add_argument('--objective_weights', nargs='+', type=float, default=[-1, 1, 1, 1, -1])
-parser.add_argument('--check_unique_coeff', nargs='+', type=float, default=[0, 0.15, 0.5])
+parser.add_argument('--objective_weights', nargs='+', type=float, default=default_objective_weights)
+parser.add_argument('--check_unique_coeff', nargs='+', type=float, default=default_check_unique_coeff)
+parser.add_argument('--use_single_objective', type=int, default=1)
+parser.add_argument('--rank_mode', type=str, default='none')
+
 
 arguments = parser.parse_args()
 
@@ -307,6 +513,10 @@ algorithm_name = arguments.algorithm_name
 # ['lbc', 'auto_pilot', 'pid_agent']
 ego_car_model = arguments.ego_car_model
 
+# ['none', 'nn', 'adv', 'inversion']
+rank_mode = arguments.rank_mode
+
+
 os.environ['HAS_DISPLAY'] = arguments.has_display
 root_folder = arguments.root_folder
 
@@ -315,6 +525,7 @@ episode_max_time = arguments.episode_max_time
 global_n_gen = arguments.n_gen
 
 pop_size = arguments.pop_size
+n_offsprings = arguments.n_offsprings
 # only used when algorithm_name is nsga2-dt
 outer_iterations = arguments.outer_iterations
 
@@ -336,6 +547,27 @@ check_unique_coeff = arguments.check_unique_coeff
 
 has_run_num = arguments.has_run_num
 finish_after_has_run = True
+
+
+
+os.environ['PYTHONHASHSEED'] = '0'
+os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
+
+import random
+import torch
+import numpy as np
+random.seed(0)
+np.random.seed(0)
+torch.manual_seed(0)
+torch.cuda.manual_seed_all(0)
+torch.set_deterministic(True)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+# torch.backends.cudnn.enabled = False
+
+
+
+
 
 
 
@@ -364,7 +596,7 @@ max_running_time = 3600*24
 
 # ['generations', 'max_time']
 global_termination_condition = 'generations'
-default_objectives = [0, 7, 7, 7, 0, 0, 0, 0]
+
 
 
 
@@ -388,7 +620,7 @@ for customizing weather choices, static_types, pedestrian_types, vehicle_types, 
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, cumulative_info=None, objective_weights=np.array([0, 0, 1, 1, -1]), check_unique_coeff=[0, 0.15, 0.5]):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, cumulative_info=None, objective_weights=default_objective_weights, check_unique_coeff=default_check_unique_coeff):
 
         customized_parameters_bounds = customized_config['customized_parameters_bounds']
         customized_parameters_distributions = customized_config['customized_parameters_distributions']
@@ -527,6 +759,9 @@ class MyProblem(Problem):
         parameters_min_bounds = self.parameters_min_bounds
         parameters_max_bounds = self.parameters_max_bounds
         labels = self.labels
+        mask = self.mask
+        xl = self.xl
+        xu = self.xu
         customized_constraints = self.customized_constraints
 
         dt = self.dt
@@ -549,9 +784,12 @@ class MyProblem(Problem):
 
 
         def fun(x, launch_server, counter):
-            if (dt and not is_critical_region(x[:-1], estimator, critical_unique_leaves)) or if_violate_constraints(x, customized_constraints, labels):
+            not_critical_region = dt and not is_critical_region(x[:-1], estimator, critical_unique_leaves)
+            violate_constraints = if_violate_constraints(x, customized_constraints, labels, verbose=True)
+            if not_critical_region or violate_constraints:
                 objectives = default_objectives
                 F = np.array(objectives[:objective_weights.shape[0]]) * objective_weights
+                print(counter)
                 return F, None, None, None, objectives, 0, None
 
             else:
@@ -560,25 +798,30 @@ class MyProblem(Problem):
                 # x = denormalize_by_entry(self, x)
 
                 customized_data = convert_x_to_customized_data(x, waypoints_num_limit, num_of_static_max, num_of_pedestrians_max, num_of_vehicles_max, static_types, pedestrian_types, vehicle_types, vehicle_colors, customized_center_transforms, parameters_min_bounds, parameters_max_bounds)
-
+                # print('x', x)
 
                 # run simulation
-                objectives, loc, object_type, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, scenario_file, ego_car_model)
+                objectives, loc, object_type, route_completion, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, scenario_file, ego_car_model)
 
-                print(counter, objectives)
 
-                # [ego_linear_speed, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light]
+
+                # [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, is_collision]
                 F = np.array(objectives[:objective_weights.shape[0]]) * objective_weights
+                is_bug = check_bug(objectives)
+
+                # change data in case the original x is used elsewhere
+                data = x[:-1]
+                # correct_travel_dist(data, labels, customized_data['tmp_travel_dist_file'])
 
 
                 info = {**info, 'x':x, 'waypoints_num_limit':waypoints_num_limit, 'num_of_static_max':num_of_static_max, 'num_of_pedestrians_max':num_of_pedestrians_max, 'num_of_vehicles_max':num_of_vehicles_max, 'customized_center_transforms':customized_center_transforms,
                 'parameters_min_bounds':parameters_min_bounds,
                 'parameters_max_bounds':parameters_max_bounds}
 
-                cur_info = {'counter':counter, 'x':x, 'objectives':objectives,  'loc':loc, 'object_type':object_type, 'labels':labels, 'info': info}
+                cur_info = {'counter':counter, 'x':x, 'data':data, 'objectives':objectives,  'loc':loc, 'object_type':object_type, 'labels':labels, 'mask':mask, 'xl':xl, 'xu':xu, 'is_bug':is_bug, 'route_completion':route_completion, 'info': info}
 
+                print(counter, is_bug, F, objectives)
 
-                is_bug = check_bug(objectives)
 
                 if is_bug:
                     cur_folder = make_hierarchical_dir([bug_folder, str(counter)])
@@ -588,13 +831,14 @@ class MyProblem(Problem):
                 with open(cur_folder+'/'+'cur_info.pickle', 'wb') as f_out:
                     pickle.dump(cur_info, f_out)
 
-                if is_bug:
-                    # copy data to current folder if it is a bug
-                    try:
-                        new_path = os.path.join(cur_folder, 'data')
-                        shutil.copytree(save_path, new_path)
-                    except:
-                        print('fail to copy from', save_path)
+
+
+                try:
+                    print('save_path, cur_folder', save_path, cur_folder)
+                    copy_tree(save_path, cur_folder)
+                except:
+                    print('fail to copy from', save_path)
+                    traceback.print_exc()
 
                 # hack:
                 cur_port = int(x[-1])
@@ -629,8 +873,9 @@ class MyProblem(Problem):
                 self.has_run += has_run
                 # record bug
                 if check_bug(objectives):
-                    bug_str = None
-                    if objectives[0] > 0:
+                    bug_str = ''
+                    bug_type = 5
+                    if objectives[0] > 0.2:
                         collision_types = {'pedestrian_collision':pedestrian_types, 'car_collision':car_types, 'motercycle_collision':motorcycle_types, 'cyclist_collision':cyclist_types, 'static_collision':static_types}
                         for k,v in collision_types.items():
                             if object_type in v:
@@ -644,9 +889,12 @@ class MyProblem(Problem):
                     elif objectives[6]:
                         bug_str = 'wronglane'
                         bug_type = 3
-                    else:
-                        bug_str = 'unknown'
-                        bug_type = 4
+                    if objectives[7]:
+                        bug_str += 'run_red_light'
+                        if bug_type > 4:
+                            bug_type = 4
+
+
                     with open(mean_objectives_across_generations_path, 'a') as f_out:
                         f_out.write(str(i)+','+bug_str+'\n')
 
@@ -695,7 +943,7 @@ class MyProblem(Problem):
 
         job_results = []
 
-        with LocalCluster(scheduler_port=self.scheduler_port, dashboard_address=self.dashboard_address, n_workers=len(self.ports), threads_per_worker=1) as cluster, Client(cluster, connection_limit=8192) as client:
+        with LocalCluster(scheduler_port=self.scheduler_port, dashboard_address=self.dashboard_address, n_workers=len(self.ports), threads_per_worker=1) as cluster, Client(cluster) as client:
             workers = []
             for k in client.has_what():
                 workers.append(k[len('tcp://'):])
@@ -724,10 +972,11 @@ class MyProblem(Problem):
             unique_collision_bugs, unique_collision_bugs_inds_list, unique_collision_num = process_specific_bug(1)
             unique_offroad_bugs, unique_offroad_bugs_inds_list, unique_offroad_num = process_specific_bug(2)
             unique_wronglane_bugs, unique_wronglane_bugs_inds_list, unique_wronglane_num = process_specific_bug(3)
+            unique_redlight_bugs, unique_redlight_bugs_inds_list, unique_redlight_num = process_specific_bug(4)
 
             # print(unique_collision_bugs, unique_offroad_bugs, unique_wronglane_bugs, type(unique_collision_bugs), type(unique_offroad_bugs), type(unique_wronglane_bugs))
-            self.unique_bugs = unique_collision_bugs + unique_offroad_bugs + unique_wronglane_bugs
-            unique_bugs_inds_list = unique_collision_bugs_inds_list + unique_offroad_bugs_inds_list + unique_wronglane_bugs_inds_list
+            self.unique_bugs = unique_collision_bugs + unique_offroad_bugs + unique_wronglane_bugs + unique_redlight_bugs
+            unique_bugs_inds_list = unique_collision_bugs_inds_list + unique_offroad_bugs_inds_list + unique_wronglane_bugs_inds_list + unique_redlight_bugs_inds_list
 
 
             num_of_bugs = len(self.bugs)
@@ -741,6 +990,7 @@ class MyProblem(Problem):
             num_of_collisions = np.sum(np.array(self.bugs_type_list)==1)
             num_of_offroad = np.sum(np.array(self.bugs_type_list)==2)
             num_of_wronglane = np.sum(np.array(self.bugs_type_list)==3)
+            num_of_redlight = np.sum(np.array(self.bugs_type_list)==4)
 
 
             # print(unique_collision_bugs, unique_offroad_bugs, unique_wronglane_bugs)
@@ -748,7 +998,7 @@ class MyProblem(Problem):
             # print(unique_collision_num, unique_offroad_num, unique_wronglane_num)
             # print()
 
-            print(self.counter, self.has_run, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_collisions, num_of_offroad, num_of_wronglane, mean_objectives_this_generation, unique_collision_num, unique_offroad_num, unique_wronglane_num)
+            print(self.counter, self.has_run, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_collisions, num_of_offroad, num_of_wronglane, num_of_redlight, mean_objectives_this_generation, unique_collision_num, unique_offroad_num, unique_wronglane_num, unique_redlight_num)
             print(self.bugs_inds_list)
             print(unique_bugs_inds_list)
 
@@ -759,8 +1009,8 @@ class MyProblem(Problem):
                         print(X.shape[0], i, j, 'same')
 
             with open(mean_objectives_across_generations_path, 'a') as f_out:
-                f_out.write(','.join([str(x) for x in [self.counter, self.has_run, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_collisions, num_of_offroad, num_of_wronglane, unique_collision_num, unique_offroad_num, unique_wronglane_num]]+[str(x) for x in mean_objectives_this_generation])+'\n')
-                f_out.write(';'.join([str(ind) for ind in unique_bugs_inds_list])+'\n')
+                f_out.write(','.join([str(x) for x in [self.counter, self.has_run, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_collisions, num_of_offroad, num_of_wronglane, num_of_redlight, unique_collision_num, unique_offroad_num, unique_wronglane_num, unique_redlight_num]]+[str(x) for x in mean_objectives_this_generation])+'\n')
+                f_out.write(';'.join([str(ind) for ind in unique_bugs_inds_list])+' objective_weights : '+str(self.objective_weights)+'\n')
             print('+'*100)
             print('\n'*10)
             # os.system('sudo chmod -R 777 '+self.bug_folder)
@@ -783,16 +1033,20 @@ class MyProblem(Problem):
             np.savez(pth, X=X, y=np.array(self.y_list), F=F, objectives=objectives, time_list=np.array(self.time_list), bugs_num_list=np.array(self.bugs_num_list), unique_bugs_num_list=np.array(self.unique_bugs_num_list), has_run_list=self.has_run_list, labels=self.labels, mask=self.mask, xl=self.xl, xu=self.xu, p=self.p, c=self.c, th=self.th, route_type=route_type, scenario_type=scenario_type)
             print('npz saved')
 
+        # job_results == F
+        if arguments.use_single_objective:
+            out["F"] = np.expand_dims(np.sum(np.row_stack(job_results), axis=1), axis=1)
+        else:
+            out["F"] = np.row_stack(job_results)
 
-        out["F"] = np.row_stack(job_results)
 
 
 
 
-def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, scenario_file, ego_car_model, ego_car_model_path=None, rerun=False, rerun_folder=None):
+def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, scenario_file, ego_car_model, ego_car_model_path=None, rerun=False):
     arguments = arguments_info()
     arguments.port = customized_data['port']
-    arguments.debug = 1
+    arguments.debug = 0
     if rerun:
         arguments.debug = 0
 
@@ -801,8 +1055,12 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
     if ego_car_model == 'lbc':
         arguments.agent = 'scenario_runner/team_code/image_agent.py'
         arguments.agent_config = 'models/epoch=24.ckpt'
-        # arguments.agent_config = 'models/stage2_retrain_9_50_leading_car_25_epoch=21.ckpt'
+        # arguments.agent_config = 'models/stage2_0.01_augmented_epoch=11.ckpt'
         base_save_folder = 'collected_data_customized'
+    elif ego_car_model == 'lbc_augment':
+        arguments.agent = 'scenario_runner/team_code/image_agent.py'
+        arguments.agent_config = 'checkpoints/stage2_pretrained/random_1_1e-4_200_20_73runs/epoch=0.ckpt'
+        base_save_folder = 'collected_data_lbc_augment'
     elif ego_car_model == 'auto_pilot':
         arguments.agent = 'leaderboard/team_code/auto_pilot.py'
         arguments.agent_config = ''
@@ -916,7 +1174,7 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
         # collect signals for estimating objectives
 
 
-        objectives, loc, object_type = estimate_objectives(save_path, default_objectives)
+        objectives, loc, object_type, route_completion = estimate_objectives(save_path, default_objectives)
 
 
 
@@ -931,29 +1189,10 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
     'ego_car_model':ego_car_model}
 
 
-    if rerun:
-        is_bug = check_bug(objectives)
-        if is_bug:
-            print('\n'*3, 'rerun also causes a bug!!! will not save this', '\n'*3)
-            try:
-                # use this version to merge into the existing folder
-                from distutils.dir_util import copy_tree
-                copy_tree(save_path, rerun_folder)
-            except:
-                print('fail to copy from', save_path)
-                traceback.print_exc()
-        else:
-            assert rerun_folder
-            try:
-                # use this version to merge into the existing folder
-                from distutils.dir_util import copy_tree
-                copy_tree(save_path, rerun_folder)
-            except:
-                print('fail to copy from', save_path)
-                traceback.print_exc()
 
 
-    return objectives, loc, object_type, info, save_path
+
+    return objectives, loc, object_type, route_completion, info, save_path
 
 
 
@@ -1039,6 +1278,22 @@ class MySampling(Sampling):
 
         X = []
         def subroutine(disable_unique_bugs=False):
+            def sample_one_feature(typ, lower, upper, dist, label):
+                assert lower <= upper, label+','+str(lower)+'>'+str(upper)
+                if typ == 'int':
+                    val = rng.integers(lower, upper+1)
+                elif typ == 'real':
+                    if dist[0] == 'normal':
+                        if dist[1] == None:
+                            mean = (lower+upper)/2
+                        else:
+                            mean = dist[1]
+                        val = rng.normal(mean, dist[2], 1)[0]
+                    else: # default is uniform
+                        val = rand_real(rng, lower, upper)
+                    val = np.clip(val, lower, upper)
+                return val
+
             sample_time = 0
             while sample_time < max_sample_times and len(X) < n_samples:
                 sample_time += 1
@@ -1047,31 +1302,20 @@ class MySampling(Sampling):
                     typ = mask[i]
                     lower = xl[i]
                     upper = xu[i]
-                    assert lower <= upper, problem.labels[i]+','+str(lower)+'>'+str(upper)
                     label = labels[i]
-                    if typ == 'int':
-                        val = rng.integers(lower, upper+1)
-                    elif typ == 'real':
-                        if dist[0] == 'normal':
-                            if dist[1] == None:
-                                mean = (lower+upper)/2
-                            else:
-                                mean = dist[1]
-                            val = rng.normal(mean, dist[2], 1)[0]
-                        else: # default is uniform
-                            val = rand_real(rng, lower, upper)
-                        val = np.clip(val, lower, upper)
+                    val = sample_one_feature(typ, lower, upper, dist, label)
                     x.append(val)
                 # print(if_violate_constraints(x, problem.customized_constraints, problem.labels), use_unique_bugs, is_distinct(x, X, mask, xl, xu, p, c, th))
+
                 if not if_violate_constraints(x, problem.customized_constraints, problem.labels) and (disable_unique_bugs or not self.use_unique_bugs or is_distinct(x, X, mask, xl, xu, p, c, th)):
                     x = np.array(x).astype(float)
                     X.append(x)
 
             return sample_time
 
-        sample_time_1 = subroutine()
+        sample_time_1 = subroutine(disable_unique_bugs=False)
         print(len(X), 'samples after first round of sampling')
-        sample_time_2 = subroutine(True)
+        sample_time_2 = subroutine(disable_unique_bugs=True)
         print(len(X), 'samples after second round of sampling')
 
         X = np.stack(X)
@@ -1132,7 +1376,6 @@ class MyMating(Mating):
 
         # iterate until enough offsprings are created
         while len(off) < n_offsprings:
-            print('n_infills', n_infills)
             # how many offsprings are remaining to be created
             n_remaining = n_offsprings - len(off)
 
@@ -1141,7 +1384,13 @@ class MyMating(Mating):
 
 
             # repair the individuals if necessary - disabled if repair is NoRepair
-            _off = self.repair.do(problem, _off, **kwargs)
+            _off_first = self.repair.do(problem, _off, **kwargs)
+
+            _off = []
+            for x in _off_first:
+                if not if_violate_constraints(x.X, problem.customized_constraints, problem.labels):
+                    _off.append(x.X)
+            _off = pop.new("X", _off)
 
             # eliminate the duplicates - disabled if it is NoRepair
             if self.use_unique_bugs:
@@ -1167,7 +1416,7 @@ class MyMating(Mating):
             if n_infills > self.n_max_iterations:
                 break
 
-        assert len(parents)==len(off)
+        # assert len(parents)==len(off)
 
         return off, parents
 
@@ -1201,13 +1450,13 @@ class MyMating(Mating):
 
 
 class NSGA2_DT(NSGA2):
-    def __init__(self, dt=False, X=None, F=None, emcmc=False, plain_sampling=None, sampling=None, algorithm_name='nsga2-un', **kwargs):
+    def __init__(self, dt=False, X=None, F=None, emcmc=False, plain_sampling=None, algorithm_name='nsga2-un', **kwargs):
         self.dt = dt
         self.X = X
         self.F = F
         self.emcmc = emcmc
         self.algorithm_name = algorithm_name
-        self.sampling = sampling
+        self.sampling = kwargs['sampling']
 
         super().__init__(**kwargs)
 
@@ -1217,51 +1466,94 @@ class NSGA2_DT(NSGA2):
         # heuristic: we keep up about 2 times of each generation's population
         self.survival_size = self.pop_size * 2
 
+
+        self.all_pop_run_X = []
+        self.initial_fit_th = 100
+        self.rank_mode = rank_mode
+
     # mainly used to modify survival
     def _next(self):
         if self.algorithm_name == 'random':
-            self.off = self.initialization.do(self.problem, self.pop_size, algorithm=self)
+            tmp_off = self.plain_initialization.do(self.problem, self.n_offsprings, algorithm=self)
         else:
             # do the mating using the current population
-            self.off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
+            tmp_off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
 
-            print('\n'*3, 'len 0', len(self.off), '\n'*3)
+            print('\n'*3, 'len 0', len(tmp_off), '\n'*3)
 
-            if len(self.off) < self.n_offsprings:
-                remaining_num = self.n_offsprings - len(self.off)
+            if len(tmp_off) < self.n_offsprings:
+                remaining_num = self.n_offsprings - len(tmp_off)
                 remaining_off = self.initialization.do(self.problem, remaining_num, algorithm=self)
                 remaining_parrents = remaining_off
 
-                self.off = Population.merge(self.off, remaining_off)
+                tmp_off = Population.merge(tmp_off, remaining_off)
                 parents = Population.merge(parents, remaining_parrents)
 
-                print('\n'*3, 'len 1', len(self.off), '\n'*3)
+                print('\n'*3, 'len 1', len(tmp_off), '\n'*3)
 
-            if len(self.off) < self.n_offsprings:
-                remaining_num = self.n_offsprings - len(self.off)
+            if len(tmp_off) < self.n_offsprings:
+                remaining_num = self.n_offsprings - len(tmp_off)
                 remaining_off = self.plain_initialization.do(self.problem, remaining_num, algorithm=self)
                 remaining_parrents = remaining_off
 
-                self.off = Population.merge(self.off, remaining_off)
+                tmp_off = Population.merge(tmp_off, remaining_off)
                 parents = Population.merge(parents, remaining_parrents)
 
-                print('\n'*3, 'len 2', len(self.off), '\n'*3)
+                print('\n'*3, 'len 2', len(tmp_off), '\n'*3)
 
 
 
-        self.off.set("n_gen", self.n_gen)
+
         # if the mating could not generate any new offspring (duplicate elimination might make that happen)
-        if len(self.off) == 0 or (not self.problem.call_from_dt and finish_after_has_run and self.problem.has_run >= has_run_num):
+        if len(tmp_off) == 0 or (not self.problem.call_from_dt and finish_after_has_run and self.problem.has_run >= has_run_num):
             self.termination.force_termination = True
             print("Mating cannot generate new springs, terminate earlier.")
             return
 
         # if not the desired number of offspring could be created
-        elif len(self.off) < self.n_offsprings:
+        elif len(tmp_off) < self.n_offsprings:
             if self.verbose:
                 print("WARNING: Mating could not produce the required number of (unique) offsprings!")
 
 
+
+
+        if len(self.all_pop_run_X) == 0:
+            self.all_pop_run_X = self.pop.get("X")
+        else:
+            self.all_pop_run_X = np.concatenate([self.all_pop_run_X, self.pop.get("X")])
+
+
+        # additional step to rank and select self.off after gathering initial population
+        if self.rank_mode != 'none' and len(self.problem.objectives_list) >= self.initial_fit_th:
+            if self.rank_mode == 'nn':
+                from sklearn.neural_network import MLPClassifier
+                from sklearn.preprocessing import StandardScaler
+                clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
+
+                all_pop_run_X = self.all_pop_run_X[:, 5:]
+                standardize = StandardScaler()
+                all_pop_run_X = standardize.fit_transform(all_pop_run_X)
+                tmp_off_X = tmp_off.get("X")
+                tmp_off_X = tmp_off_X[:, 5:]
+                tmp_off_X = standardize.transform(tmp_off_X)
+
+                all_pop_run_y = np.array([check_bug(obj) for obj in self.problem.objectives_list])
+
+                clf.fit(all_pop_run_X, all_pop_run_y)
+                scores = -1*clf.predict_proba(tmp_off_X)[:, 1]
+
+                inds = np.argsort(scores)[:self.pop_size]
+                print('scores', scores)
+                print('chosen indices', inds)
+                self.off = tmp_off[inds]
+            else:
+                print('unsupported rank_mode', rank_mode)
+                raise
+        else:
+            self.off = tmp_off[:self.pop_size]
+
+        self.off.set("n_gen", self.n_gen)
         # evaluate the offspring
         self.evaluator.eval(self.problem, self.off, algorithm=self)
 
@@ -1319,6 +1611,13 @@ class NSGA2_DT(NSGA2):
             pop = self.survival.do(self.problem, pop, len(pop), algorithm=self, n_min_infeas_survive=self.min_infeas_pop_size)
 
         self.pop, self.off = pop, pop
+
+        # print('\n'*5)
+        # print(self.pop)
+        # print(self.pop.individual)
+        # print(self.pop.individual.X)
+        # print(self.pop.get("X"))
+        # print('\n'*5)
 
 
 
@@ -1403,7 +1702,7 @@ class MyEvaluator(Evaluator):
                         q = empty_slots.popleft()
                         print('shift', j, 'to', q)
                         for k in keys:
-                            print(k)
+                            # print(k)
                             ind_to = label_to_id[k+'_'+str(q)]
                             ind_from = label_to_id[k+'_'+str(j)]
                             pop[i].X[ind_to] = pop[i].X[ind_from]
@@ -1415,23 +1714,62 @@ class MyEvaluator(Evaluator):
                                     pop[i].X[ind_to] = pop[i].X[ind_from]
 
                         empty_slots.append(j)
-            # print()
+
 
 
         with open('tmp_folder/total.pickle', 'rb') as f_in:
             all_final_generated_transforms_list = pickle.load(f_in)
 
-        for i, all_final_generated_transforms_list_i in enumerate(all_final_generated_transforms_list):
-            if all_final_generated_transforms_list_i:
-                # print(i)
-                correct_spawn_locations(all_final_generated_transforms_list_i, i, 'static', static_general_labels)
-                correct_spawn_locations(all_final_generated_transforms_list_i, i, 'pedestrian', pedestrian_general_labels)
-                correct_spawn_locations(all_final_generated_transforms_list_i, i, 'vehicle', vehicle_general_labels)
+        # for i, all_final_generated_transforms_list_i in enumerate(all_final_generated_transforms_list):
+        #     if all_final_generated_transforms_list_i:
+        #         # print(i)
+        #         correct_spawn_locations(all_final_generated_transforms_list_i, i, 'static', static_general_labels)
+        #         correct_spawn_locations(all_final_generated_transforms_list_i, i, 'pedestrian', pedestrian_general_labels)
+        #         correct_spawn_locations(all_final_generated_transforms_list_i, i, 'vehicle', vehicle_general_labels)
                 # print('\n'*3)
         # print(pop[0].X)
 
 
 
+# class Single_Objective_Survival(Survival):
+#
+#     def __init__(self) -> None:
+#         super().__init__(filter_infeasible=True)
+#
+#     def _do(self, problem, pop, n_survive, D=None, **kwargs):
+#
+#         # get the objective space values and objects
+#         F = pop.get("F").astype(np.float, copy=False)
+#
+#         # the final indices of surviving individuals
+#         survivors = []
+#
+#         # do the non-dominated sorting until splitting front
+#         fronts = NonDominatedSorting().do(F, n_stop_if_ranked=n_survive)
+#
+#         for k, front in enumerate(fronts):
+#
+#             # calculate the crowding distance of the front
+#             crowding_of_front = calc_crowding_distance(F[front, :])
+#
+#             # save rank and crowding in the individual class
+#             for j, i in enumerate(front):
+#                 pop[i].set("rank", k)
+#                 pop[i].set("crowding", crowding_of_front[j])
+#
+#             # current front sorted by crowding distance if splitting
+#             if len(survivors) + len(front) > n_survive:
+#                 I = randomized_argsort(crowding_of_front, order='descending', method='numpy')
+#                 I = I[:(n_survive - len(survivors))]
+#
+#             # otherwise take the whole front unsorted
+#             else:
+#                 I = np.arange(len(front))
+#
+#             # extend the survivors by all or selected individuals
+#             survivors.extend(front[I])
+#
+#         return pop[survivors]
 
 
 
@@ -1631,7 +1969,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         "int": get_mutation("int_pm", eta=5, prob=int(0.05*problem.n_var))
     })
 
-
+    # survival = Single_Objective_Survival()
 
     selection = TournamentSelection(func_comp=binary_tournament)
     repair = ClipRepair()
@@ -1664,7 +2002,9 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       mutation=mutation,
                       eliminate_duplicates=eliminate_duplicates,
                       repair=repair,
-                      mating=mating)
+                      mating=mating,
+                      n_offsprings=n_offsprings,
+                      rank_mode=rank_mode)
 
 
 

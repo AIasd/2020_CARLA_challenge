@@ -5,40 +5,102 @@ WEATHERS = [
         carla.WeatherParameters.ClearNoon,
         carla.WeatherParameters.ClearSunset,
 
+
+
         carla.WeatherParameters.CloudyNoon,
         carla.WeatherParameters.CloudySunset,
+
+
 
         carla.WeatherParameters.WetNoon,
         carla.WeatherParameters.WetSunset,
 
+
+
         carla.WeatherParameters.MidRainyNoon,
         carla.WeatherParameters.MidRainSunset,
+
+
 
         carla.WeatherParameters.WetCloudyNoon,
         carla.WeatherParameters.WetCloudySunset,
 
+
+
         carla.WeatherParameters.HardRainNoon,
         carla.WeatherParameters.HardRainSunset,
+
+
 
         carla.WeatherParameters.SoftRainNoon,
         carla.WeatherParameters.SoftRainSunset,
 
-        # night modes
-        # clear night
+
+        # ClearNight
         carla.WeatherParameters(15.0, 0.0, 0.0, 0.35, 0.0, -90.0, 0.0, 0.0, 0.0),
-        # cloudy night
+
+        # CloudyNight
         carla.WeatherParameters(80.0, 0.0, 0.0, 0.35, 0.0, -90.0, 0.0, 0.0, 0.0),
-        # wet night
+
+        # WetNight
         carla.WeatherParameters(20.0, 0.0, 50.0, 0.35, 0.0, -90.0, 0.0, 0.0, 0.0),
-        # midrain night
+
+        # MidRainNight
         carla.WeatherParameters(90.0, 0.0, 50.0, 0.35, 0.0, -90.0, 0.0, 0.0, 0.0),
-        # wetcloudy night
+
+        # WetCloudyNight
         carla.WeatherParameters(80.0, 30.0, 50.0, 0.40, 0.0, -90.0, 0.0, 0.0, 0.0),
-        # hardrain night
+
+        # HardRainNight
         carla.WeatherParameters(80.0, 60.0, 100.0, 1.00, 0.0, -90.0, 0.0, 0.0, 0.0),
-        # softrain night
+
+        # SoftRainNight
         carla.WeatherParameters(90.0, 15.0, 50.0, 0.35, 0.0, -90.0, 0.0, 0.0, 0.0),
 ]
+
+weather_names = ['ClearNoon', 'ClearSunset', 'CloudyNoon', 'CloudySunset', 'WetNoon', 'WetSunset', 'MidRainyNoon', 'MidRainSunset', 'WetCloudyNoon', 'WetCloudySunset', 'HardRainNoon', 'HardRainSunset', 'SoftRainNoon', 'SoftRainSunset', 'ClearNight', 'CloudyNight', 'WetNight', 'MidRainNight', 'WetCloudyNight', 'HardRainNight', 'SoftRainNight']
+
+
+
+
+# WEATHERS = [
+#         carla.WeatherParameters.ClearNoon,
+#         carla.WeatherParameters.ClearSunset,
+#
+#
+#
+#         carla.WeatherParameters.CloudyNoon,
+#         carla.WeatherParameters.CloudySunset,
+#
+#
+#
+#         carla.WeatherParameters.WetNoon,
+#         carla.WeatherParameters.WetSunset,
+#
+#
+#
+#         carla.WeatherParameters.MidRainyNoon,
+#         carla.WeatherParameters.MidRainSunset,
+#
+#
+#
+#         carla.WeatherParameters.WetCloudyNoon,
+#         carla.WeatherParameters.WetCloudySunset,
+#
+#
+#
+#         carla.WeatherParameters.HardRainNoon,
+#         carla.WeatherParameters.HardRainSunset,
+#
+#
+#
+#         carla.WeatherParameters.SoftRainNoon,
+#         carla.WeatherParameters.SoftRainSunset,
+#
+#
+# ]
+#
+# weather_names = ['ClearNoon', 'ClearSunset', 'CloudyNoon', 'CloudySunset', 'WetNoon', 'WetSunset', 'MidRainyNoon', 'MidRainSunset', 'WetCloudyNoon', 'WetCloudySunset', 'HardRainNoon', 'HardRainSunset', 'SoftRainNoon', 'SoftRainSunset']
 
 
 # walker modifiable attributes: speed: float
