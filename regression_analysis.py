@@ -1,4 +1,25 @@
 '''
+tomorrow TBD:
+1.try the other 2 scenarios here and think about impact of their variables
+# 2.simplify object_type to be more easily to be onehot encoded
+3.integrate remove/include into ga_fuzzing and run them to compare with vanilla nsga2
+4.improve adv in rerun to reflect remove/include
+5.try some heuristic from MTFuzz for adv to potentially produce better performance for this particular problem?
+6.try different config for town_05_front to get more out-of-road error? Or maybe improve the objective?
+
+
+
+
+
+
+1.carefully design the fields chosen (perturbation, categorical)
+2.analyze important features using MtFuzz hotbytes method
+
+3.rethink about search objectives as well as optimization loss
+
+4.redesign/select scenarios to run for potentially better property
+
+5.consider MtFuzz method of leveraging hotbytes for generating new inputs
 
 
 Methods:
@@ -9,11 +30,12 @@ Methods:
 4.Inversion Model
 
 
-4.uniqueness
+Uniqueness
 - cases where enough uniqueness exist and consider eliminate cases where duplicates exist??? (rank methods)
 - adv with extra projection
 - inversion model with extra projection / penalty
 
+show our method is better in previous work def, then show our method works better in generalized cases
 
 Fix:
 1.randomness / reproducibility
@@ -98,13 +120,181 @@ def reformat(cur_info):
     assert len(x) == len(xl)
 
 
-    # labels.extend(['ego_linear_speed', 'min_d', 'offroad_d', 'wronglane_d', 'dev_dist', 'is_offroad', 'is_wrong_lane', 'is_run_red_light', 'accident_x', 'accident_y', 'is_bug', 'route_completion', 'is_adjusted_travel_dist'])
-    #
-    #
-    # x = np.concatenate([x, result_info, [0]])
-    # data = np.concatenate([data, result_info, [1]])
 
-    x = x[5:]
+    # town_05_right
+    # labels_to_encode = ['num_of_weathers', 'num_of_static', 'num_of_pedestrians', 'num_of_vehicles', 'num_of_pedestrian_types_0', 'num_of_vehicle_types_0', 'vehicle_waypoint_follower_0', 'vehicle_avoid_collision_0', 'num_of_vehicle_colors_0']
+
+
+
+
+    # town_04_front
+    labels_to_encode = ['num_of_weathers']
+
+    labels_to_remove = ['num_of_static', 'num_of_pedestrians', 'num_of_vehicles',
+     'num_of_pedestrian_types_0', 'num_of_pedestrian_types_1',
+     'num_of_pedestrian_types_2', 'num_of_pedestrian_types_3',
+     'num_of_pedestrian_types_4', 'num_of_pedestrian_types_5',
+     'num_of_pedestrian_types_6', 'num_of_pedestrian_types_7',
+     'num_of_pedestrian_types_8', 'num_of_pedestrian_types_9',
+     'num_of_vehicle_types_0', 'vehicle_waypoint_follower_0',
+     'vehicle_avoid_collision_0', 'num_of_vehicle_colors_0',
+     'num_of_vehicle_types_1', 'vehicle_waypoint_follower_1',
+     'vehicle_avoid_collision_1', 'num_of_vehicle_colors_1',
+     'num_of_vehicle_types_2', 'vehicle_waypoint_follower_2',
+     'vehicle_avoid_collision_2', 'num_of_vehicle_colors_2',
+     'num_of_vehicle_types_3', 'vehicle_waypoint_follower_3',
+     'vehicle_avoid_collision_3', 'num_of_vehicle_colors_3',
+     'num_of_vehicle_types_4', 'vehicle_waypoint_follower_4',
+     'vehicle_avoid_collision_4', 'num_of_vehicle_colors_4',
+     'num_of_vehicle_types_5', 'vehicle_waypoint_follower_5',
+     'vehicle_avoid_collision_5', 'num_of_vehicle_colors_5',
+     'num_of_vehicle_types_6', 'vehicle_waypoint_follower_6',
+     'vehicle_avoid_collision_6', 'num_of_vehicle_colors_6',
+     'num_of_vehicle_types_7', 'vehicle_waypoint_follower_7',
+     'vehicle_avoid_collision_7', 'num_of_vehicle_colors_7',
+     'num_of_vehicle_types_8', 'vehicle_waypoint_follower_8',
+     'vehicle_avoid_collision_8', 'num_of_vehicle_colors_8',
+     'num_of_vehicle_types_9', 'vehicle_waypoint_follower_9',
+     'vehicle_avoid_collision_9', 'num_of_vehicle_colors_9']
+
+
+
+
+    # town_05_front
+    # ['num_of_weathers', 'num_of_static', 'num_of_pedestrians', 'num_of_vehicles',
+    #  'num_of_pedestrian_types_0', 'num_of_vehicle_types_0',
+    #  'vehicle_waypoint_follower_0', 'vehicle_avoid_collision_0',
+    #  'num_of_vehicle_colors_0', 'num_of_vehicle_types_1',
+    #  'vehicle_waypoint_follower_1', 'vehicle_avoid_collision_1',
+    #  'num_of_vehicle_colors_1', 'num_of_vehicle_types_2',
+    #  'vehicle_waypoint_follower_2', 'vehicle_avoid_collision_2',
+    #  'num_of_vehicle_colors_2']
+
+
+    # labels_to_encode = ['num_of_weathers', 'num_of_pedestrian_types_0', 'num_of_vehicle_types_0',
+    #  'vehicle_waypoint_follower_0', 'vehicle_avoid_collision_0',
+    #  'num_of_vehicle_colors_0', 'num_of_vehicle_types_1',
+    #  'vehicle_waypoint_follower_1', 'vehicle_avoid_collision_1',
+    #  'num_of_vehicle_colors_1', 'num_of_vehicle_types_2',
+    #  'vehicle_waypoint_follower_2', 'vehicle_avoid_collision_2',
+    #  'num_of_vehicle_colors_2']
+    # labels_to_remove = []
+
+
+
+    def encode_and_remove_fields(x, mask, labels, labels_to_remove, labels_to_encode):
+        from sklearn.preprocessing import OneHotEncoder
+        # from object_types import weather_names, vehicle_colors, pedestrian_types, vehicle_types
+
+        weather_names = ['ClearNoon', 'ClearSunset', 'CloudyNoon', 'CloudySunset', 'WetNoon', 'WetSunset', 'MidRainyNoon', 'MidRainSunset', 'WetCloudyNoon', 'WetCloudySunset', 'HardRainNoon', 'HardRainSunset', 'SoftRainNoon', 'SoftRainSunset', 'ClearNight', 'CloudyNight', 'WetNight', 'MidRainNight', 'WetCloudyNight', 'HardRainNight', 'SoftRainNight']
+
+
+
+        # walker modifiable attributes: speed: float
+        pedestrian_types = ['walker.pedestrian.00'+f'{i:02d}' for i in range(1, 14)]
+
+
+        # vehicle types
+        # car
+        car_types = ['vehicle.audi.a2',
+        'vehicle.audi.tt',
+        'vehicle.mercedes-benz.coupe',
+        'vehicle.bmw.grandtourer',
+        'vehicle.audi.etron',
+        'vehicle.nissan.micra',
+        'vehicle.lincoln.mkz2017',
+        'vehicle.tesla.cybertruck',
+        'vehicle.dodge_charger.police',
+        'vehicle.tesla.model3',
+        'vehicle.toyota.prius',
+        'vehicle.seat.leon',
+        'vehicle.nissan.patrol',
+        'vehicle.mini.cooperst',
+        'vehicle.jeep.wrangler_rubicon',
+        'vehicle.mustang.mustang',
+        'vehicle.volkswagen.t2',
+        'vehicle.chevrolet.impala',
+        'vehicle.citroen.c3']
+
+        large_car_types = ['vehicle.carlamotors.carlacola']
+
+        # motorcycle
+        motorcycle_types = ['vehicle.yamaha.yzf',
+        'vehicle.harley-davidson.low_rider',
+        'vehicle.kawasaki.ninja']
+
+        # cyclist
+        cyclist_types = ['vehicle.bh.crossbike',
+        'vehicle.gazelle.omafiets',
+        'vehicle.diamondback.century']
+
+        vehicle_types = car_types + large_car_types + motorcycle_types + cyclist_types
+
+
+        # vehicle colors
+        # black, white, gray, silver, blue, red, brown, gold, green, tan, orange
+        vehicle_colors = ['(0, 0, 0)',
+        '(255, 255, 255)',
+        '(220, 220, 220)',
+        '(192, 192, 192)',
+        '(0, 0, 255)',
+        '(255, 0, 0)',
+        '(165,42,42)',
+        '(255,223,0)',
+        '(0,128,0)',
+        '(210,180,140)',
+        '(255,165,0)']
+
+
+
+
+        keywords = {'num_of_weathers': len(weather_names), 'num_of_vehicle_colors': len(vehicle_colors), 'num_of_pedestrian_types': len(pedestrian_types), 'num_of_vehicle_types': len(vehicle_types)}
+
+        keywords = {'num_of_weathers': len(weather_names)}
+
+
+
+        x = np.array(x).astype(np.float)
+        inds_to_remove = []
+        for label in labels_to_remove:
+            ind = labels.index(label)
+            inds_to_remove.append(ind)
+        inds_to_keep = list(set(range(len(x))) - set(inds_to_remove))
+        x = x[inds_to_keep]
+        mask = np.array(mask)[inds_to_keep].tolist()
+        labels = np.array(labels)[inds_to_keep].tolist()
+
+
+        encode_fields = []
+        inds_to_encode = []
+        for label in labels_to_encode:
+            for k, v in keywords.items():
+                if k in label:
+                    ind = labels.index(label)
+                    inds_to_encode.append(ind)
+
+                    encode_fields.append(v)
+                    break
+        inds_non_encode = list(set(range(len(x))) - set(inds_to_encode))
+
+        enc = OneHotEncoder(handle_unknown='ignore', sparse=False)
+        m = len(encode_fields)
+        data_for_fit_encode = np.zeros((int(np.sum(encode_fields)), m))
+        counter = 0
+        for i, encode_field in enumerate(encode_fields):
+            for j in range(encode_field):
+                data_for_fit_encode[counter, i] = j
+                counter += 1
+        enc.fit(data_for_fit_encode)
+
+        embed = np.array([x[inds_to_encode].astype(np.int)])
+        embed = enc.transform(embed)[0]
+
+        x = np.concatenate([embed, x[inds_non_encode]]).astype(np.float)
+        return x
+
+    # x = x[mask!='int']
+    x = encode_and_remove_fields(x, mask, labels, labels_to_remove, labels_to_encode)
 
     return x, objectives, int(is_bug)
 
@@ -200,7 +390,8 @@ def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, t
 
     y = is_bug_list
     # y = (objective_list[:, 1] < 2.5).astype(np.int)
-
+    # y = (objective_list[:, -1] == 1).astype(np.int)
+    print(np.sum(is_bug_list), np.sum(objective_list[:, -1] == 1))
     print(X.shape, y.shape)
 
     X_train, X_test = X[:cutoff], X[cutoff:cutoff_end]
@@ -209,8 +400,7 @@ def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, t
     X_train = standardize.fit_transform(X_train)
     X_test = standardize.transform(X_test)
 
-    X_train = X_train[:, 5:]
-    X_test = X_test[:, 5:]
+
 
 
     ind_0 = y_test==0
@@ -219,10 +409,9 @@ def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, t
     print(np.sum(y_train<0.5), np.sum(y_train>0.5), np.sum(y_test<0.5), np.sum(y_test>0.5))
 
     names = ["Nearest Neighbors", "Neural Net", "AdaBoost", "Random", "NN ensemble"]
-    # names = ["Nearest Neighbors", "Neural Net", "AdaBoost", "Random"]
 
     classifiers = [
-        KNeighborsClassifier(3),
+        KNeighborsClassifier(5),
         MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000),
         AdaBoostClassifier(),
         DummyClassifier(strategy='stratified'),
@@ -304,7 +493,7 @@ def get_sorted_subfolders(parent_folder):
 
 if __name__ == '__main__':
     mode = 'discrete'
-    trial_num = 30
+    trial_num = 15
     cutoff = 300
     cutoff_end = 400
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town04_front_0/pedestrians_cross_street_town04/lbc/50_8_all'
@@ -313,7 +502,7 @@ if __name__ == '__main__':
     # 51.5+-4, 400: 199 VS 203, 1000: 444 VS 421, Ada 43
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_8_all'
     # 55+-3, 400: 206 VS 178, Ada 59
-    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_8_all'
+    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town04_front_0/pedestrians_cross_street_town04/lbc/50_8_all'
 
     subfolders = get_sorted_subfolders(parent_folder)
     X, is_bug_list, objective_list  = load_data(subfolders)

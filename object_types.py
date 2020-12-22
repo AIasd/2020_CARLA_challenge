@@ -128,8 +128,9 @@ car_types = ['vehicle.audi.a2',
 'vehicle.mustang.mustang',
 'vehicle.volkswagen.t2',
 'vehicle.chevrolet.impala',
-'vehicle.citroen.c3',
-'vehicle.carlamotors.carlacola']
+'vehicle.citroen.c3']
+
+large_car_types = ['vehicle.carlamotors.carlacola']
 
 # motorcycle
 motorcycle_types = ['vehicle.yamaha.yzf',
@@ -141,7 +142,7 @@ cyclist_types = ['vehicle.bh.crossbike',
 'vehicle.gazelle.omafiets',
 'vehicle.diamondback.century']
 
-vehicle_types = car_types + motorcycle_types + cyclist_types
+vehicle_types = car_types + large_car_types + motorcycle_types + cyclist_types
 
 
 # static objects
@@ -251,3 +252,118 @@ vehicle_colors = ['(0, 0, 0)',
 '(0,128,0)',
 '(210,180,140)',
 '(255,165,0)']
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'''
+When using smaller number of choices
+'''
+WEATHERS = [
+        carla.WeatherParameters.ClearNoon,
+        carla.WeatherParameters.ClearSunset,
+
+
+
+        carla.WeatherParameters.CloudyNoon,
+        carla.WeatherParameters.CloudySunset,
+
+
+
+        # carla.WeatherParameters.WetNoon,
+        # carla.WeatherParameters.WetSunset,
+
+
+
+        carla.WeatherParameters.MidRainyNoon,
+        carla.WeatherParameters.MidRainSunset,
+
+
+
+        # carla.WeatherParameters.WetCloudyNoon,
+        # carla.WeatherParameters.WetCloudySunset,
+
+
+
+        carla.WeatherParameters.HardRainNoon,
+        carla.WeatherParameters.HardRainSunset,
+
+
+
+        carla.WeatherParameters.SoftRainNoon,
+        carla.WeatherParameters.SoftRainSunset,
+
+
+        # ClearNight
+        carla.WeatherParameters(15.0, 0.0, 0.0, 0.35, 0.0, -90.0, 0.0, 0.0, 0.0),
+
+        # CloudyNight
+        carla.WeatherParameters(80.0, 0.0, 0.0, 0.35, 0.0, -90.0, 0.0, 0.0, 0.0),
+
+        # # WetNight
+        # carla.WeatherParameters(20.0, 0.0, 50.0, 0.35, 0.0, -90.0, 0.0, 0.0, 0.0),
+
+        # MidRainNight
+        carla.WeatherParameters(90.0, 0.0, 50.0, 0.35, 0.0, -90.0, 0.0, 0.0, 0.0),
+
+        # # WetCloudyNight
+        # carla.WeatherParameters(80.0, 30.0, 50.0, 0.40, 0.0, -90.0, 0.0, 0.0, 0.0),
+
+        # HardRainNight
+        carla.WeatherParameters(80.0, 60.0, 100.0, 1.00, 0.0, -90.0, 0.0, 0.0, 0.0),
+
+        # SoftRainNight
+        carla.WeatherParameters(90.0, 15.0, 50.0, 0.35, 0.0, -90.0, 0.0, 0.0, 0.0),
+]
+
+weather_names = ['ClearNoon', 'ClearSunset', 'CloudyNoon', 'CloudySunset',  'MidRainyNoon', 'MidRainSunset',  'HardRainNoon', 'HardRainSunset', 'SoftRainNoon', 'SoftRainSunset', 'ClearNight', 'CloudyNight', 'MidRainNight', 'HardRainNight', 'SoftRainNight']
+
+assert len(WEATHERS) == len(weather_names)
+
+# walker modifiable attributes: speed: float
+pedestrian_types = ['walker.pedestrian.00'+f'{i:02d}' for i in [1, 5, 13, 14]]
+
+
+
+# vehicle types
+# car
+car_types = [
+'vehicle.tesla.cybertruck',
+'vehicle.dodge_charger.police',
+'vehicle.tesla.model3',
+'vehicle.mini.cooperst',
+'vehicle.jeep.wrangler_rubicon',
+'vehicle.volkswagen.t2']
+
+large_car_types = ['vehicle.carlamotors.carlacola']
+
+# motorcycle
+motorcycle_types = ['vehicle.yamaha.yzf',
+'vehicle.harley-davidson.low_rider']
+
+# cyclist
+cyclist_types = ['vehicle.bh.crossbike',
+'vehicle.gazelle.omafiets']
+
+vehicle_types = car_types + large_car_types + motorcycle_types + cyclist_types
+
+
+
+vehicle_colors = ['(0, 0, 0)',
+'(255, 255, 255)',
+'(220, 220, 220)',
+'(192, 192, 192)',
+'(0, 0, 255)']

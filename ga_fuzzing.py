@@ -109,17 +109,19 @@ TBD:
 ***** finetune NN estimator and integrate NN estimator into pipeline
 
 -- scenario 1
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 20 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 1000 --objective_weights -1 1 0 0 0 0 0 0 0 --n_offsprings 200
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 10 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 500 --objective_weights -1 1 0 0 0 0 0 0 0 --n_offsprings 200
 
 
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 8 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 400 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200 --rank_mode nn
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 10 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 500 --objective_weights 0 0 1 1 -1 0 0 0 0 --n_offsprings 200 --rank_mode nn
 
 
 -- scenario 2
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 20 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 1000 --objective_weights -1 1 0 0 0 0 0 0 0 --route_type 'town05_front_0' --n_offsprings 200
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 600 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200
 
 
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 20 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 1000 --objective_weights 0 0 1 1 -1 0 0 0 0 --n_offsprings 200 --rank_mode nn
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 12 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name random --has_run_num 600 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200 --rank_mode nn
+
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 20 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 1000 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200 --rank_mode nn
 
 
 -- scenario 3
@@ -129,9 +131,26 @@ python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 8 --pop_size 50 -r 'to
 python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 8 --pop_size 50 -r 'town04_front_0' -c 'pedestrians_cross_street_town04 --algorithm_name nsga2 --has_run_num 400 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200 --rank_mode nn
 
 
+-- scenario 4
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 10 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2 --has_run_num 400 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200
+
+
+-- scenario 5
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 10 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2 --has_run_num 400 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200
 
 
 
+
+
+
+-r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num'
+-r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num'
+
+
+-r 'town07_front_0' -c 'go_straight_town07'
+-r 'town01_left_0' -c 'turn_left_town01'
+
+-r 'town04_front_0' -c 'pedestrians_cross_street_town04
 
 
 

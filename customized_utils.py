@@ -622,13 +622,25 @@ customized_bounds_and_distributions = {
     'customized_center_transforms':{},
     'customized_constraints':[]},
 
-    'low_traffic': {'customized_parameters_bounds':{
+    'turn_left_town01': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
-        'num_of_static_max': 1,
-        'num_of_pedestrians_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 1,
         'num_of_pedestrians_max': 1,
-        'num_of_vehicles_min': 0,
+        'num_of_vehicles_min': 1,
         'num_of_vehicles_max': 1,
+    },
+    'customized_parameters_distributions':{},
+    'customized_center_transforms':{},
+    'customized_constraints':[]},
+
+    'go_straight_town07': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 2,
+        'num_of_pedestrians_max': 2,
+        'num_of_vehicles_min': 2,
+        'num_of_vehicles_max': 2,
     },
     'customized_parameters_distributions':{},
     'customized_center_transforms':{},
@@ -771,28 +783,31 @@ customized_bounds_and_distributions = {
         'num_of_static_max': 0,
         'num_of_pedestrians_min': 1,
         'num_of_pedestrians_max': 1,
-        'num_of_vehicles_min': 3,
-        'num_of_vehicles_max': 3,
+        'num_of_vehicles_min': 1,
+        'num_of_vehicles_max': 1,
 
 
         'vehicle_x_min_0': -4,
         'vehicle_x_max_0': -3,
         'vehicle_y_min_0': -20,
-        'vehicle_y_max_0': 20,
+        'vehicle_y_max_0': -1,
         'vehicle_yaw_min_0': 270,
         'vehicle_yaw_max_0': 270,
         'vehicle_initial_speed_min_0': 3,
         'vehicle_initial_speed_max_0': 7,
         'vehicle_trigger_distance_min_0': 0,
         'vehicle_trigger_distance_max_0': 0,
-        'vehicle_dist_to_travel_min_0': 30,
-        'vehicle_dist_to_travel_max_0': 50,
+        'vehicle_dist_to_travel_min_0': 15,
+        'vehicle_dist_to_travel_max_0': 40,
+        'vehicle_avoid_collision_min_0': 1,
+        'vehicle_avoid_collision_max_0': 1,
 
     },
     'customized_parameters_distributions':{
     },
     'customized_center_transforms':{
-        'vehicle_center_transform_0': ('waypoint_ratio', 0)
+        'vehicle_center_transform_0': ('waypoint_ratio', 0),
+        'pedestrian_center_transform_0': ('waypoint_ratio', 20)
     },
     'customized_constraints': []
     },
@@ -1847,7 +1862,7 @@ def estimate_objectives(save_path, default_objectives):
     events_path = os.path.join(save_path, 'events.txt')
     deviations_path = os.path.join(save_path, 'deviations.txt')
 
-    # hack: threshold to avoid too large influence
+    # set thresholds to avoid too large influence
     ego_linear_speed = 0
     min_d = 7
     offroad_d = 7
