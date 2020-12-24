@@ -109,10 +109,12 @@ TBD:
 ***** finetune NN estimator and integrate NN estimator into pipeline
 
 -- scenario 1
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 10 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 500 --objective_weights -1 1 0 0 0 0 0 0 0 --n_offsprings 200
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100
 
 
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 10 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 500 --objective_weights 0 0 1 1 -1 0 0 0 0 --n_offsprings 200 --rank_mode nn
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 700 --objective_weights 0 0 0 1 1 -1 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100
+
+
 
 
 -- scenario 2
@@ -434,7 +436,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_and_remove_fields
 
 
 from collections import deque
@@ -489,8 +491,8 @@ from pymoo.model.survival import Survival
 from distutils.dir_util import copy_tree
 
 
-default_objective_weights = np.array([-1, 1, 1, 1, -1, -1, -1, -1, -1])
-default_objectives = [0, 7, 7, 7, 0, 0, 0, 0, 0]
+default_objective_weights = np.array([-1, 1, 1, 1, 1, -1, 0, 0, 0, -1])
+default_objectives = [0, 20, 1, 7, 7, 0, 0, 0, 0, 0]
 default_check_unique_coeff = [0, 0.15, 0.5]
 
 parser = argparse.ArgumentParser()
@@ -514,6 +516,7 @@ parser.add_argument('--objective_weights', nargs='+', type=float, default=defaul
 parser.add_argument('--check_unique_coeff', nargs='+', type=float, default=default_check_unique_coeff)
 parser.add_argument('--use_single_objective', type=int, default=1)
 parser.add_argument('--rank_mode', type=str, default='none')
+parser.add_argument('--initial_fit_th', type=int, default=200)
 
 
 arguments = parser.parse_args()
@@ -534,6 +537,7 @@ ego_car_model = arguments.ego_car_model
 
 # ['none', 'nn', 'adv', 'inversion']
 rank_mode = arguments.rank_mode
+initial_fit_th = arguments.initial_fit_th
 
 
 os.environ['HAS_DISPLAY'] = arguments.has_display
@@ -894,7 +898,7 @@ class MyProblem(Problem):
                 if check_bug(objectives):
                     bug_str = ''
                     bug_type = 5
-                    if objectives[0] > 0.2:
+                    if objectives[0] > 0.1:
                         collision_types = {'pedestrian_collision':pedestrian_types, 'car_collision':car_types, 'motercycle_collision':motorcycle_types, 'cyclist_collision':cyclist_types, 'static_collision':static_types}
                         for k,v in collision_types.items():
                             if object_type in v:
@@ -902,13 +906,13 @@ class MyProblem(Problem):
                         if not bug_str:
                             bug_str = 'unknown_collision'+'_'+object_type
                         bug_type = 1
-                    elif objectives[5]:
+                    elif objectives[-3]:
                         bug_str = 'offroad'
                         bug_type = 2
-                    elif objectives[6]:
+                    elif objectives[-2]:
                         bug_str = 'wronglane'
                         bug_type = 3
-                    if objectives[7]:
+                    if objectives[-1]:
                         bug_str += 'run_red_light'
                         if bug_type > 4:
                             bug_type = 4
@@ -1052,11 +1056,20 @@ class MyProblem(Problem):
             np.savez(pth, X=X, y=np.array(self.y_list), F=F, objectives=objectives, time_list=np.array(self.time_list), bugs_num_list=np.array(self.bugs_num_list), unique_bugs_num_list=np.array(self.unique_bugs_num_list), has_run_list=self.has_run_list, labels=self.labels, mask=self.mask, xl=self.xl, xu=self.xu, p=self.p, c=self.c, th=self.th, route_type=route_type, scenario_type=scenario_type)
             print('npz saved')
 
+
+        all_objectives = np.stack(self.objectives_list)
+        objectives_mean = np.mean(all_objectives, axis=0)
+        objectives_std = np.std(all_objectives, axis=0)
+
+        print('\n'*2, 'objectives_mean, objectives_std :', objectives_mean, objectives_std, '\n'*2)
+
+        current_objectives = np.row_stack(job_results)
+        current_objectives = (current_objectives - objectives_mean) / objectives_std
         # job_results == F
         if arguments.use_single_objective:
-            out["F"] = np.expand_dims(np.sum(np.row_stack(job_results), axis=1), axis=1)
+            out["F"] = np.expand_dims(np.sum(current_objectives, axis=1), axis=1)
         else:
-            out["F"] = np.row_stack(job_results)
+            out["F"] = np.row_stack(current_objectives)
 
 
 
@@ -1487,7 +1500,7 @@ class NSGA2_DT(NSGA2):
 
 
         self.all_pop_run_X = []
-        self.initial_fit_th = 100
+        self.initial_fit_th = initial_fit_th
         self.rank_mode = rank_mode
 
     # mainly used to modify survival
@@ -1549,15 +1562,36 @@ class NSGA2_DT(NSGA2):
                 from sklearn.neural_network import MLPClassifier
                 from sklearn.preprocessing import StandardScaler
                 clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
-
-                all_pop_run_X = self.all_pop_run_X[:, 5:]
                 standardize = StandardScaler()
+
+                labels_to_remove = []
+                labels_to_encode = []
+                from customized_utils import keywords_for_encode
+                for label in self.problem.labels:
+                    for keyword in keywords_for_encode:
+                        if keyword in label:
+                            labels_to_encode.append(label)
+
+
+                all_pop_run_X = encode_and_remove_fields(self.all_pop_run_X, self.problem.mask, self.problem.labels, labels_to_remove, labels_to_encode)
                 all_pop_run_X = standardize.fit_transform(all_pop_run_X)
+
                 tmp_off_X = tmp_off.get("X")
-                tmp_off_X = tmp_off_X[:, 5:]
+                tmp_off_X = encode_and_remove_fields(tmp_off_X, self.problem.mask, self.problem.labels, labels_to_remove, labels_to_encode)
                 tmp_off_X = standardize.transform(tmp_off_X)
 
+
                 all_pop_run_y = np.array([check_bug(obj) for obj in self.problem.objectives_list])
+
+                # remove fields that have no change at all to reduce
+                # unnecessary parameters
+                print('all_pop_run_X.shape, tmp_off_X.shape')
+                print(all_pop_run_X.shape, tmp_off_X.shape)
+                kept_fields = np.std(all_pop_run_X, axis=0) > 0
+                all_pop_run_X = all_pop_run_X[:, kept_fields]
+                tmp_off_X = tmp_off_X[:, kept_fields]
+                print(all_pop_run_X.shape, tmp_off_X.shape)
+
 
                 clf.fit(all_pop_run_X, all_pop_run_y)
                 scores = -1*clf.predict_proba(tmp_off_X)[:, 1]
@@ -2023,7 +2057,8 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       repair=repair,
                       mating=mating,
                       n_offsprings=n_offsprings,
-                      rank_mode=rank_mode)
+                      rank_mode=rank_mode,
+                      initial_fit_th=initial_fit_th)
 
 
 

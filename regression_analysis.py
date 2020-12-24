@@ -1,14 +1,47 @@
 '''
 tomorrow TBD:
-1.try the other 2 scenarios here and think about impact of their variables
-# 2.simplify object_type to be more easily to be onehot encoded
-3.integrate remove/include into ga_fuzzing and run them to compare with vanilla nsga2
-4.improve adv in rerun to reflect remove/include
-5.try some heuristic from MTFuzz for adv to potentially produce better performance for this particular problem?
+
+# 1.need to improve objectives to make them more correlated with bugs;
+# (1) off-road and wronglane have cases where it is the front-side reach the wronglane/off-road, need to add another measure from the front and take the minimum to accomodate these observations
+#
+# (2)right now min_d and in fov are tied together and it is not good for diversity or very complex space search
+
+# test + debug this
+
+
+# 2.normalize each objective before multiplying with weight function?
+
+
+2.2 analyze new nsga2 correlation between objective and if bug 
+
+2.5 compare new nsga2 and nsga2 + DNN
+
+3.improve adv in rerun (properly handle encoding fields; early stop?)
+
+4.try some heuristic from MTFuzz for adv to potentially produce better performance for this particular problem?
+
+
+clustering for error type analysis? (what vectors used for clustering? feature vector of some DNNs?)
+
+maybe consider unique bugs in terms of if the actor is inside the view of the ego car?
+
+think about better way to process the "if condition" for waypoint_follower
+
+
+5 try regression
+
+5.8 change sklearn in ga_fuzzing to pytorch and integrate adv (applying adv attack on top ranked new configs) (if it shows some early promising results).
+
 6.try different config for town_05_front to get more out-of-road error? Or maybe improve the objective?
 
+6.3 let is_collision to be true only when a real collision bug happens
+6.5 dynamic weight adjustment (normalize each objective from previous generation objectives)
 
 
+7.ensemble idea (use validation for weighted average confidence?)?
+
+modify DNN objective for different types of bugs (i.e. different weights for different bugs assigned)?
+compare with random + DNN?
 
 
 
@@ -25,7 +58,7 @@ tomorrow TBD:
 Methods:
 0.better objective function for NN?
 1.better NN for better than random performance? figure out training loss decreases but testing loss increases; NN to rank with fine-grained signal?? (right now we only use binary and have not considered different types of bugs)
-2.RankNet to rank
+2.RankNet / learn to rank to rank???
 3.Adv perturbation on generated cases
 4.Inversion Model
 
@@ -101,12 +134,14 @@ from sklearn.dummy import DummyClassifier
 from sklearn.neural_network import MLPRegressor
 from sklearn.linear_model import LinearRegression
 
+from customized_utils import encode_and_remove_fields
+
 
 def reformat(cur_info):
     objectives = cur_info['objectives']
     is_bug = cur_info['is_bug']
 
-    ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, is_collision = objectives
+    ego_linear_speed, min_d, d_angle_norm, offroad_d, wronglane_d, dev_dist, is_collision, is_offroad, is_wrong_lane, is_run_red_light = objectives
     accident_x, accident_y = cur_info['loc']
 
 
@@ -120,183 +155,7 @@ def reformat(cur_info):
     assert len(x) == len(xl)
 
 
-
-    # town_05_right
-    # labels_to_encode = ['num_of_weathers', 'num_of_static', 'num_of_pedestrians', 'num_of_vehicles', 'num_of_pedestrian_types_0', 'num_of_vehicle_types_0', 'vehicle_waypoint_follower_0', 'vehicle_avoid_collision_0', 'num_of_vehicle_colors_0']
-
-
-
-
-    # town_04_front
-    labels_to_encode = ['num_of_weathers']
-
-    labels_to_remove = ['num_of_static', 'num_of_pedestrians', 'num_of_vehicles',
-     'num_of_pedestrian_types_0', 'num_of_pedestrian_types_1',
-     'num_of_pedestrian_types_2', 'num_of_pedestrian_types_3',
-     'num_of_pedestrian_types_4', 'num_of_pedestrian_types_5',
-     'num_of_pedestrian_types_6', 'num_of_pedestrian_types_7',
-     'num_of_pedestrian_types_8', 'num_of_pedestrian_types_9',
-     'num_of_vehicle_types_0', 'vehicle_waypoint_follower_0',
-     'vehicle_avoid_collision_0', 'num_of_vehicle_colors_0',
-     'num_of_vehicle_types_1', 'vehicle_waypoint_follower_1',
-     'vehicle_avoid_collision_1', 'num_of_vehicle_colors_1',
-     'num_of_vehicle_types_2', 'vehicle_waypoint_follower_2',
-     'vehicle_avoid_collision_2', 'num_of_vehicle_colors_2',
-     'num_of_vehicle_types_3', 'vehicle_waypoint_follower_3',
-     'vehicle_avoid_collision_3', 'num_of_vehicle_colors_3',
-     'num_of_vehicle_types_4', 'vehicle_waypoint_follower_4',
-     'vehicle_avoid_collision_4', 'num_of_vehicle_colors_4',
-     'num_of_vehicle_types_5', 'vehicle_waypoint_follower_5',
-     'vehicle_avoid_collision_5', 'num_of_vehicle_colors_5',
-     'num_of_vehicle_types_6', 'vehicle_waypoint_follower_6',
-     'vehicle_avoid_collision_6', 'num_of_vehicle_colors_6',
-     'num_of_vehicle_types_7', 'vehicle_waypoint_follower_7',
-     'vehicle_avoid_collision_7', 'num_of_vehicle_colors_7',
-     'num_of_vehicle_types_8', 'vehicle_waypoint_follower_8',
-     'vehicle_avoid_collision_8', 'num_of_vehicle_colors_8',
-     'num_of_vehicle_types_9', 'vehicle_waypoint_follower_9',
-     'vehicle_avoid_collision_9', 'num_of_vehicle_colors_9']
-
-
-
-
-    # town_05_front
-    # ['num_of_weathers', 'num_of_static', 'num_of_pedestrians', 'num_of_vehicles',
-    #  'num_of_pedestrian_types_0', 'num_of_vehicle_types_0',
-    #  'vehicle_waypoint_follower_0', 'vehicle_avoid_collision_0',
-    #  'num_of_vehicle_colors_0', 'num_of_vehicle_types_1',
-    #  'vehicle_waypoint_follower_1', 'vehicle_avoid_collision_1',
-    #  'num_of_vehicle_colors_1', 'num_of_vehicle_types_2',
-    #  'vehicle_waypoint_follower_2', 'vehicle_avoid_collision_2',
-    #  'num_of_vehicle_colors_2']
-
-
-    # labels_to_encode = ['num_of_weathers', 'num_of_pedestrian_types_0', 'num_of_vehicle_types_0',
-    #  'vehicle_waypoint_follower_0', 'vehicle_avoid_collision_0',
-    #  'num_of_vehicle_colors_0', 'num_of_vehicle_types_1',
-    #  'vehicle_waypoint_follower_1', 'vehicle_avoid_collision_1',
-    #  'num_of_vehicle_colors_1', 'num_of_vehicle_types_2',
-    #  'vehicle_waypoint_follower_2', 'vehicle_avoid_collision_2',
-    #  'num_of_vehicle_colors_2']
-    # labels_to_remove = []
-
-
-
-    def encode_and_remove_fields(x, mask, labels, labels_to_remove, labels_to_encode):
-        from sklearn.preprocessing import OneHotEncoder
-        # from object_types import weather_names, vehicle_colors, pedestrian_types, vehicle_types
-
-        weather_names = ['ClearNoon', 'ClearSunset', 'CloudyNoon', 'CloudySunset', 'WetNoon', 'WetSunset', 'MidRainyNoon', 'MidRainSunset', 'WetCloudyNoon', 'WetCloudySunset', 'HardRainNoon', 'HardRainSunset', 'SoftRainNoon', 'SoftRainSunset', 'ClearNight', 'CloudyNight', 'WetNight', 'MidRainNight', 'WetCloudyNight', 'HardRainNight', 'SoftRainNight']
-
-
-
-        # walker modifiable attributes: speed: float
-        pedestrian_types = ['walker.pedestrian.00'+f'{i:02d}' for i in range(1, 14)]
-
-
-        # vehicle types
-        # car
-        car_types = ['vehicle.audi.a2',
-        'vehicle.audi.tt',
-        'vehicle.mercedes-benz.coupe',
-        'vehicle.bmw.grandtourer',
-        'vehicle.audi.etron',
-        'vehicle.nissan.micra',
-        'vehicle.lincoln.mkz2017',
-        'vehicle.tesla.cybertruck',
-        'vehicle.dodge_charger.police',
-        'vehicle.tesla.model3',
-        'vehicle.toyota.prius',
-        'vehicle.seat.leon',
-        'vehicle.nissan.patrol',
-        'vehicle.mini.cooperst',
-        'vehicle.jeep.wrangler_rubicon',
-        'vehicle.mustang.mustang',
-        'vehicle.volkswagen.t2',
-        'vehicle.chevrolet.impala',
-        'vehicle.citroen.c3']
-
-        large_car_types = ['vehicle.carlamotors.carlacola']
-
-        # motorcycle
-        motorcycle_types = ['vehicle.yamaha.yzf',
-        'vehicle.harley-davidson.low_rider',
-        'vehicle.kawasaki.ninja']
-
-        # cyclist
-        cyclist_types = ['vehicle.bh.crossbike',
-        'vehicle.gazelle.omafiets',
-        'vehicle.diamondback.century']
-
-        vehicle_types = car_types + large_car_types + motorcycle_types + cyclist_types
-
-
-        # vehicle colors
-        # black, white, gray, silver, blue, red, brown, gold, green, tan, orange
-        vehicle_colors = ['(0, 0, 0)',
-        '(255, 255, 255)',
-        '(220, 220, 220)',
-        '(192, 192, 192)',
-        '(0, 0, 255)',
-        '(255, 0, 0)',
-        '(165,42,42)',
-        '(255,223,0)',
-        '(0,128,0)',
-        '(210,180,140)',
-        '(255,165,0)']
-
-
-
-
-        keywords = {'num_of_weathers': len(weather_names), 'num_of_vehicle_colors': len(vehicle_colors), 'num_of_pedestrian_types': len(pedestrian_types), 'num_of_vehicle_types': len(vehicle_types)}
-
-        keywords = {'num_of_weathers': len(weather_names)}
-
-
-
-        x = np.array(x).astype(np.float)
-        inds_to_remove = []
-        for label in labels_to_remove:
-            ind = labels.index(label)
-            inds_to_remove.append(ind)
-        inds_to_keep = list(set(range(len(x))) - set(inds_to_remove))
-        x = x[inds_to_keep]
-        mask = np.array(mask)[inds_to_keep].tolist()
-        labels = np.array(labels)[inds_to_keep].tolist()
-
-
-        encode_fields = []
-        inds_to_encode = []
-        for label in labels_to_encode:
-            for k, v in keywords.items():
-                if k in label:
-                    ind = labels.index(label)
-                    inds_to_encode.append(ind)
-
-                    encode_fields.append(v)
-                    break
-        inds_non_encode = list(set(range(len(x))) - set(inds_to_encode))
-
-        enc = OneHotEncoder(handle_unknown='ignore', sparse=False)
-        m = len(encode_fields)
-        data_for_fit_encode = np.zeros((int(np.sum(encode_fields)), m))
-        counter = 0
-        for i, encode_field in enumerate(encode_fields):
-            for j in range(encode_field):
-                data_for_fit_encode[counter, i] = j
-                counter += 1
-        enc.fit(data_for_fit_encode)
-
-        embed = np.array([x[inds_to_encode].astype(np.int)])
-        embed = enc.transform(embed)[0]
-
-        x = np.concatenate([embed, x[inds_non_encode]]).astype(np.float)
-        return x
-
-    # x = x[mask!='int']
-    x = encode_and_remove_fields(x, mask, labels, labels_to_remove, labels_to_encode)
-
-    return x, objectives, int(is_bug)
+    return x, objectives, int(is_bug), mask, labels
 
 
 
@@ -412,10 +271,10 @@ def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, t
 
     classifiers = [
         KNeighborsClassifier(5),
-        MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000),
+        MLPClassifier(hidden_layer_sizes=[150], solver='lbfgs', activation='tanh', max_iter=10000),
         AdaBoostClassifier(),
         DummyClassifier(strategy='stratified'),
-        NN_EnsembleClassifier(3),
+        NN_EnsembleClassifier(5),
         ]
 
     performance = {name:[] for name in names}
@@ -456,20 +315,87 @@ def load_data(subfolders):
     is_bug_list = []
 
     objectives_list = []
-
+    mask, labels = None, None
     for sub_folder in subfolders:
         if os.path.isdir(sub_folder):
             pickle_filename = os.path.join(sub_folder, 'cur_info.pickle')
             with open(pickle_filename, 'rb') as f_in:
                 cur_info = pickle.load(f_in)
-                data, objectives, is_bug = reformat(cur_info)
+                data, objectives, is_bug, mask, labels = reformat(cur_info)
                 data_list.append(data)
 
                 is_bug_list.append(is_bug)
                 objectives_list.append(objectives)
 
 
-    return np.array(data_list), np.array(is_bug_list), np.array(objectives_list)
+    # town_04_front
+    # labels_to_encode = ['num_of_weathers']
+    #
+    # labels_to_remove = ['num_of_static', 'num_of_pedestrians', 'num_of_vehicles',
+    #  'num_of_pedestrian_types_0', 'num_of_pedestrian_types_1',
+    #  'num_of_pedestrian_types_2', 'num_of_pedestrian_types_3',
+    #  'num_of_pedestrian_types_4', 'num_of_pedestrian_types_5',
+    #  'num_of_pedestrian_types_6', 'num_of_pedestrian_types_7',
+    #  'num_of_pedestrian_types_8', 'num_of_pedestrian_types_9',
+    #  'num_of_vehicle_types_0', 'vehicle_waypoint_follower_0',
+    #  'vehicle_avoid_collision_0', 'num_of_vehicle_colors_0',
+    #  'num_of_vehicle_types_1', 'vehicle_waypoint_follower_1',
+    #  'vehicle_avoid_collision_1', 'num_of_vehicle_colors_1',
+    #  'num_of_vehicle_types_2', 'vehicle_waypoint_follower_2',
+    #  'vehicle_avoid_collision_2', 'num_of_vehicle_colors_2',
+    #  'num_of_vehicle_types_3', 'vehicle_waypoint_follower_3',
+    #  'vehicle_avoid_collision_3', 'num_of_vehicle_colors_3',
+    #  'num_of_vehicle_types_4', 'vehicle_waypoint_follower_4',
+    #  'vehicle_avoid_collision_4', 'num_of_vehicle_colors_4',
+    #  'num_of_vehicle_types_5', 'vehicle_waypoint_follower_5',
+    #  'vehicle_avoid_collision_5', 'num_of_vehicle_colors_5',
+    #  'num_of_vehicle_types_6', 'vehicle_waypoint_follower_6',
+    #  'vehicle_avoid_collision_6', 'num_of_vehicle_colors_6',
+    #  'num_of_vehicle_types_7', 'vehicle_waypoint_follower_7',
+    #  'vehicle_avoid_collision_7', 'num_of_vehicle_colors_7',
+    #  'num_of_vehicle_types_8', 'vehicle_waypoint_follower_8',
+    #  'vehicle_avoid_collision_8', 'num_of_vehicle_colors_8',
+    #  'num_of_vehicle_types_9', 'vehicle_waypoint_follower_9',
+    #  'vehicle_avoid_collision_9', 'num_of_vehicle_colors_9']
+
+
+
+
+    # town_05_front
+    # ['num_of_weathers', 'num_of_static', 'num_of_pedestrians', 'num_of_vehicles',
+    #  'num_of_pedestrian_types_0', 'num_of_vehicle_types_0',
+    #  'vehicle_waypoint_follower_0', 'vehicle_avoid_collision_0',
+    #  'num_of_vehicle_colors_0', 'num_of_vehicle_types_1',
+    #  'vehicle_waypoint_follower_1', 'vehicle_avoid_collision_1',
+    #  'num_of_vehicle_colors_1', 'num_of_vehicle_types_2',
+    #  'vehicle_waypoint_follower_2', 'vehicle_avoid_collision_2',
+    #  'num_of_vehicle_colors_2']
+
+
+    # labels_to_encode = ['num_of_weathers', 'num_of_pedestrian_types_0', 'num_of_vehicle_types_0',
+    #  'vehicle_waypoint_follower_0', 'vehicle_avoid_collision_0',
+    #  'num_of_vehicle_colors_0', 'num_of_vehicle_types_1',
+    #  'vehicle_waypoint_follower_1', 'vehicle_avoid_collision_1',
+    #  'num_of_vehicle_colors_1', 'num_of_vehicle_types_2',
+    #  'vehicle_waypoint_follower_2', 'vehicle_avoid_collision_2',
+    #  'num_of_vehicle_colors_2']
+    # labels_to_remove = []
+
+
+    # town_05_right
+    labels_to_encode = ['num_of_weathers', 'num_of_pedestrian_types_0', 'num_of_vehicle_types_0',
+     'vehicle_waypoint_follower_0', 'vehicle_avoid_collision_0',
+     'num_of_vehicle_colors_0']
+    labels_to_remove = []
+
+    # x = x[mask!='int']
+    x = encode_and_remove_fields(data_list, mask, labels, labels_to_remove, labels_to_encode)
+
+    print(x.shape)
+    std = np.std(x, axis=0)
+    x = x[:, std>0]
+    print(x.shape)
+    return x, np.array(is_bug_list), np.array(objectives_list)
 
 
 def get_sorted_subfolders(parent_folder):
@@ -489,25 +415,47 @@ def get_sorted_subfolders(parent_folder):
 
 
 
+def analyze_objective_data(is_bug_list, objective_list):
+    from matplotlib import pyplot as plt
+    ind = 6
+    ind2 = 3
+    print(np.sum(objective_list[:, ind]))
 
+
+
+    cond1 = (is_bug_list==1) & (objective_list[:, ind]==1)
+    cond2 = (is_bug_list==0) & (objective_list[:, ind]==0)
+
+
+    print(np.where(cond1 == 1), objective_list[cond1, ind2])
+
+    plt.hist(objective_list[cond1, ind2], label='bug', alpha=0.5, bins=50)
+    plt.hist(objective_list[cond2, ind2], label='normal', alpha=0.5, bins=200)
+    plt.legend()
+    plt.show()
 
 if __name__ == '__main__':
-    mode = 'discrete'
+    mode = 'analysis'
     trial_num = 15
-    cutoff = 300
-    cutoff_end = 400
+    cutoff = 499
+    cutoff_end = 500
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town04_front_0/pedestrians_cross_street_town04/lbc/50_8_all'
     # 54.2+-1.5, 400: 218 VS 221, Ada 46
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_front_0/change_lane_town05_fixed_npc_num/lbc/50_8_all'
     # 51.5+-4, 400: 199 VS 203, 1000: 444 VS 421, Ada 43
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_8_all'
     # 55+-3, 400: 206 VS 178, Ada 59
-    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town04_front_0/pedestrians_cross_street_town04/lbc/50_8_all'
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_10_collision_new_objtype'
+    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_10_outofroad_new_objtype'
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_10_collision_new_objtype'
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_10_outofroad_new_objtype'
 
     subfolders = get_sorted_subfolders(parent_folder)
     X, is_bug_list, objective_list  = load_data(subfolders)
 
-    if mode == 'discrete':
+    if mode == 'analysis':
+        analyze_objective_data(is_bug_list, objective_list)
+    elif mode == 'discrete':
         classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_end, trial_num)
     else:
         regression_analysis(X, is_bug_list, objective_list, cutoff, cutoff_end, trial_num)

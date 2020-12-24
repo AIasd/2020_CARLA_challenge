@@ -1809,8 +1809,8 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1):
 
 
 def check_bug(objectives):
-    # speed needs to be large than 0.2 to avoid false positive
-    return objectives[0] > 0.2 or objectives[5] or objectives[6] or objectives[7]
+    # speed needs to be larger than 0.1 to avoid false positive
+    return objectives[0] > 0.1 or objectives[-3] or objectives[-2] or objectives[-1]
 
 
 def start_server(port):
@@ -1864,10 +1864,14 @@ def estimate_objectives(save_path, default_objectives):
 
     # set thresholds to avoid too large influence
     ego_linear_speed = 0
-    min_d = 7
+    min_d = 20
     offroad_d = 7
     wronglane_d = 7
     dev_dist = 0
+    d_angle_norm = 1
+
+    ego_linear_speed_max = 7
+    dev_dist_max = 7
 
     is_offroad = 0
     is_wrong_lane = 0
@@ -1886,6 +1890,8 @@ def estimate_objectives(save_path, default_objectives):
                 wronglane_d = np.min([wronglane_d, d])
             elif type == 'dev_dist':
                 dev_dist = np.max([dev_dist, d])
+            elif type == 'd_angle_norm':
+                d_angle_norm = np.min([d_angle_norm, d])
 
     x = None
     y = None
@@ -1937,10 +1943,10 @@ def estimate_objectives(save_path, default_objectives):
                     y = float(loc.group(2))
 
     # limit impact of too large values
-    ego_linear_speed = np.min([ego_linear_speed, 7])
-    dev_dist = np.min([dev_dist, 7])
+    ego_linear_speed = np.min([ego_linear_speed, ego_linear_speed_max])
+    dev_dist = np.min([dev_dist, dev_dist_max])
 
-    return [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, is_collision], (x, y), object_type, route_completion
+    return [ego_linear_speed, min_d, d_angle_norm, offroad_d, wronglane_d, dev_dist, is_collision, is_offroad, is_wrong_lane, is_run_red_light], (x, y), object_type, route_completion
 
 
 def norm_2d(loc_1, loc_2):
@@ -2007,7 +2013,15 @@ def angle_from_center_view_fov(target, ego, fov=90):
     ego_location = ego.get_location()
     ego_orientation = ego.get_transform().rotation.yaw
 
-    target_vector = np.array([target_location.x - ego_location.x, target_location.y - ego_location.y])
+    # hack: adjust to the front central camera's location
+    # this needs to be changed when the camera's location / fov change
+    dx = 1.3 * np.cos(np.deg2rad(ego_orientation-90))
+
+    ego_location = ego.get_location()
+    ego_x = ego_location.x+dx
+    ego_y = ego_location.y
+
+    target_vector = np.array([target_location.x - ego_x, target_location.y - ego_y])
     norm_target = np.linalg.norm(target_vector)
 
     if norm_target < 0.001:
@@ -2020,6 +2034,7 @@ def angle_from_center_view_fov(target, ego, fov=90):
     except:
         print('\n'*3, 'np.dot(forward_vector, target_vector)', np.dot(forward_vector, target_vector), norm_target, '\n'*3)
         d_angle = 0
+    # d_angle_norm == 0 when target within fov
     d_angle_norm = np.clip((d_angle - fov / 2) / (180 - fov / 2), 0, 1)
 
     return d_angle_norm
@@ -2028,7 +2043,122 @@ def angle_from_center_view_fov(target, ego, fov=90):
 
 
 
+keywords_for_encode = ['num_of_weathers', 'num_of_vehicle_colors','num_of_pedestrian_types', 'num_of_vehicle_types']
+#
+# keywords_for_remove = ['num_of_static', 'num_of_pedestrians', 'num_of_vehicles']
 
+def encode_and_remove_fields(x, mask, labels, labels_to_remove, labels_to_encode):
+    from sklearn.preprocessing import OneHotEncoder
+    from object_types import weather_names, vehicle_colors, pedestrian_types, vehicle_types
+
+    # weather_names = ['ClearNoon', 'ClearSunset', 'CloudyNoon', 'CloudySunset', 'WetNoon', 'WetSunset', 'MidRainyNoon', 'MidRainSunset', 'WetCloudyNoon', 'WetCloudySunset', 'HardRainNoon', 'HardRainSunset', 'SoftRainNoon', 'SoftRainSunset', 'ClearNight', 'CloudyNight', 'WetNight', 'MidRainNight', 'WetCloudyNight', 'HardRainNight', 'SoftRainNight']
+    #
+    #
+    #
+    # # walker modifiable attributes: speed: float
+    # pedestrian_types = ['walker.pedestrian.00'+f'{i:02d}' for i in range(1, 14)]
+    #
+    #
+    # # vehicle types
+    # # car
+    # car_types = ['vehicle.audi.a2',
+    # 'vehicle.audi.tt',
+    # 'vehicle.mercedes-benz.coupe',
+    # 'vehicle.bmw.grandtourer',
+    # 'vehicle.audi.etron',
+    # 'vehicle.nissan.micra',
+    # 'vehicle.lincoln.mkz2017',
+    # 'vehicle.tesla.cybertruck',
+    # 'vehicle.dodge_charger.police',
+    # 'vehicle.tesla.model3',
+    # 'vehicle.toyota.prius',
+    # 'vehicle.seat.leon',
+    # 'vehicle.nissan.patrol',
+    # 'vehicle.mini.cooperst',
+    # 'vehicle.jeep.wrangler_rubicon',
+    # 'vehicle.mustang.mustang',
+    # 'vehicle.volkswagen.t2',
+    # 'vehicle.chevrolet.impala',
+    # 'vehicle.citroen.c3']
+    #
+    # large_car_types = ['vehicle.carlamotors.carlacola']
+    #
+    # # motorcycle
+    # motorcycle_types = ['vehicle.yamaha.yzf',
+    # 'vehicle.harley-davidson.low_rider',
+    # 'vehicle.kawasaki.ninja']
+    #
+    # # cyclist
+    # cyclist_types = ['vehicle.bh.crossbike',
+    # 'vehicle.gazelle.omafiets',
+    # 'vehicle.diamondback.century']
+    #
+    # vehicle_types = car_types + large_car_types + motorcycle_types + cyclist_types
+    #
+    #
+    # # vehicle colors
+    # # black, white, gray, silver, blue, red, brown, gold, green, tan, orange
+    # vehicle_colors = ['(0, 0, 0)',
+    # '(255, 255, 255)',
+    # '(220, 220, 220)',
+    # '(192, 192, 192)',
+    # '(0, 0, 255)',
+    # '(255, 0, 0)',
+    # '(165,42,42)',
+    # '(255,223,0)',
+    # '(0,128,0)',
+    # '(210,180,140)',
+    # '(255,165,0)']
+
+
+
+
+    keywords_dict = {'num_of_weathers': len(weather_names), 'num_of_vehicle_colors': len(vehicle_colors), 'num_of_pedestrian_types': len(pedestrian_types), 'num_of_vehicle_types': len(vehicle_types)}
+
+    # keywords_dict = {'num_of_weathers': len(weather_names)}
+
+
+
+    x = np.array(x).astype(np.float)
+    inds_to_remove = []
+    for label in labels_to_remove:
+        ind = labels.index(label)
+        inds_to_remove.append(ind)
+    inds_to_keep = list(set(range(x.shape[1])) - set(inds_to_remove))
+    x = x[:, inds_to_keep]
+    mask = np.array(mask)[inds_to_keep].tolist()
+    labels = np.array(labels)[inds_to_keep].tolist()
+
+
+    encode_fields = []
+    inds_to_encode = []
+    for label in labels_to_encode:
+        for k, v in keywords_dict.items():
+            if k in label:
+                ind = labels.index(label)
+                inds_to_encode.append(ind)
+
+                encode_fields.append(v)
+                break
+    inds_non_encode = list(set(range(x.shape[1])) - set(inds_to_encode))
+
+    enc = OneHotEncoder(handle_unknown='ignore', sparse=False)
+    m = len(encode_fields)
+    data_for_fit_encode = np.zeros((int(np.sum(encode_fields)), m))
+    counter = 0
+    for i, encode_field in enumerate(encode_fields):
+        for j in range(encode_field):
+            data_for_fit_encode[counter, i] = j
+            counter += 1
+    enc.fit(data_for_fit_encode)
+
+    embed = np.array(x[:, inds_to_encode].astype(np.int))
+    embed = enc.transform(embed)
+
+    x = np.concatenate([embed, x[:, inds_non_encode]], axis=1).astype(np.float)
+
+
+    return x
 
 
 
