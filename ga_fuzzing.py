@@ -117,6 +117,20 @@ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 14 --pop_size 50 -r 't
 
 
 
+
+++ NSGA2-UN collision
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 10 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 500 --objective_weights 0 0 0 1 1 -1 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100
+
+++ NSGA2-UN DNN collision
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 10 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 500 --objective_weights 0 0 0 1 1 -1 0 0 0 0
+
+
+
+
+
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 3 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 12 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100
+
+
 -- scenario 2
 python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 600 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200
 
@@ -436,7 +450,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_and_remove_fields
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_and_remove_fields, remove_fields_not_changing, get_labels_to_encode
 
 
 from collections import deque
@@ -489,6 +503,10 @@ from pymoo.operators.sampling.random_sampling import FloatRandomSampling
 from pymoo.model.survival import Survival
 
 from distutils.dir_util import copy_tree
+
+
+
+from sklearn.preprocessing import StandardScaler
 
 
 default_objective_weights = np.array([-1, 1, 1, 1, 1, -1, 0, 0, 0, -1])
@@ -811,9 +829,7 @@ class MyProblem(Problem):
             violate_constraints = if_violate_constraints(x, customized_constraints, labels, verbose=True)
             if not_critical_region or violate_constraints:
                 objectives = default_objectives
-                F = np.array(objectives[:objective_weights.shape[0]]) * objective_weights
-                print(counter)
-                return F, None, None, None, objectives, 0, None
+                return objectives, None, None, None, 0, None
 
             else:
 
@@ -829,7 +845,7 @@ class MyProblem(Problem):
 
 
                 # [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, is_collision]
-                F = np.array(objectives[:objective_weights.shape[0]]) * objective_weights
+
                 is_bug = check_bug(objectives)
 
                 # change data in case the original x is used elsewhere
@@ -843,7 +859,7 @@ class MyProblem(Problem):
 
                 cur_info = {'counter':counter, 'x':x, 'data':data, 'objectives':objectives,  'loc':loc, 'object_type':object_type, 'labels':labels, 'mask':mask, 'xl':xl, 'xu':xu, 'is_bug':is_bug, 'route_completion':route_completion, 'info': info}
 
-                print(counter, is_bug, F, objectives)
+                print(counter, is_bug, objectives)
 
 
                 if is_bug:
@@ -869,7 +885,7 @@ class MyProblem(Problem):
                 with open(filename, 'rb') as f_in:
                     all_final_generated_transforms = pickle.load(f_in)
 
-                return F, loc, object_type, info, objectives, 1, all_final_generated_transforms
+                return objectives, loc, object_type, info, 1, all_final_generated_transforms
 
 
 
@@ -889,7 +905,7 @@ class MyProblem(Problem):
 
             for i in range(len(jobs)):
                 job = jobs[i]
-                F, loc, object_type, info, objectives, has_run, all_final_generated_transforms_i = job.result()
+                objectives, loc, object_type, info, has_run, all_final_generated_transforms_i = job.result()
                 all_final_generated_transforms_list.append(all_final_generated_transforms_i)
 
                 self.has_run_list.append(has_run)
@@ -930,9 +946,8 @@ class MyProblem(Problem):
                     self.y_list.append(0)
                 # we don't want to store port number
                 self.x_list.append(X[i])
-                self.F_list.append(F)
                 self.objectives_list.append(np.array(objectives))
-                job_results.append(F)
+                job_results.append(np.array(objectives))
 
             # print(all_final_generated_transforms_list)
 
@@ -984,6 +999,32 @@ class MyProblem(Problem):
                 submit_and_run_jobs(end_ind, X.shape[0], self.launch_server, job_results)
 
 
+
+            # standardize current objectives using all objectives so far
+            all_objectives = np.stack(self.objectives_list)
+            current_objectives = np.stack(job_results)
+            print('all_objectives.shape, current_objectives.shape', all_objectives.shape, current_objectives.shape)
+            standardize = StandardScaler()
+            standardize.fit(all_objectives)
+            standardize.transform(current_objectives)
+
+
+            current_objectives *= objective_weights
+
+            print('\n'*2, 'all_objectives_mean, all_objectives_std :', standardize.mean_, standardize.var_, '\n'*2)
+
+
+
+            if arguments.use_single_objective:
+                current_F = np.expand_dims(np.sum(current_objectives, axis=1), axis=1)
+            else:
+                current_F = np.row_stack(current_objectives)
+
+            out["F"] = current_F
+            self.F_list.append(current_F)
+
+
+
             time_elapsed = time.time() - self.start_time
             print('\n'*10)
             print('+'*100)
@@ -1015,11 +1056,6 @@ class MyProblem(Problem):
             num_of_wronglane = np.sum(np.array(self.bugs_type_list)==3)
             num_of_redlight = np.sum(np.array(self.bugs_type_list)==4)
 
-
-            # print(unique_collision_bugs, unique_offroad_bugs, unique_wronglane_bugs)
-            # print(unique_collision_bugs_inds_list, unique_offroad_bugs_inds_list, unique_wronglane_bugs_inds_list)
-            # print(unique_collision_num, unique_offroad_num, unique_wronglane_num)
-            # print()
 
             print(self.counter, self.has_run, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_collisions, num_of_offroad, num_of_wronglane, num_of_redlight, mean_objectives_this_generation, unique_collision_num, unique_offroad_num, unique_wronglane_num, unique_redlight_num)
             print(self.bugs_inds_list)
@@ -1057,19 +1093,7 @@ class MyProblem(Problem):
             print('npz saved')
 
 
-        all_objectives = np.stack(self.objectives_list)
-        objectives_mean = np.mean(all_objectives, axis=0)
-        objectives_std = np.std(all_objectives, axis=0)
 
-        print('\n'*2, 'objectives_mean, objectives_std :', objectives_mean, objectives_std, '\n'*2)
-
-        current_objectives = np.row_stack(job_results)
-        current_objectives = (current_objectives - objectives_mean) / objectives_std
-        # job_results == F
-        if arguments.use_single_objective:
-            out["F"] = np.expand_dims(np.sum(current_objectives, axis=1), axis=1)
-        else:
-            out["F"] = np.row_stack(current_objectives)
 
 
 
@@ -1511,7 +1535,7 @@ class NSGA2_DT(NSGA2):
             # do the mating using the current population
             tmp_off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
 
-            print('\n'*3, 'len 0', len(tmp_off), '\n'*3)
+            print('\n'*3, 'after mating len 0', len(tmp_off), '\n'*3)
 
             if len(tmp_off) < self.n_offsprings:
                 remaining_num = self.n_offsprings - len(tmp_off)
@@ -1521,7 +1545,7 @@ class NSGA2_DT(NSGA2):
                 tmp_off = Population.merge(tmp_off, remaining_off)
                 parents = Population.merge(parents, remaining_parrents)
 
-                print('\n'*3, 'len 1', len(tmp_off), '\n'*3)
+                print('\n'*3, 'unique after random generation len 1', len(tmp_off), '\n'*3)
 
             if len(tmp_off) < self.n_offsprings:
                 remaining_num = self.n_offsprings - len(tmp_off)
@@ -1531,7 +1555,7 @@ class NSGA2_DT(NSGA2):
                 tmp_off = Population.merge(tmp_off, remaining_off)
                 parents = Population.merge(parents, remaining_parrents)
 
-                print('\n'*3, 'len 2', len(tmp_off), '\n'*3)
+                print('\n'*3, 'random generation len 2', len(tmp_off), '\n'*3)
 
 
 
@@ -1565,32 +1589,23 @@ class NSGA2_DT(NSGA2):
                 standardize = StandardScaler()
 
                 labels_to_remove = []
-                labels_to_encode = []
-                from customized_utils import keywords_for_encode
-                for label in self.problem.labels:
-                    for keyword in keywords_for_encode:
-                        if keyword in label:
-                            labels_to_encode.append(label)
+                labels_to_encode = get_labels_to_encode(self.problem.labels)
 
 
-                all_pop_run_X = encode_and_remove_fields(self.all_pop_run_X, self.problem.mask, self.problem.labels, labels_to_remove, labels_to_encode)
+
+                # Encode + Remove non-changing fields + Standardize
+                all_pop_run_X, _, _, _, _ = encode_and_remove_fields(self.all_pop_run_X, self.problem.mask, self.problem.labels, labels_to_remove, labels_to_encode)
+                all_pop_run_X, _, kept_fields, _ = remove_fields_not_changing(all_pop_run_X)
                 all_pop_run_X = standardize.fit_transform(all_pop_run_X)
 
                 tmp_off_X = tmp_off.get("X")
-                tmp_off_X = encode_and_remove_fields(tmp_off_X, self.problem.mask, self.problem.labels, labels_to_remove, labels_to_encode)
+                tmp_off_X, _, _, _, _ = encode_and_remove_fields(tmp_off_X, self.problem.mask, self.problem.labels, labels_to_remove, labels_to_encode)
+                tmp_off_X = tmp_off_X[:, kept_fields]
                 tmp_off_X = standardize.transform(tmp_off_X)
 
 
                 all_pop_run_y = np.array([check_bug(obj) for obj in self.problem.objectives_list])
 
-                # remove fields that have no change at all to reduce
-                # unnecessary parameters
-                print('all_pop_run_X.shape, tmp_off_X.shape')
-                print(all_pop_run_X.shape, tmp_off_X.shape)
-                kept_fields = np.std(all_pop_run_X, axis=0) > 0
-                all_pop_run_X = all_pop_run_X[:, kept_fields]
-                tmp_off_X = tmp_off_X[:, kept_fields]
-                print(all_pop_run_X.shape, tmp_off_X.shape)
 
 
                 clf.fit(all_pop_run_X, all_pop_run_y)

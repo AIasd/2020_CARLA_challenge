@@ -1,22 +1,17 @@
 '''
 tomorrow TBD:
 
-# 1.need to improve objectives to make them more correlated with bugs;
-# (1) off-road and wronglane have cases where it is the front-side reach the wronglane/off-road, need to add another measure from the front and take the minimum to accomodate these observations
-#
-# (2)right now min_d and in fov are tied together and it is not good for diversity or very complex space search
+debug objectives not being optimized as expected (rethink about proper way to do standardization, objective/bug correlation, objectives change as time goes on)
 
-# test + debug this
-
-
-# 2.normalize each objective before multiplying with weight function?
-
-
-2.2 analyze new nsga2 correlation between objective and if bug 
-
+2.2 analyze new nsga2 correlation between objective and if bug
+2.3 try fitting DNN on new data
 2.5 compare new nsga2 and nsga2 + DNN
 
-3.improve adv in rerun (properly handle encoding fields; early stop?)
+3.improve adv in rerun (early stop to avoid overfitting (increasing test loss) -> make this automatic by checking validation loss elbow point) Also early stop adv attack at some point
+
+3.3 improve either search strategy or definition. the current way is extremelly close to sampling randomly for some scenarios due to probability theorem.
+
+3.5 feature importance + causal analysis through intervention for important fields? LIME/SHAP for individual bug config analysis and thus define uniqueness? cluster analysis and calculate+sort std of each field of each cluster to determine uniqueness? neighbor bugness?
 
 4.try some heuristic from MTFuzz for adv to potentially produce better performance for this particular problem?
 
@@ -134,7 +129,7 @@ from sklearn.dummy import DummyClassifier
 from sklearn.neural_network import MLPRegressor
 from sklearn.linear_model import LinearRegression
 
-from customized_utils import encode_and_remove_fields
+from customized_utils import encode_and_remove_fields, decode_fields, remove_fields_not_changing, recover_fields_not_changing, get_labels_to_encode
 
 
 def reformat(cur_info):
@@ -328,74 +323,18 @@ def load_data(subfolders):
                 objectives_list.append(objectives)
 
 
-    # town_04_front
-    # labels_to_encode = ['num_of_weathers']
-    #
-    # labels_to_remove = ['num_of_static', 'num_of_pedestrians', 'num_of_vehicles',
-    #  'num_of_pedestrian_types_0', 'num_of_pedestrian_types_1',
-    #  'num_of_pedestrian_types_2', 'num_of_pedestrian_types_3',
-    #  'num_of_pedestrian_types_4', 'num_of_pedestrian_types_5',
-    #  'num_of_pedestrian_types_6', 'num_of_pedestrian_types_7',
-    #  'num_of_pedestrian_types_8', 'num_of_pedestrian_types_9',
-    #  'num_of_vehicle_types_0', 'vehicle_waypoint_follower_0',
-    #  'vehicle_avoid_collision_0', 'num_of_vehicle_colors_0',
-    #  'num_of_vehicle_types_1', 'vehicle_waypoint_follower_1',
-    #  'vehicle_avoid_collision_1', 'num_of_vehicle_colors_1',
-    #  'num_of_vehicle_types_2', 'vehicle_waypoint_follower_2',
-    #  'vehicle_avoid_collision_2', 'num_of_vehicle_colors_2',
-    #  'num_of_vehicle_types_3', 'vehicle_waypoint_follower_3',
-    #  'vehicle_avoid_collision_3', 'num_of_vehicle_colors_3',
-    #  'num_of_vehicle_types_4', 'vehicle_waypoint_follower_4',
-    #  'vehicle_avoid_collision_4', 'num_of_vehicle_colors_4',
-    #  'num_of_vehicle_types_5', 'vehicle_waypoint_follower_5',
-    #  'vehicle_avoid_collision_5', 'num_of_vehicle_colors_5',
-    #  'num_of_vehicle_types_6', 'vehicle_waypoint_follower_6',
-    #  'vehicle_avoid_collision_6', 'num_of_vehicle_colors_6',
-    #  'num_of_vehicle_types_7', 'vehicle_waypoint_follower_7',
-    #  'vehicle_avoid_collision_7', 'num_of_vehicle_colors_7',
-    #  'num_of_vehicle_types_8', 'vehicle_waypoint_follower_8',
-    #  'vehicle_avoid_collision_8', 'num_of_vehicle_colors_8',
-    #  'num_of_vehicle_types_9', 'vehicle_waypoint_follower_9',
-    #  'vehicle_avoid_collision_9', 'num_of_vehicle_colors_9']
+    return data_list, np.array(is_bug_list), np.array(objectives_list), mask, labels
 
-
-
-
-    # town_05_front
-    # ['num_of_weathers', 'num_of_static', 'num_of_pedestrians', 'num_of_vehicles',
-    #  'num_of_pedestrian_types_0', 'num_of_vehicle_types_0',
-    #  'vehicle_waypoint_follower_0', 'vehicle_avoid_collision_0',
-    #  'num_of_vehicle_colors_0', 'num_of_vehicle_types_1',
-    #  'vehicle_waypoint_follower_1', 'vehicle_avoid_collision_1',
-    #  'num_of_vehicle_colors_1', 'num_of_vehicle_types_2',
-    #  'vehicle_waypoint_follower_2', 'vehicle_avoid_collision_2',
-    #  'num_of_vehicle_colors_2']
-
-
-    # labels_to_encode = ['num_of_weathers', 'num_of_pedestrian_types_0', 'num_of_vehicle_types_0',
-    #  'vehicle_waypoint_follower_0', 'vehicle_avoid_collision_0',
-    #  'num_of_vehicle_colors_0', 'num_of_vehicle_types_1',
-    #  'vehicle_waypoint_follower_1', 'vehicle_avoid_collision_1',
-    #  'num_of_vehicle_colors_1', 'num_of_vehicle_types_2',
-    #  'vehicle_waypoint_follower_2', 'vehicle_avoid_collision_2',
-    #  'num_of_vehicle_colors_2']
-    # labels_to_remove = []
-
-
+def encode_and_remove_x(data_list, mask, labels):
     # town_05_right
-    labels_to_encode = ['num_of_weathers', 'num_of_pedestrian_types_0', 'num_of_vehicle_types_0',
-     'vehicle_waypoint_follower_0', 'vehicle_avoid_collision_0',
-     'num_of_vehicle_colors_0']
+    labels_to_encode = get_labels_to_encode(labels)
     labels_to_remove = []
 
-    # x = x[mask!='int']
-    x = encode_and_remove_fields(data_list, mask, labels, labels_to_remove, labels_to_encode)
+    x, enc, inds_to_encode, inds_non_encode, encode_fields = encode_and_remove_fields(data_list, mask, labels, labels_to_remove, labels_to_encode)
 
-    print(x.shape)
-    std = np.std(x, axis=0)
-    x = x[:, std>0]
-    print(x.shape)
-    return x, np.array(is_bug_list), np.array(objectives_list)
+    x, x_removed, kept_fields, removed_fields = remove_fields_not_changing(x)
+
+    return x
 
 
 def get_sorted_subfolders(parent_folder):
@@ -417,8 +356,8 @@ def get_sorted_subfolders(parent_folder):
 
 def analyze_objective_data(is_bug_list, objective_list):
     from matplotlib import pyplot as plt
-    ind = 6
-    ind2 = 3
+    ind = -2
+    ind2 = 1
     print(np.sum(objective_list[:, ind]))
 
 
@@ -427,18 +366,20 @@ def analyze_objective_data(is_bug_list, objective_list):
     cond2 = (is_bug_list==0) & (objective_list[:, ind]==0)
 
 
-    print(np.where(cond1 == 1), objective_list[cond1, ind2])
+    print(np.where(cond1 == 1))
+    print(objective_list[cond1, ind2])
+    print(objective_list[cond2, ind2])
 
     plt.hist(objective_list[cond1, ind2], label='bug', alpha=0.5, bins=50)
-    plt.hist(objective_list[cond2, ind2], label='normal', alpha=0.5, bins=200)
+    plt.hist(objective_list[cond2, ind2], label='normal', alpha=0.5, bins=100)
     plt.legend()
     plt.show()
 
 if __name__ == '__main__':
-    mode = 'analysis'
+    mode = 'discrete'
     trial_num = 15
-    cutoff = 499
-    cutoff_end = 500
+    cutoff = 500
+    cutoff_end = 600
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town04_front_0/pedestrians_cross_street_town04/lbc/50_8_all'
     # 54.2+-1.5, 400: 218 VS 221, Ada 46
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_front_0/change_lane_town05_fixed_npc_num/lbc/50_8_all'
@@ -446,12 +387,14 @@ if __name__ == '__main__':
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_8_all'
     # 55+-3, 400: 206 VS 178, Ada 59
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_10_collision_new_objtype'
-    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_10_outofroad_new_objtype'
+    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_out_of_road_new_new'
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_10_collision_new_objtype'
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_10_outofroad_new_objtype'
 
     subfolders = get_sorted_subfolders(parent_folder)
-    X, is_bug_list, objective_list  = load_data(subfolders)
+    X, is_bug_list, objective_list, mask, labels  = load_data(subfolders)
+
+    X = encode_and_remove_x(X, mask, labels)
 
     if mode == 'analysis':
         analyze_objective_data(is_bug_list, objective_list)

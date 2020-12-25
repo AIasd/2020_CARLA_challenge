@@ -2042,82 +2042,12 @@ def angle_from_center_view_fov(target, ego, fov=90):
 
 
 
-
-keywords_for_encode = ['num_of_weathers', 'num_of_vehicle_colors','num_of_pedestrian_types', 'num_of_vehicle_types']
-#
-# keywords_for_remove = ['num_of_static', 'num_of_pedestrians', 'num_of_vehicles']
-
 def encode_and_remove_fields(x, mask, labels, labels_to_remove, labels_to_encode):
     from sklearn.preprocessing import OneHotEncoder
     from object_types import weather_names, vehicle_colors, pedestrian_types, vehicle_types
 
-    # weather_names = ['ClearNoon', 'ClearSunset', 'CloudyNoon', 'CloudySunset', 'WetNoon', 'WetSunset', 'MidRainyNoon', 'MidRainSunset', 'WetCloudyNoon', 'WetCloudySunset', 'HardRainNoon', 'HardRainSunset', 'SoftRainNoon', 'SoftRainSunset', 'ClearNight', 'CloudyNight', 'WetNight', 'MidRainNight', 'WetCloudyNight', 'HardRainNight', 'SoftRainNight']
-    #
-    #
-    #
-    # # walker modifiable attributes: speed: float
-    # pedestrian_types = ['walker.pedestrian.00'+f'{i:02d}' for i in range(1, 14)]
-    #
-    #
-    # # vehicle types
-    # # car
-    # car_types = ['vehicle.audi.a2',
-    # 'vehicle.audi.tt',
-    # 'vehicle.mercedes-benz.coupe',
-    # 'vehicle.bmw.grandtourer',
-    # 'vehicle.audi.etron',
-    # 'vehicle.nissan.micra',
-    # 'vehicle.lincoln.mkz2017',
-    # 'vehicle.tesla.cybertruck',
-    # 'vehicle.dodge_charger.police',
-    # 'vehicle.tesla.model3',
-    # 'vehicle.toyota.prius',
-    # 'vehicle.seat.leon',
-    # 'vehicle.nissan.patrol',
-    # 'vehicle.mini.cooperst',
-    # 'vehicle.jeep.wrangler_rubicon',
-    # 'vehicle.mustang.mustang',
-    # 'vehicle.volkswagen.t2',
-    # 'vehicle.chevrolet.impala',
-    # 'vehicle.citroen.c3']
-    #
-    # large_car_types = ['vehicle.carlamotors.carlacola']
-    #
-    # # motorcycle
-    # motorcycle_types = ['vehicle.yamaha.yzf',
-    # 'vehicle.harley-davidson.low_rider',
-    # 'vehicle.kawasaki.ninja']
-    #
-    # # cyclist
-    # cyclist_types = ['vehicle.bh.crossbike',
-    # 'vehicle.gazelle.omafiets',
-    # 'vehicle.diamondback.century']
-    #
-    # vehicle_types = car_types + large_car_types + motorcycle_types + cyclist_types
-    #
-    #
-    # # vehicle colors
-    # # black, white, gray, silver, blue, red, brown, gold, green, tan, orange
-    # vehicle_colors = ['(0, 0, 0)',
-    # '(255, 255, 255)',
-    # '(220, 220, 220)',
-    # '(192, 192, 192)',
-    # '(0, 0, 255)',
-    # '(255, 0, 0)',
-    # '(165,42,42)',
-    # '(255,223,0)',
-    # '(0,128,0)',
-    # '(210,180,140)',
-    # '(255,165,0)']
-
-
-
-
     keywords_dict = {'num_of_weathers': len(weather_names), 'num_of_vehicle_colors': len(vehicle_colors), 'num_of_pedestrian_types': len(pedestrian_types), 'num_of_vehicle_types': len(vehicle_types)}
-
     # keywords_dict = {'num_of_weathers': len(weather_names)}
-
-
 
     x = np.array(x).astype(np.float)
     inds_to_remove = []
@@ -2126,6 +2056,7 @@ def encode_and_remove_fields(x, mask, labels, labels_to_remove, labels_to_encode
         inds_to_remove.append(ind)
     inds_to_keep = list(set(range(x.shape[1])) - set(inds_to_remove))
     x = x[:, inds_to_keep]
+    print('x.shape, len(mask)', x.shape, len(mask))
     mask = np.array(mask)[inds_to_keep].tolist()
     labels = np.array(labels)[inds_to_keep].tolist()
 
@@ -2143,8 +2074,10 @@ def encode_and_remove_fields(x, mask, labels, labels_to_remove, labels_to_encode
     inds_non_encode = list(set(range(x.shape[1])) - set(inds_to_encode))
 
     enc = OneHotEncoder(handle_unknown='ignore', sparse=False)
-    m = len(encode_fields)
-    data_for_fit_encode = np.zeros((int(np.sum(encode_fields)), m))
+
+    embed_dims = int(np.sum(encode_fields))
+    embed_fields_num = len(encode_fields)
+    data_for_fit_encode = np.zeros((embed_dims, embed_fields_num))
     counter = 0
     for i, encode_field in enumerate(encode_fields):
         for j in range(encode_field):
@@ -2158,17 +2091,116 @@ def encode_and_remove_fields(x, mask, labels, labels_to_remove, labels_to_encode
     x = np.concatenate([embed, x[:, inds_non_encode]], axis=1).astype(np.float)
 
 
-    return x
+
+    return x, enc, inds_to_encode, inds_non_encode, encode_fields
 
 
+def max_one_hot_op(images, encode_fields):
+    m = np.sum(encode_fields)
+    one_hotezed_images_embed = np.zeros([images.shape[0], m])
+    s = 0
+    for field_len in encode_fields:
+        max_inds = np.argmax(images[:, s:s+field_len], axis=1)
+        one_hotezed_images_embed[np.arange(images.shape[0]), s+max_inds] = 1
+        s += field_len
+    images[:, :m] = one_hotezed_images_embed
 
 
+def customized_standardize(X, standardize, m, partial=True):
+    # print(X[:, :m].shape, standardize.transform(X[:, m:]).shape)
+    if partial:
+        res = np.concatenate([X[:, :m], standardize.transform(X[:, m:])], axis=1)
+    else:
+        res = standardize.transform(X)
+    return res
 
+def customized_inverse_standardize(X, standardize, m, partial=True):
+    if partial:
+        res = np.concatenate([X[:, :m], standardize.inverse_transform(X[:, m:])], axis=1)
+    else:
+        res = standardize.inverse_transform(X)
+    return res
+
+def decode_fields(x, enc, inds_to_encode, inds_non_encode, encode_fields, adv=False):
+    n = x.shape[0]
+    m = len(inds_to_encode) + len(inds_non_encode)
+    embed_dims = np.sum(encode_fields)
+
+    embed = x[:, :embed_dims]
+    kept = x[:, embed_dims:]
+
+    if adv:
+        one_hot_embed = np.zeros(embed.shape)
+        s = 0
+        for field_len in encode_fields:
+            max_inds = np.argmax(x[:, s:s+field_len], axis=1)
+            one_hot_embed[np.arange(x.shape[0]), s+max_inds] = 1
+            s += field_len
+        embed = one_hot_embed
+
+    x_encoded = enc.inverse_transform(embed)
+    # print('encode_fields', encode_fields)
+    # print('embed', embed[0], x_encoded[0])
+    x_decoded = np.zeros([n, m])
+    x_decoded[:, inds_non_encode] = kept
+    x_decoded[:, inds_to_encode] = x_encoded
+
+    return x_decoded
+
+
+def remove_fields_not_changing(x, embed_dims=0):
+
+    cond = np.std(x, axis=0) > 0
+    kept_fields = np.where(cond)[0]
+    if embed_dims > 0:
+        kept_fields = list(set(kept_fields).union(set(range(embed_dims))))
+
+    removed_fields = list(set(range(x.shape[1])) - set(kept_fields))
+    x_removed = x[:, removed_fields]
+    x = x[:, kept_fields]
+    return x, x_removed, kept_fields, removed_fields
+
+
+def recover_fields_not_changing(x, x_removed, kept_fields, removed_fields):
+    n = x.shape[0]
+    m = len(kept_fields) + len(removed_fields)
+
+    # this is True usually when adv is used
+    if x_removed.shape[0] != n:
+        x_removed = np.array([x_removed[0] for _ in range(n)])
+    x_recovered = np.zeros([n, m])
+    x_recovered[:, kept_fields] = x
+    x_recovered[:, removed_fields] = x_removed
+
+    return x_recovered
+
+
+def get_labels_to_encode(labels):
+    # hack: explicitly listing keywords for encode to be imported
+    keywords_for_encode = ['num_of_weathers', 'num_of_vehicle_colors','num_of_pedestrian_types', 'num_of_vehicle_types']
+    labels_to_encode = []
+    for label in labels:
+        for keyword in keywords_for_encode:
+            if keyword in label:
+                labels_to_encode.append(label)
+    return labels_to_encode
+
+
+def encode_bounds(xl, xu, inds_to_encode, inds_non_encode, encode_fields):
+    m1 = np.sum(encode_fields)
+    m2 = len(inds_non_encode)
+    m = m1 + m2
+
+    xl_embed, xu_embed = np.zeros(m1), np.ones(m1)
+
+    xl_new = np.concatenate([xl_embed, xl[inds_non_encode]])
+    xu_new = np.concatenate([xu_embed, xu[inds_non_encode]])
+
+    return xl_new, xu_new
 
 
 
 # analysis
-
 def draw_auc_roc_for_scores(scores, y_test):
     inds_sorted = np.argsort(scores)
     tp, fp = 0, 0

@@ -5,7 +5,7 @@ import random
 import pickle
 import numpy as np
 from datetime import datetime
-from customized_utils import make_hierarchical_dir, convert_x_to_customized_data, exit_handler, customized_routes, parse_route_and_scenario, check_bug
+from customized_utils import make_hierarchical_dir, convert_x_to_customized_data, exit_handler, customized_routes, parse_route_and_scenario, check_bug, get_labels_to_encode, encode_and_remove_fields, decode_fields, remove_fields_not_changing, recover_fields_not_changing, encode_bounds, max_one_hot_op, customized_standardize, customized_inverse_standardize
 import atexit
 
 import traceback
@@ -232,159 +232,184 @@ is_save = True
 
 
 
-def get_adv_configs(X_train, y_train, X_test, y_test, xl, xu, standardize, mask):
-    # use_cuda = True
-    # device = torch.device("cuda" if use_cuda else "cpu")
-    # input_size = X_train.shape[1]
-    # hidden_size = 100
-    # num_classes = 1
-    # num_epochs = 500
-    #
-    #
-    # class VanillaDataset(Data.Dataset):
-    #     def __init__(self, X, y):
-    #         self.X = X
-    #         self.y = y
-    #
-    #     def __len__(self):
-    #         return len(self.y)
-    #
-    #     def __getitem__(self, idx):
-    #         return (self.X[idx], self.y[idx])
-    #
-    # class Net(nn.Module):
-    #     def __init__(self, input_size, hidden_size, num_classes):
-    #         super(Net, self).__init__()
-    #         self.fc1 = nn.Linear(input_size, hidden_size)
-    #         self.tanh = nn.Tanh()
-    #         self.fc2 = nn.Linear(hidden_size, num_classes)
-    #         self.sigmoid = nn.Sigmoid()
-    #     def forward(self, x):
-    #         out = self.fc1(x)
-    #         out = self.tanh(out)
-    #         out = self.fc2(out)
-    #         out = self.sigmoid(out)
-    #         return out
-    #
-    # def pgd_attack(model, images, labels, xl, xu, eps=0.3, alpha=2/255, iters=40) :
-    #     images = torch.from_numpy(images).to(device).float()
-    #     labels = torch.from_numpy(labels).to(device).float()
-    #
-    #     xl = torch.from_numpy(xl).to(device).float()
-    #     xu = torch.from_numpy(xu).to(device).float()
-    #
-    #     loss = nn.BCELoss()
-    #
-    #     ori_images = images.data
-    #
-    #     for i in range(iters) :
-    #         images.requires_grad = True
-    #         outputs = model(images)
-    #         model.zero_grad()
-    #
-    #         cost = loss(outputs, labels).to(device)
-    #         cost.backward()
-    #
-    #         adv_images = images + alpha*images.grad.sign()
-    #         eta = torch.clip(adv_images - ori_images, min=-eps, max=eps)
-    #         images = torch.max(torch.min(ori_images + eta, xu), xl).detach_()
-    #
-    #     images = standardize.inverse_transform(images.cpu())[0]
-    #     images[mask=='int'] = np.round(images[mask=='int'])
-    #
-    #     return images
-    #
-    # def validation(model, test_loader):
-    #     mean_loss = []
-    #     model.eval()
-    #     for i, (x_batch, y_batch) in enumerate(test_loader):
-    #         x_batch = x_batch.to(device).float()
-    #         y_batch = y_batch.to(device).float()
-    #
-    #         y_pred_batch = model(x_batch).squeeze()
-    #         loss = criterion(y_pred_batch, y_batch)
-    #         mean_loss.append(loss.cpu().detach().numpy())
-    #         print('test', y_pred_batch, y_batch)
-    #
-    #     mean_loss = np.mean(mean_loss)
-    #
-    #     return mean_loss
-    #
-    # model = Net(input_size, hidden_size, num_classes)
-    # model.cuda()
-    #
-    # criterion = nn.BCELoss()
-    #
-    #
-    # # optimizer = torch.optim.LBFGS(model.parameters())
-    # optimizer = torch.optim.Adam(model.parameters())
-    #
-    #
-    # d_train = VanillaDataset(X_train, y_train)
-    # train_loader = Data.DataLoader(d_train, batch_size=20, shuffle=True)
-    #
-    # d_test = VanillaDataset(X_test, y_test)
-    # test_loader = Data.DataLoader(d_test, batch_size=5, shuffle=True)
-    #
-    #
-    #
-    #
-    #
-    #
-    # # Train the Model
-    # counter = 0
-    # for epoch in range(num_epochs):
-    #     for i, (x_batch, y_batch) in enumerate(train_loader):
-    #         x_batch = x_batch.to(device).float()
-    #         y_batch = y_batch.to(device).float()
-    #
-    #         # LBFGS
-    #         # def closure():
-    #         #     optimizer.zero_grad()
-    #         #     y_pred_batch = model(x_batch).squeeze()
-    #         #     loss = criterion(y_pred_batch, y_batch)
-    #         #     loss.backward()
-    #         #     return loss
-    #         # optimizer.step(closure)
-    #
-    #
-    #         # Adam
-    #         optimizer.zero_grad()
-    #         y_pred_batch = model(x_batch).squeeze()
-    #         loss = criterion(y_pred_batch, y_batch)
-    #         loss.backward()
-    #         optimizer.step()
-    #
-    #         counter += 1
-    #         if counter % 10 == 0:
-    #             print ('Epoch [%d/%d], Step %d, Loss: %.4f'
-    #                    %(epoch+1, num_epochs, counter, loss))
-    #             print('train', y_pred_batch, y_batch)
-    #         if counter % 100 == 0:
-    #             mean_loss = validation(model, test_loader)
-    #             print ('Epoch [%d/%d], Step %d, Test Mean Loss: %.4f'
-    #                    %(epoch+1, num_epochs, counter, mean_loss))
-    #             model.train()
-    #
-    #
-    # # adv attack the trained mlp to get adversarial configs
-    # model.eval()
-    # label = 1
+def get_adv_configs(X_train, y_train, X_test, y_test, xl, xu, standardize, encode_fields):
+    use_cuda = True
+    device = torch.device("cuda" if use_cuda else "cpu")
+    input_size = X_train.shape[1]
+    hidden_size = 100
+    num_classes = 1
+    num_epochs = 30
+
+
+    class VanillaDataset(Data.Dataset):
+        def __init__(self, X, y):
+            self.X = X
+            self.y = y
+
+        def __len__(self):
+            return len(self.y)
+
+        def __getitem__(self, idx):
+            return (self.X[idx], self.y[idx])
+
+    class Net(nn.Module):
+        def __init__(self, input_size, hidden_size, num_classes):
+            super(Net, self).__init__()
+            self.fc1 = nn.Linear(input_size, hidden_size)
+            self.tanh = nn.Tanh()
+            self.fc2 = nn.Linear(hidden_size, num_classes)
+            self.sigmoid = nn.Sigmoid()
+        def forward(self, x):
+            out = self.fc1(x)
+            out = self.tanh(out)
+            out = self.fc2(out)
+            out = self.sigmoid(out)
+            return out
+
+    def pgd_attack(model, images, labels, xl, xu, eps=0.3, alpha=2/255, iters=40):
+        images = torch.from_numpy(images).to(device).float()
+        labels = torch.from_numpy(labels).to(device).float()
+
+        xl = torch.from_numpy(xl).to(device).float()
+        xu = torch.from_numpy(xu).to(device).float()
+
+        loss = nn.BCELoss()
+
+        ori_images = images.data
+        m = np.sum(encode_fields)
+
+        for i in range(iters) :
+            images.requires_grad = True
+            outputs = model(images)
+            model.zero_grad()
+
+            cost = loss(outputs, labels).to(device)
+            cost.backward()
+
+            adv_images = images + alpha*images.grad.sign()
+            eta = torch.clip(adv_images - ori_images, min=-eps, max=eps)
+            images = torch.max(torch.min(ori_images + eta, xu), xl).detach_()
+
+
+            one_hotezed_images_embed = torch.zeros([images.shape[0], m])
+            s = 0
+            # print(encode_fields)
+            for field_len in encode_fields:
+                max_inds = torch.argmax(images[:, s:s+field_len], axis=1)
+                one_hotezed_images_embed[torch.arange(images.shape[0]), s+max_inds] = 1
+                # print(images.cpu().detach().numpy())
+                # print(field_len, max_inds.cpu().detach().numpy())
+                # print(one_hotezed_images_embed.cpu().detach().numpy())
+                s += field_len
+            images[:, :m] = one_hotezed_images_embed
+            # print(images.cpu().detach().numpy())
+        images = images.cpu().detach().numpy()
+        images = images[0]
+        return images
+
+    def validation(model, test_loader):
+        mean_loss = []
+        mean_acc = []
+        model.eval()
+        for i, (x_batch, y_batch) in enumerate(test_loader):
+            x_batch = x_batch.to(device).float()
+            y_batch = y_batch.to(device).float()
+
+            y_pred_batch = model(x_batch).squeeze()
+
+            loss = criterion(y_pred_batch, y_batch)
+            loss_np = loss.cpu().detach().numpy()
+
+            y_batch_np = y_batch.cpu().detach().numpy()
+            y_pred_batch_np = y_pred_batch.cpu().detach().numpy()
+
+            acc = np.mean(np.round(y_pred_batch_np) == y_batch_np)
+
+
+            mean_loss.append(loss_np)
+            mean_acc.append(acc)
+            # print('test', y_pred_batch, y_batch, loss_np, acc)
+
+        mean_loss = np.mean(mean_loss)
+        mean_acc = np.mean(mean_acc)
+
+        return mean_loss, mean_acc
+
+    model = Net(input_size, hidden_size, num_classes)
+    model.cuda()
+
+    criterion = nn.BCELoss()
+
+
+    # optimizer = torch.optim.LBFGS(model.parameters())
+    optimizer = torch.optim.Adam(model.parameters())
+
+
+    d_train = VanillaDataset(X_train, y_train)
+    train_loader = Data.DataLoader(d_train, batch_size=20, shuffle=True)
+
+    d_test = VanillaDataset(X_test, y_test)
+    test_loader = Data.DataLoader(d_test, batch_size=5, shuffle=True)
+
+
+
+
+
+
+    # Train the Model
+    counter = 0
+    for epoch in range(num_epochs):
+        for i, (x_batch, y_batch) in enumerate(train_loader):
+            x_batch = x_batch.to(device).float()
+            y_batch = y_batch.to(device).float()
+
+            # LBFGS
+            # def closure():
+            #     optimizer.zero_grad()
+            #     y_pred_batch = model(x_batch).squeeze()
+            #     loss = criterion(y_pred_batch, y_batch)
+            #     loss.backward()
+            #     return loss
+            # optimizer.step(closure)
+
+
+            # Adam
+            optimizer.zero_grad()
+            y_pred_batch = model(x_batch).squeeze()
+            loss = criterion(y_pred_batch, y_batch)
+            loss.backward()
+            optimizer.step()
+
+            counter += 1
+            # if counter % 10 == 0:
+            #     print ('Epoch [%d/%d], Step %d, Loss: %.4f'
+            #            %(epoch+1, num_epochs, counter, loss))
+            #     print('train', y_pred_batch, y_batch)
+            if counter % 50 == 0:
+                mean_loss, mean_acc = validation(model, test_loader)
+                print ('Epoch [%d/%d], Step %d, Test Mean Loss: %.4f, Test Mean Accuracy: %.4f'
+                       %(epoch+1, num_epochs, counter, mean_loss, mean_acc))
+                model.train()
+
+
+    # adv attack the trained mlp to get adversarial configs
+    model.eval()
+    label = 1
     test_x_adv_list = []
-    #
-    # for test_x in X_test:
-    #     test_x_adv = pgd_attack(model, np.array([test_x]), np.array([[label]]), xl, xu)
-    #     test_x_adv_list.append(test_x_adv)
+
+    for test_x in X_test:
+        test_x_adv = pgd_attack(model, np.array([test_x]), np.array([[label]]), xl, xu)
+        # print('test_x, test_x_adv', test_x, test_x_adv)
+        test_x_adv_list.append(test_x_adv)
 
 
-    from sklearn.neural_network import MLPClassifier
-    clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
-    clf.fit(X_train, y_train)
+    # from sklearn.neural_network import MLPClassifier
+    # clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
+    # clf.fit(X_train, y_train)
     # score = clf.score(X_test, y_test)
-    # y_pred = clf.predict(X_test)
-    y_pred = clf.predict_proba(X_test)[:, 1]
-    print(y_test, y_pred)
-    print(np.mean(np.abs(y_test-y_pred)))
+    # y_pred = clf.predict_proba(X_test)[:, 1]
+    # print(y_test, y_pred)
+    # print(score, np.mean(np.abs(y_test-y_pred)))
 
     # from customized_utils import draw_auc_roc_for_scores
     # draw_auc_roc_for_scores(-1*y_pred, y_test)
@@ -553,43 +578,67 @@ if __name__ == '__main__':
 
     elif task == 'adv':
         rerun_save_folder = make_hierarchical_dir(['adv', time_str])
-        cutoff = 300
-        cutoff_end = 400
-        parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_8_all'
+        cutoff = 500
+        cutoff_end = 600
+        parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_new_new'
 
-        pickle_filename = parent_folder + '/bugs/1/cur_info.pickle'
+        pickle_filename = parent_folder + '/bugs/2/cur_info.pickle'
         with open(pickle_filename, 'rb') as f_in:
             d = pickle.load(f_in)
         # hack: since we are only using the elements after the first five
 
-        xl_ori = d['xl'][5:]
-        xu_ori =d['xu'][5:]
-        mask = d['mask'][5:]
-        x_5 = d['x'][:5]
+        xl_ori = d['xl']
+        xu_ori = d['xu']
+
 
         subfolders = get_sorted_subfolders(parent_folder)
-        X, y, _ = load_data(subfolders)
+        X, y, objective_list, mask, labels = load_data(subfolders)
+
+
+        labels_to_encode = get_labels_to_encode(labels)
+
+        X, enc, inds_to_encode, inds_non_encode, encode_fields = encode_and_remove_fields(X, mask, labels, [], labels_to_encode)
+        one_hot_fields_len = np.sum(encode_fields)
+
+        xl, xu = encode_bounds(xl_ori, xu_ori, inds_to_encode, inds_non_encode, encode_fields)
+
+        X, X_removed, kept_fields, removed_fields = remove_fields_not_changing(X, one_hot_fields_len)
+
+        xl = xl[kept_fields]
+        xu = xu[kept_fields]
 
 
         X_train, X_test = X[:cutoff], X[cutoff:cutoff_end]
         y_train, y_test = y[:cutoff], y[cutoff:cutoff_end]
         standardize = StandardScaler()
-        X_train = standardize.fit_transform(X_train)
-        X_test = standardize.transform(X_test)
-        xl = standardize.transform([xl_ori])[0]
-        xu = standardize.transform([xu_ori])[0]
+
+        standardize.fit(X_train[:, one_hot_fields_len:])
+        X_train = customized_standardize(X_train, standardize, one_hot_fields_len)
+        X_test = customized_standardize(X_test, standardize, one_hot_fields_len)
+        xl = customized_standardize(np.array([xl]), standardize, one_hot_fields_len)[0]
+        xu = customized_standardize(np.array([xu]), standardize, one_hot_fields_len)[0]
 
 
-        test_x_adv_list = get_adv_configs(X_train, y_train, X_test, y_test, xl, xu, standardize, mask)
+
+        test_x_adv_list = get_adv_configs(X_train, y_train, X_test, y_test, xl, xu, standardize, encode_fields)
+
+        test_x_adv_list = customized_inverse_standardize(np.array(test_x_adv_list), standardize, one_hot_fields_len)
+
+        print('X0', test_x_adv_list[0])
+        X = recover_fields_not_changing(test_x_adv_list, X_removed, kept_fields, removed_fields)
+        print('X1', X[0])
+        X = decode_fields(X, enc, inds_to_encode, inds_non_encode, encode_fields, adv=True)
+        print('X2', X[0])
 
         is_bug_list = []
 
-        for i, test_x_adv in enumerate(test_x_adv_list):
+        for i, test_x_adv in enumerate(X):
             np.clip(test_x_adv, xl_ori, xu_ori)
             test_x_adv = np.append(test_x_adv, port)
-            test_x_adv = np.append(x_5, test_x_adv)
 
-            # is_bug, objectives = rerun_simulation(pickle_filename, True, rerun_save_folder, i, str(i), scenario_file, ego_car_model=ego_car_model, x=test_x_adv)
-            #
-            # is_bug_list.append(check_bug(objectives))
-            # print(np.sum(is_bug_list), '/', len(is_bug_list))
+            print(test_x_adv)
+
+            is_bug, objectives = rerun_simulation(pickle_filename, True, rerun_save_folder, i, str(i), scenario_file, ego_car_model=ego_car_model, x=test_x_adv)
+
+            is_bug_list.append(check_bug(objectives))
+            print(np.sum(is_bug_list), '/', len(is_bug_list))
