@@ -1,16 +1,41 @@
 '''
 tomorrow TBD:
 
-1.let eps for one-hot embed to be 1 or let eps for embed dims and non-embed dims separate (otherwise they cannot be changed), check out effect
-
-2.integrate adv into ga_fuzzing (need to use pytorch to replace sklearn)
 
 
+currently:
+0.trying pytorch town_05_right without indicator in loss
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 300 --rank_mode nn --initial_fit_th 300 --dnn_lib pytorch
+
+1.trying adv_nn in town_05_right without indicator in loss
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 300 --rank_mode adv_nn --initial_fit_th 300 --dnn_lib pytorch
+
+
+
+2.try nsga2 with no indicator in loss weights for town_03_front, pytorch nn, and adv_nn, respectively
 
 
 
 
 
+3.try to improve regression_analysis performance of DNN on town_03_front
+
+
+
+
+
+
+
+maybe also consider eps for one-hot embed to be 1 or let eps for embed dims and non-embed dims separate (otherwise they cannot be changed), check out effect
+
+
+
+
+
+
+
+
+consider about (1) sorting and then adv (2) adv and then sorting
 
 
 t-sne and results change across adv iterations
@@ -316,8 +341,8 @@ def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, t
 
     performance = {name:[] for name in names}
     from sklearn.metrics import roc_auc_score
-    # dnn_lib = 'sklearn'
-    dnn_lib = 'sklearn'
+    # ['sklearn', 'pytorch']
+    dnn_lib = 'pytorch'
 
     for i in range(trial_num):
         print(i)
@@ -445,11 +470,12 @@ def analyze_objective_data(X, is_bug_list, objective_list):
 if __name__ == '__main__':
     mode = 'discrete'
     trial_num = 15
-    cutoff = 100
-    cutoff_end = 150
+    cutoff = 200
+    cutoff_end = 300
 
-    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_out_of_road_new_new_nn'
-
+    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_new_new'
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_new_new'
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town03_front_1/change_lane_town03_fixed_npc_num/lbc/50_12_collision'
 
     subfolders = get_sorted_subfolders(parent_folder)
     X, is_bug_list, objective_list, mask, labels  = load_data(subfolders)

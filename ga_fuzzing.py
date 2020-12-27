@@ -109,64 +109,56 @@ TBD:
 ***** finetune NN estimator and integrate NN estimator into pipeline
 
 -- scenario 1
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 12 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100 --dnn_lib pytorch
 
 
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 700 --objective_weights 0 0 0 1 1 -1 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 700 --objective_weights 0 0 0 1 1 -1 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100
 
 
 
 
 
 ++ NSGA2-UN collision
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 10 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 500 --objective_weights 0 0 0 1 1 -1 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 10 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 500 --objective_weights 0 0 0 1 1 -1 0 0 0 0
 
 ++ NSGA2-UN DNN collision
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 10 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 500 --objective_weights 0 0 0 1 1 -1 0 0 0 0
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 10 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 500 --objective_weights 0 0 0 1 1 -1 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100
 
 
 
 
 
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 3 --pop_size 4 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 12 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100
-
-
--- scenario 2
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 600 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200
-
-
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 12 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name random --has_run_num 600 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200 --rank_mode nn
-
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 20 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 1000 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200 --rank_mode nn
-
-
--- scenario 3
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 8 --pop_size 50 -r 'town04_front_0' -c 'pedestrians_cross_street_town04 --algorithm_name nsga2 --has_run_num 400 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200
-
-
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 8 --pop_size 50 -r 'town04_front_0' -c 'pedestrians_cross_street_town04 --algorithm_name nsga2 --has_run_num 400 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200 --rank_mode nn
-
-
--- scenario 4
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 10 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2 --has_run_num 400 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200
 
 
 -- scenario 5
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 10 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2 --has_run_num 400 --objective_weights -1 1 1 1 -1 0 0 -1 0 --n_offsprings 200
+python ga_fuzzing.py -p 2015 2018 -s 8792 -d 8793 --n_gen 12 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2 --has_run_num 600 --objective_weights -1 1 1 0 0 0 -1 0 0 0
+
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2 --has_run_num 600 --objective_weights 0 0 0 1 1 -1 0 -1 -1 0
 
 
+
+
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 600 --objective_weights 0 0 0 1 1 -1 0 0 0 0
+
+
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 10 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 1000 --objective_weights 0 0 0 1 1 -1 0 -1 -1 0
 
 
 
 
 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num'
--r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num'
-
 
 -r 'town07_front_0' -c 'go_straight_town07'
 -r 'town01_left_0' -c 'turn_left_town01'
-
 -r 'town04_front_0' -c 'pedestrians_cross_street_town04
+-r town03_front_1' -c 'change_lane_town03_fixed_npc_num'
+
+-r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num'
+
+
+
+
+
 
 
 
@@ -450,7 +442,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_and_remove_fields, remove_fields_not_changing, get_labels_to_encode
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_and_remove_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing
 
 
 from collections import deque
@@ -519,7 +511,7 @@ parser.add_argument("-s", "--scheduler_port", type=int, default=8785)
 parser.add_argument("-d", "--dashboard_address", type=int, default=8786)
 parser.add_argument("-r", "--route_type", type=str, default='town05_right_0')
 parser.add_argument("-c", "--scenario_type", type=str, default='default')
-parser.add_argument('-a','--algorithm_name', type=str, default='nsga2-un')
+parser.add_argument('-a','--algorithm_name', type=str, default='nsga2')
 parser.add_argument("-m", "--ego_car_model", type=str, default='lbc')
 parser.add_argument("--has_display", type=str, default='0')
 parser.add_argument("--root_folder", type=str, default='run_results')
@@ -527,14 +519,15 @@ parser.add_argument("--root_folder", type=str, default='run_results')
 parser.add_argument("--episode_max_time", type=int, default=60)
 parser.add_argument("--n_gen", type=int, default=2)
 parser.add_argument("--pop_size", type=int, default=100)
-parser.add_argument("--n_offsprings", type=int, default=100)
+parser.add_argument("--n_offsprings", type=int, default=300)
 parser.add_argument("--has_run_num", type=int, default=1000)
 parser.add_argument("--outer_iterations", type=int, default=3)
 parser.add_argument('--objective_weights', nargs='+', type=float, default=default_objective_weights)
 parser.add_argument('--check_unique_coeff', nargs='+', type=float, default=default_check_unique_coeff)
 parser.add_argument('--use_single_objective', type=int, default=1)
 parser.add_argument('--rank_mode', type=str, default='none')
-parser.add_argument('--initial_fit_th', type=int, default=200)
+parser.add_argument('--dnn_lib', type=str, default='pytorch')
+parser.add_argument('--initial_fit_th', type=int, default=300)
 
 
 arguments = parser.parse_args()
@@ -555,6 +548,8 @@ ego_car_model = arguments.ego_car_model
 
 # ['none', 'nn', 'adv', 'inversion']
 rank_mode = arguments.rank_mode
+# ['sklearn', 'pytorch']
+dnn_lib = arguments.dnn_lib
 initial_fit_th = arguments.initial_fit_th
 
 
@@ -1526,6 +1521,7 @@ class NSGA2_DT(NSGA2):
         self.all_pop_run_X = []
         self.initial_fit_th = initial_fit_th
         self.rank_mode = rank_mode
+        self.dnn_lib = dnn_lib
 
     # mainly used to modify survival
     def _next(self):
@@ -1578,43 +1574,88 @@ class NSGA2_DT(NSGA2):
             self.all_pop_run_X = self.pop.get("X")
         else:
             self.all_pop_run_X = np.concatenate([self.all_pop_run_X, self.pop.get("X")])
-
+        # print('self.all_pop_run_X', self.all_pop_run_X)
 
         # additional step to rank and select self.off after gathering initial population
         if self.rank_mode != 'none' and len(self.problem.objectives_list) >= self.initial_fit_th:
-            if self.rank_mode == 'nn':
-                from sklearn.neural_network import MLPClassifier
+            if self.rank_mode in ['nn', 'adv_nn']:
+
                 from sklearn.preprocessing import StandardScaler
-                clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
-                standardize = StandardScaler()
 
-                labels_to_remove = []
+                X_train = self.all_pop_run_X
+                X_test = tmp_off.get("X")
+
+
                 labels_to_encode = get_labels_to_encode(self.problem.labels)
+                partial = True
+                X_train, enc, inds_to_encode, inds_non_encode, encode_fields = encode_and_remove_fields(X_train, self.problem.mask, self.problem.labels, [], labels_to_encode)
+
+                # print('encode_and_remove_fields', X_train.shape)
+                #
+                # print('labels_to_encode', labels_to_encode, 'encode_fields', encode_fields)
+                one_hot_fields_len = np.sum(encode_fields)
+
+                xl, xu = encode_bounds(self.problem.xl, self.problem.xu, inds_to_encode, inds_non_encode, encode_fields)
+
+                X_train, X_removed, kept_fields, removed_fields = remove_fields_not_changing(X_train, one_hot_fields_len)
+
+                # print('remove_fields_not_changing', X_train.shape)
+
+                xl = xl[kept_fields]
+                xu = xu[kept_fields]
 
 
 
-                # Encode + Remove non-changing fields + Standardize
-                all_pop_run_X, _, _, _, _ = encode_and_remove_fields(self.all_pop_run_X, self.problem.mask, self.problem.labels, labels_to_remove, labels_to_encode)
-                all_pop_run_X, _, kept_fields, _ = remove_fields_not_changing(all_pop_run_X)
-                all_pop_run_X = standardize.fit_transform(all_pop_run_X)
-
-                tmp_off_X = tmp_off.get("X")
-                tmp_off_X, _, _, _, _ = encode_and_remove_fields(tmp_off_X, self.problem.mask, self.problem.labels, labels_to_remove, labels_to_encode)
-                tmp_off_X = tmp_off_X[:, kept_fields]
-                tmp_off_X = standardize.transform(tmp_off_X)
+                X_test, _, _, _, _ = encode_and_remove_fields(X_test, self.problem.mask, self.problem.labels, [], labels_to_encode)
+                X_test = X_test[:, kept_fields]
 
 
-                all_pop_run_y = np.array([check_bug(obj) for obj in self.problem.objectives_list])
+                standardize = StandardScaler()
+                customized_fit(X_train, standardize, one_hot_fields_len, partial)
+                X_train = customized_standardize(X_train, standardize, one_hot_fields_len, partial)
+                X_test = customized_standardize(X_test, standardize, one_hot_fields_len, partial)
+                xl = customized_standardize(np.array([xl]), standardize, one_hot_fields_len, partial)[0]
+                xu = customized_standardize(np.array([xu]), standardize, one_hot_fields_len, partial)[0]
+
+                y_train = np.array([check_bug(obj) for obj in self.problem.objectives_list])
 
 
+                if self.dnn_lib == 'sklearn':
+                    from sklearn.neural_network import MLPClassifier
+                    clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
+                    clf.fit(X_train, y_train)
+                elif dnn_lib == 'pytorch':
+                    from pgd_attack import train_net
+                    clf = train_net(X_train, y_train, [], [])
+                else:
+                    raise
 
-                clf.fit(all_pop_run_X, all_pop_run_y)
-                scores = -1*clf.predict_proba(tmp_off_X)[:, 1]
-
+                scores = -1*clf.predict_proba(X_test)[:, 1]
                 inds = np.argsort(scores)[:self.pop_size]
                 print('scores', scores)
                 print('chosen indices', inds)
-                self.off = tmp_off[inds]
+
+                if self.rank_mode == 'nn':
+                    self.off = tmp_off[inds]
+                elif self.rank_mode == 'adv_nn':
+                    X_test_pgd = X_test[inds]
+
+                    from pgd_attack import pgd_attack
+                    y_zeros = np.zeros(X_test_pgd.shape[0])
+                    test_x_adv_list, new_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encode_fields)
+
+                    test_x_adv_list = customized_inverse_standardize(np.array(test_x_adv_list), standardize, one_hot_fields_len, partial)
+                    X = recover_fields_not_changing(test_x_adv_list, X_removed, kept_fields, removed_fields)
+                    X = decode_fields(X, enc, inds_to_encode, inds_non_encode, encode_fields, adv=True)
+
+                    from pymoo.model.individual import Individual
+                    tmp_individual = Individual()
+                    pop = Population(X.shape[0], individual=tmp_individual)
+                    pop.set("X", X)
+                    pop.set("F", [None for _ in range(X.shape[0])])
+                    self.off = pop
+
+
             else:
                 print('unsupported rank_mode', rank_mode)
                 raise
@@ -1623,8 +1664,9 @@ class NSGA2_DT(NSGA2):
 
         self.off.set("n_gen", self.n_gen)
         # evaluate the offspring
+        # print('start evaluator', 'pop', self.off)
         self.evaluator.eval(self.problem, self.off, algorithm=self)
-
+        # print('end evaluator')
 
 
         if self.algorithm_name == 'random':
@@ -1799,48 +1841,6 @@ class MyEvaluator(Evaluator):
 
 
 
-# class Single_Objective_Survival(Survival):
-#
-#     def __init__(self) -> None:
-#         super().__init__(filter_infeasible=True)
-#
-#     def _do(self, problem, pop, n_survive, D=None, **kwargs):
-#
-#         # get the objective space values and objects
-#         F = pop.get("F").astype(np.float, copy=False)
-#
-#         # the final indices of surviving individuals
-#         survivors = []
-#
-#         # do the non-dominated sorting until splitting front
-#         fronts = NonDominatedSorting().do(F, n_stop_if_ranked=n_survive)
-#
-#         for k, front in enumerate(fronts):
-#
-#             # calculate the crowding distance of the front
-#             crowding_of_front = calc_crowding_distance(F[front, :])
-#
-#             # save rank and crowding in the individual class
-#             for j, i in enumerate(front):
-#                 pop[i].set("rank", k)
-#                 pop[i].set("crowding", crowding_of_front[j])
-#
-#             # current front sorted by crowding distance if splitting
-#             if len(survivors) + len(front) > n_survive:
-#                 I = randomized_argsort(crowding_of_front, order='descending', method='numpy')
-#                 I = I[:(n_survive - len(survivors))]
-#
-#             # otherwise take the whole front unsorted
-#             else:
-#                 I = np.arange(len(front))
-#
-#             # extend the survivors by all or selected individuals
-#             survivors.extend(front[I])
-#
-#         return pop[survivors]
-
-
-
 def customized_minimize(problem,
              algorithm,
              resume_run,
@@ -1998,7 +1998,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         time_str = dt_time_str
     else:
         now = datetime.now()
-        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
+        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([rank_mode, dnn_lib, str(initial_fit_th)])
 
 
     cur_parent_folder = make_hierarchical_dir([root_folder, algorithm_name, route_type, scenario_type, ego_car_model, time_str])
@@ -2073,7 +2073,8 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       mating=mating,
                       n_offsprings=n_offsprings,
                       rank_mode=rank_mode,
-                      initial_fit_th=initial_fit_th)
+                      initial_fit_th=initial_fit_th,
+                      dnn_lib = dnn_lib)
 
 
 
@@ -2149,7 +2150,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     non_dt_save_file = '_'.join([algorithm_name, route_type, scenario_type, ego_car_model, str(n_gen), str(pop_size)])
     pth = os.path.join(bug_parent_folder, non_dt_save_file)
 
-    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, has_run=has_run, has_run_list=has_run_list, labels=labels, hv=hv, mask=mask, xl=xl, xu=xu, p=p, c=c, th=th, route_type=route_type, scenario_type=scenario_type)
+    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, has_run=has_run, has_run_list=has_run_list, labels=labels, hv=hv, mask=mask, xl=xl, xu=xu, p=p, c=c, th=th, route_type=route_type, scenario_type=scenario_type, rank_mode=rank_mode, dnn_lib=dnn_lib, initial_fit_th=initial_fit_th)
     print('npz saved')
 
 

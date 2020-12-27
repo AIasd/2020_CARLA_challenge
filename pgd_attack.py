@@ -44,7 +44,9 @@ class SimpleNet(nn.Module):
     def predict_proba(self, x):
         x = torch.from_numpy(x).to(self.device).float()
         out = self.forward(x)
-        out = torch.stack([1 - out, out], dim=1)
+
+        out = torch.stack([1 - out, out], dim=1).squeeze()
+        # print(out.cpu().detach().numpy().shape)
         return out.cpu().detach().numpy()
 
 
@@ -133,7 +135,8 @@ def pgd_attack(model, images, labels, xl, xu, encode_fields, device=None, eps=1.
             # print(one_hotezed_images_embed.cpu().detach().numpy())
             s += field_len
         images[:, :m] = one_hotezed_images_embed
-        print('iter', i, ':', 'cost :', cost.cpu().detach().numpy(), 'outputs :', outputs.cpu().detach().numpy())
+        if i == iters - 1:
+            print('iter', i, ':', 'cost :', cost.cpu().detach().numpy(), 'outputs :', outputs.cpu().detach().numpy())
 
 
     return images.cpu().detach().numpy(), outputs.cpu().detach().numpy()

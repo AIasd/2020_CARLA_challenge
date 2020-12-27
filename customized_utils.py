@@ -2149,7 +2149,7 @@ def encode_and_remove_fields(x, mask, labels, labels_to_remove, labels_to_encode
         inds_to_remove.append(ind)
     inds_to_keep = list(set(range(x.shape[1])) - set(inds_to_remove))
     x = x[:, inds_to_keep]
-    print('x.shape, len(mask)', x.shape, len(mask))
+    # print('x.shape, len(mask)', x.shape, len(mask))
     mask = np.array(mask)[inds_to_keep].tolist()
     labels = np.array(labels)[inds_to_keep].tolist()
 
@@ -2199,7 +2199,7 @@ def max_one_hot_op(images, encode_fields):
     images[:, :m] = one_hotezed_images_embed
 
 def customized_fit(X_train, standardize, one_hot_fields_len, partial=True):
-    print('\n'*2, 'customized_fit X_train.shape', X_train.shape, '\n'*2)
+    # print('\n'*2, 'customized_fit X_train.shape', X_train.shape, '\n'*2)
     if partial:
         standardize.fit(X_train[:, one_hot_fields_len:])
     else:
