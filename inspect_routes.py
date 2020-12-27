@@ -1023,7 +1023,7 @@ def game_loop(args):
     try:
 
         client = carla.Client(args.host, args.port)
-        town_name = 'Town04'
+        town_name = args.map
         print(town_name)
         print(client.get_available_maps())
 
@@ -1142,6 +1142,10 @@ def main():
         default=2.2,
         type=float,
         help='Gamma correction of the camera (default: 2.2)')
+    argparser.add_argument(
+        '--map',
+        default='Town04',
+        help='which map to use')
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]

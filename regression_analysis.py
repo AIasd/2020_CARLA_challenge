@@ -1,13 +1,46 @@
 '''
 tomorrow TBD:
 
-debug objectives not being optimized as expected (rethink about proper way to do standardization, objective/bug correlation, objectives change as time goes on)
+1.let eps for one-hot embed to be 1 or let eps for embed dims and non-embed dims separate (otherwise they cannot be changed), check out effect
+
+2.integrate adv into ga_fuzzing (need to use pytorch to replace sklearn)
+
+
+
+
+
+
+
+
+
+t-sne and results change across adv iterations
+
+new scenario that has both types of errors
+
+analyze found bugs distribution
+
+fix some actors are not moving on some parts of some maps
+
+make mutation process more customizable (trade off convergence of exploration; current binary tournament only make use of top elements 2 times which leads to very slow convergence)
+
+
+
+1.2 make adv can be tuned to make one type of bug more likely (this needs to make the classification separate classes or 2 DNNs; also may be also consider regression???)
+
+
+1.5 maybe modify standardization and adv attack ? (i.e. also standardize those one-hot encoded fields but record each field's value to be used during projection?)
 
 2.2 analyze new nsga2 correlation between objective and if bug
-2.3 try fitting DNN on new data
-2.5 compare new nsga2 and nsga2 + DNN
 
-3.improve adv in rerun (early stop to avoid overfitting (increasing test loss) -> make this automatic by checking validation loss elbow point) Also early stop adv attack at some point
+2.5 improve nsga2 + DNN over nsga2
+
+
+
+2.8 try adv nn for town05_front
+
+
+
+3.improve adv in rerun to try to make it work (early stop to avoid overfitting (increasing test loss) -> make this automatic by checking validation loss elbow point) Also early stop adv attack at some point
 
 3.3 improve either search strategy or definition. the current way is extremelly close to sampling randomly for some scenarios due to probability theorem.
 
@@ -38,7 +71,7 @@ think about better way to process the "if condition" for waypoint_follower
 modify DNN objective for different types of bugs (i.e. different weights for different bugs assigned)?
 compare with random + DNN?
 
-
+maybe also tsne of learned DNN feature vector?
 
 1.carefully design the fields chosen (perturbation, categorical)
 2.analyze important features using MtFuzz hotbytes method
@@ -129,7 +162,7 @@ from sklearn.dummy import DummyClassifier
 from sklearn.neural_network import MLPRegressor
 from sklearn.linear_model import LinearRegression
 
-from customized_utils import encode_and_remove_fields, decode_fields, remove_fields_not_changing, recover_fields_not_changing, get_labels_to_encode
+from customized_utils import encode_and_remove_fields, decode_fields, remove_fields_not_changing, recover_fields_not_changing, get_labels_to_encode, customized_standardize, customized_fit
 
 
 def reformat(cur_info):
@@ -235,7 +268,7 @@ def regression_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, trial
         print(name, np.mean(performance[name]), np.std(performance[name]))
 
 
-def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, trial_num):
+def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, trial_num, encode_fields):
 
     # from matplotlib import pyplot as plt
     # plt.hist(objective_list[:, 1])
@@ -251,11 +284,20 @@ def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, t
     X_train, X_test = X[:cutoff], X[cutoff:cutoff_end]
     y_train, y_test = y[:cutoff], y[cutoff:cutoff_end]
     standardize = StandardScaler()
-    X_train = standardize.fit_transform(X_train)
-    X_test = standardize.transform(X_test)
 
 
+    # X_train = standardize.fit_transform(X_train)
+    # X_test = standardize.transform(X_test)
 
+
+    one_hot_fields_len = len(encode_fields)
+
+    customized_fit(X_train, standardize, one_hot_fields_len, partial=True)
+    X_train = customized_standardize(X_train, standardize, one_hot_fields_len, partial=True)
+    X_test = customized_standardize(X_test, standardize, one_hot_fields_len, partial=True)
+
+
+    print('y_test', y_test)
 
     ind_0 = y_test==0
     ind_1 = y_test==1
@@ -274,14 +316,22 @@ def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, t
 
     performance = {name:[] for name in names}
     from sklearn.metrics import roc_auc_score
+    # dnn_lib = 'sklearn'
+    dnn_lib = 'sklearn'
 
     for i in range(trial_num):
         print(i)
         for name, clf in zip(names, classifiers):
-            clf.fit(X_train, y_train)
-            # score = clf.score(X_test, y_test)
-            y_pred = clf.predict(X_test)
-            prob = clf.predict_proba(X_test)[:, 1]
+            if name == "Neural Net" and dnn_lib == 'pytorch':
+                from pgd_attack import train_net
+                clf = train_net(X_train, y_train, [], [], model_type='one_output')
+                y_pred = clf.predict(X_test)
+                prob = clf.predict_proba(X_test)[:, 1]
+            else:
+                clf.fit(X_train, y_train)
+                # score = clf.score(X_test, y_test)
+                y_pred = clf.predict(X_test)
+                prob = clf.predict_proba(X_test)[:, 1]
 
 
             t = y_test == 1
@@ -332,9 +382,10 @@ def encode_and_remove_x(data_list, mask, labels):
 
     x, enc, inds_to_encode, inds_non_encode, encode_fields = encode_and_remove_fields(data_list, mask, labels, labels_to_remove, labels_to_encode)
 
-    x, x_removed, kept_fields, removed_fields = remove_fields_not_changing(x)
+    one_hot_fields_len = len(encode_fields)
+    x, x_removed, kept_fields, removed_fields = remove_fields_not_changing(x, one_hot_fields_len)
 
-    return x
+    return x, encode_fields
 
 
 def get_sorted_subfolders(parent_folder):
@@ -354,51 +405,61 @@ def get_sorted_subfolders(parent_folder):
 
 
 
-def analyze_objective_data(is_bug_list, objective_list):
+def analyze_objective_data(X, is_bug_list, objective_list):
     from matplotlib import pyplot as plt
-    ind = -2
-    ind2 = 1
-    print(np.sum(objective_list[:, ind]))
+
+
+    mode = 'tsne_input'
+
+    if mode == 'hist':
+        ind = -2
+        ind2 = 1
+        print(np.sum(objective_list[:, ind]))
 
 
 
-    cond1 = (is_bug_list==1) & (objective_list[:, ind]==1)
-    cond2 = (is_bug_list==0) & (objective_list[:, ind]==0)
+        cond1 = (is_bug_list==1) & (objective_list[:, ind]==1)
+        cond2 = (is_bug_list==0) & (objective_list[:, ind]==0)
 
 
-    print(np.where(cond1 == 1))
-    print(objective_list[cond1, ind2])
-    print(objective_list[cond2, ind2])
+        print(np.where(cond1 == 1))
+        print(objective_list[cond1, ind2])
+        print(objective_list[cond2, ind2])
 
-    plt.hist(objective_list[cond1, ind2], label='bug', alpha=0.5, bins=50)
-    plt.hist(objective_list[cond2, ind2], label='normal', alpha=0.5, bins=100)
-    plt.legend()
-    plt.show()
+        plt.hist(objective_list[cond1, ind2], label='bug', alpha=0.5, bins=50)
+        plt.hist(objective_list[cond2, ind2], label='normal', alpha=0.5, bins=100)
+        plt.legend()
+        plt.show()
+    elif mode == 'tsne_input':
+        from sklearn.manifold import TSNE
+        X_embedded = TSNE(n_components=2, perplexity=5, n_iter=3000).fit_transform(X)
+        y = np.array(is_bug_list)
+        ind0 = y == 0
+        ind1 = y == 1
+        plt.scatter(X_embedded[ind0, 0], X_embedded[ind0, 1], label='normal', alpha=0.5, s=3)
+        plt.scatter(X_embedded[ind1, 0], X_embedded[ind1, 1], label='bug', alpha=0.5, s=5)
+        plt.legend()
+        plt.show()
+
 
 if __name__ == '__main__':
     mode = 'discrete'
     trial_num = 15
-    cutoff = 500
-    cutoff_end = 600
-    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town04_front_0/pedestrians_cross_street_town04/lbc/50_8_all'
-    # 54.2+-1.5, 400: 218 VS 221, Ada 46
-    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_front_0/change_lane_town05_fixed_npc_num/lbc/50_8_all'
-    # 51.5+-4, 400: 199 VS 203, 1000: 444 VS 421, Ada 43
-    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_8_all'
-    # 55+-3, 400: 206 VS 178, Ada 59
-    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_10_collision_new_objtype'
-    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_out_of_road_new_new'
-    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_10_collision_new_objtype'
-    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_10_outofroad_new_objtype'
+    cutoff = 100
+    cutoff_end = 150
+
+    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_out_of_road_new_new_nn'
+
 
     subfolders = get_sorted_subfolders(parent_folder)
     X, is_bug_list, objective_list, mask, labels  = load_data(subfolders)
 
-    X = encode_and_remove_x(X, mask, labels)
+    X, encode_fields = encode_and_remove_x(X, mask, labels)
+
 
     if mode == 'analysis':
-        analyze_objective_data(is_bug_list, objective_list)
+        analyze_objective_data(X, is_bug_list, objective_list)
     elif mode == 'discrete':
-        classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_end, trial_num)
+        classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_end, trial_num, encode_fields)
     else:
         regression_analysis(X, is_bug_list, objective_list, cutoff, cutoff_end, trial_num)

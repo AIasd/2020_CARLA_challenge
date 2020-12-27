@@ -783,18 +783,19 @@ customized_bounds_and_distributions = {
         'num_of_static_max': 0,
         'num_of_pedestrians_min': 1,
         'num_of_pedestrians_max': 1,
+
         'num_of_vehicles_min': 1,
         'num_of_vehicles_max': 1,
 
 
-        'vehicle_x_min_0': -4,
-        'vehicle_x_max_0': -3,
-        'vehicle_y_min_0': -20,
-        'vehicle_y_max_0': -1,
+        'vehicle_x_min_0': -4.5,
+        'vehicle_x_max_0': -2.5,
+        'vehicle_y_min_0': -25,
+        'vehicle_y_max_0': -3,
         'vehicle_yaw_min_0': 270,
         'vehicle_yaw_max_0': 270,
-        'vehicle_initial_speed_min_0': 3,
-        'vehicle_initial_speed_max_0': 7,
+        'vehicle_initial_speed_min_0': 2,
+        'vehicle_initial_speed_max_0': 8,
         'vehicle_trigger_distance_min_0': 0,
         'vehicle_trigger_distance_max_0': 0,
         'vehicle_dist_to_travel_min_0': 15,
@@ -807,7 +808,7 @@ customized_bounds_and_distributions = {
     },
     'customized_center_transforms':{
         'vehicle_center_transform_0': ('waypoint_ratio', 0),
-        'pedestrian_center_transform_0': ('waypoint_ratio', 20)
+        'pedestrian_center_transform_0': ('waypoint_ratio', 50)
     },
     'customized_constraints': []
     },
@@ -1031,6 +1032,42 @@ customized_bounds_and_distributions = {
     'customized_constraints': []
     },
 
+
+    'front_town10': {'customized_parameters_bounds':{
+
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 1,
+        'num_of_pedestrians_max': 1,
+
+        'num_of_vehicles_min': 1,
+        'num_of_vehicles_max': 1,
+
+
+        'vehicle_x_min_0': 3,
+        'vehicle_x_max_0': 20,
+        'vehicle_y_min_0': -4.5,
+        'vehicle_y_max_0': -2.5,
+        'vehicle_yaw_min_0': 0,
+        'vehicle_yaw_max_0': 0,
+        'vehicle_initial_speed_min_0': 2,
+        'vehicle_initial_speed_max_0': 8,
+        'vehicle_trigger_distance_min_0': 0,
+        'vehicle_trigger_distance_max_0': 0,
+        'vehicle_dist_to_travel_min_0': 15,
+        'vehicle_dist_to_travel_max_0': 40,
+        'vehicle_avoid_collision_min_0': 1,
+        'vehicle_avoid_collision_max_0': 1,
+
+    },
+    'customized_parameters_distributions':{
+    },
+    'customized_center_transforms':{
+        'vehicle_center_transform_0': ('waypoint_ratio', 0),
+        'pedestrian_center_transform_0': ('waypoint_ratio', 50)
+    },
+    'customized_constraints': []
+    },
 
 
 
@@ -1412,6 +1449,48 @@ customized_bounds_and_distributions = {
     },
 
 
+    'change_lane_town03_fixed_npc_num': {'customized_parameters_bounds':{
+        'num_of_static_min': 0,
+        'num_of_static_max': 0,
+        'num_of_pedestrians_min': 1,
+        'num_of_pedestrians_max': 1,
+
+        'num_of_vehicles_min': 1,
+        'num_of_vehicles_max': 1,
+
+
+        'vehicle_x_min_0': 2.5,
+        'vehicle_x_max_0': 4.5,
+        'vehicle_y_min_0': -20,
+        'vehicle_y_max_0': 2,
+        'vehicle_yaw_min_0': 270,
+        'vehicle_yaw_max_0': 270,
+        'vehicle_initial_speed_min_0': 2,
+        'vehicle_initial_speed_max_0': 8,
+        'vehicle_trigger_distance_min_0': 0,
+        'vehicle_trigger_distance_max_0': 0,
+        'vehicle_dist_to_travel_min_0': 15,
+        'vehicle_dist_to_travel_max_0': 40,
+        'vehicle_avoid_collision_min_0': 1,
+        'vehicle_avoid_collision_max_0': 1,
+
+
+        'pedestrian_x_min_0': -8,
+        'pedestrian_x_max_0': 8,
+        'pedestrian_y_min_0': -8,
+        'pedestrian_y_max_0': 8,
+    },
+    'customized_parameters_distributions':{
+    },
+    'customized_center_transforms':{
+        'vehicle_center_transform_0': ('waypoint_ratio', 0),
+        'pedestrian_center_transform_0': ('waypoint_ratio', 75)
+    },
+    'customized_constraints': []
+    },
+
+
+
     'none': {'customized_parameters_bounds':{
         'num_of_static_min': 0,
         'num_of_static_max': 0,
@@ -1439,14 +1518,6 @@ customized_routes = {
     'location_list': [(-120, 30), (-103, 4)]
     },
 
-    # pick: change lane, town
-    'town05_front_0': {
-    'town_name': 'Town05',
-    'direction': 'front',
-    'route_id': 0,
-    'location_list': [(-120, 60), (-124, 26)]
-    },
-
     # pick: turn left non-siginalized intersection, town
     'town01_left_0': {
     'town_name': 'Town01',
@@ -1471,10 +1542,24 @@ customized_routes = {
     'location_list': [(258, -230), (258, -270)]
     },
 
+    # pick: change lane
+    'town03_front_1': {
+    'town_name': 'Town03',
+    'direction': 'left',
+    'route_id': 0,
+    'location_list': [(1.5, 185), (4, 165)]
+    },
+
+    # potential pick: change lane, town
+    'town05_front_0': {
+    'town_name': 'Town05',
+    'direction': 'front',
+    'route_id': 0,
+    'location_list': [(-120, 60), (-124, 26)]
+    },
 
 
-
-    # pick: go through signalized crossroad
+    # potential pick: go through signalized crossroad
     'town03_front_0': {
     'town_name': 'Town03',
     'direction': 'front',
@@ -1483,7 +1568,7 @@ customized_routes = {
     },
 
 
-    # go across street, town
+    # potential pick: go across street, town
     'town05_front_1': {
     'town_name': 'Town05',
     'direction': 'front',
@@ -1494,12 +1579,17 @@ customized_routes = {
 
 
 
-    # change lane, city
+
+
+
+
+
+    # change lane, city, error: other cars are not moving
     'town10HD_front_0': {
     'town_name': 'Town10HD',
     'direction': 'front',
     'route_id': 0,
-    'location_list': [(-35, 138), (-17, 143)]
+    'location_list': [(-38, 143), (-5, 138)]
     },
     # go through non-signalized intersection, rural, error: other cars are not moving
     'town07_left_0': {
@@ -1924,7 +2014,10 @@ def estimate_objectives(save_path, default_objectives):
                     y = float(loc.group(2))
                     ego_linear_speed = float(loc.group(4))
                     other_actor_linear_speed = float(loc.group(5))
-                is_collision = 1
+
+                    # only record valid collisions to promote valid collision bugs
+                    if ego_linear_speed > 0.1:
+                        is_collision = 1
 
             elif infraction_type == 'off_road':
                 loc = re.search('.*x=(.*), y=(.*), z=(.*)\)', infraction)
@@ -2105,6 +2198,12 @@ def max_one_hot_op(images, encode_fields):
         s += field_len
     images[:, :m] = one_hotezed_images_embed
 
+def customized_fit(X_train, standardize, one_hot_fields_len, partial=True):
+    print('\n'*2, 'customized_fit X_train.shape', X_train.shape, '\n'*2)
+    if partial:
+        standardize.fit(X_train[:, one_hot_fields_len:])
+    else:
+        standardize.fit(X_train)
 
 def customized_standardize(X, standardize, m, partial=True):
     # print(X[:, :m].shape, standardize.transform(X[:, m:]).shape)
