@@ -1618,7 +1618,11 @@ def if_violate_constraints(x, customized_constraints, labels, verbose=False):
     keywords = ['coefficients', 'labels', 'value']
     extra_keywords = ['power']
 
-    for constraint in customized_constraints:
+    if_violate = False
+    violated_constraints = []
+    involved_labels = set()
+
+    for i, constraint in enumerate(customized_constraints):
         for k in keywords:
             assert k in constraint
         assert len(constraint['coefficients']) == len(constraint['labels'])
@@ -1633,17 +1637,20 @@ def if_violate_constraints(x, customized_constraints, labels, verbose=False):
         coeff = np.array(constraint['coefficients'])
         features = np.array(x_ids)
 
-        if_violate = np.sum(coeff * np.power(features, powers)) > constraint['value']
-        if if_violate:
+        if_violate_current = np.sum(coeff * np.power(features, powers)) > constraint['value']
+        if if_violate_current:
+            if_violate = True
+            violated_constraints.append(constraint)
+            involved_labels = involved_labels.union(set(constraint['labels']))
             if verbose:
                 print('\n'*5, 'violate_constraints!!!!', '\n'*5)
                 print(coeff, features, powers, np.sum(coeff * np.power(features, powers)), constraint['value'], constraint['labels'])
-            return True
+
+    return if_violate, [violated_constraints, involved_labels]
 
 
 
 
-    return False
 
 def parse_route_and_scenario(location_list, town_name, scenario, direction, route_str, scenario_file):
 
@@ -1805,37 +1812,39 @@ def parse_route_file(route_filename, route_length_lower_bound=50):
 
     return config_list
 
-def is_similar(x_1, x_2, mask, xl, xu, p, c, th, verbose=False, labels=[], diff_th=0.1):
+def is_similar(x_1, x_2, mask, xl, xu, p, c, th, verbose=False, labels=[], diff_th=0.1, y_i=-1, y_j=-1):
 
-    eps = 1e-8
+    if y_i == y_j:
+        eps = 1e-8
 
-    int_inds = mask == 'int'
-    real_inds = mask == 'real'
-    int_diff_raw = np.abs(x_1[int_inds] - x_2[int_inds])
-    int_diff = np.ones(int_diff_raw.shape) * (int_diff_raw > eps)
+        int_inds = mask == 'int'
+        real_inds = mask == 'real'
+        int_diff_raw = np.abs(x_1[int_inds] - x_2[int_inds])
+        int_diff = np.ones(int_diff_raw.shape) * (int_diff_raw > eps)
 
-    real_diff_raw = np.abs(x_1[real_inds] - x_2[real_inds]) / (np.abs(xu - xl) + eps)[real_inds]
+        real_diff_raw = np.abs(x_1[real_inds] - x_2[real_inds]) / (np.abs(xu - xl) + eps)[real_inds]
 
-    real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > c)
+        real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > c)
 
-    diff = np.concatenate([int_diff, real_diff])
+        diff = np.concatenate([int_diff, real_diff])
 
-    diff_norm = np.linalg.norm(diff, p)
-    equal = diff_norm < th
+        diff_norm = np.linalg.norm(diff, p)
+        equal = diff_norm < th
 
-    # if verbose:
-    #     print('diff_raw', int_diff_raw, real_diff_raw, p, c, th, diff, diff_norm)
-    #
-    #     x_1_r = np.concatenate([x_1[int_inds], x_1[real_inds]])
-    #     x_2_r = np.concatenate([x_2[int_inds], x_2[real_inds]])
-    #     print(diff[42], x_1_r[42], x_2_r[42], diff[62], x_1_r[62], x_2_r[62])
-    #     if len(labels)>0:
-    #         labels = np.array(labels)
-    #         # print(labels[int_inds])
-    #         # print(labels[real_inds])
-    #         labels_r = np.concatenate([labels[int_inds], labels[real_inds]])
-    #         print(labels_r[42], labels_r[62])
-
+        # if verbose:
+        #     print('diff_raw', int_diff_raw, real_diff_raw, p, c, th, diff, diff_norm)
+        #
+        #     x_1_r = np.concatenate([x_1[int_inds], x_1[real_inds]])
+        #     x_2_r = np.concatenate([x_2[int_inds], x_2[real_inds]])
+        #     print(diff[42], x_1_r[42], x_2_r[42], diff[62], x_1_r[62], x_2_r[62])
+        #     if len(labels)>0:
+        #         labels = np.array(labels)
+        #         # print(labels[int_inds])
+        #         # print(labels[real_inds])
+        #         labels_r = np.concatenate([labels[int_inds], labels[real_inds]])
+        #         print(labels_r[42], labels_r[62])
+    else:
+        equal = False
     return equal
 
 
@@ -1858,7 +1867,7 @@ def is_distinct(x, X, mask, xl, xu, p, c, th, diff_th=0.1):
 
 
 
-def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1):
+def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1, y=[]):
 
     # ['forward', 'backward']
     order = 'forward'
@@ -1877,8 +1886,13 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1):
             for i in range(len(data_points)-1):
                 similar = False
                 for j in range(i+1, len(data_points)):
-
-                    similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th, diff_th)
+                    if len(y) > 0:
+                        y_i = y[i]
+                        y_j = y[j]
+                    else:
+                        y_i = -1
+                        y_j = -1
+                    similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th, diff_th, y_i=y_i, y_j=y_j)
                     if similar:
                         break
                 if not similar:
@@ -1889,7 +1903,13 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1):
             for i in range(1, len(data_points)):
                 similar = False
                 for j in distinct_inds:
-                    similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th, diff_th)
+                    if len(y) > 0:
+                        y_i = y[i]
+                        y_j = y[j]
+                    else:
+                        y_i = -1
+                        y_j = -1
+                    similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th, diff_th, y_i=y_i, y_j=y_j)
                     if similar:
                         break
                 if not similar:
@@ -2135,7 +2155,7 @@ def angle_from_center_view_fov(target, ego, fov=90):
 
 
 
-def encode_and_remove_fields(x, mask, labels, labels_to_remove, labels_to_encode):
+def encode_fields(x, labels, labels_to_encode):
     from sklearn.preprocessing import OneHotEncoder
     from object_types import weather_names, vehicle_colors, pedestrian_types, vehicle_types
 
@@ -2143,15 +2163,7 @@ def encode_and_remove_fields(x, mask, labels, labels_to_remove, labels_to_encode
     # keywords_dict = {'num_of_weathers': len(weather_names)}
 
     x = np.array(x).astype(np.float)
-    inds_to_remove = []
-    for label in labels_to_remove:
-        ind = labels.index(label)
-        inds_to_remove.append(ind)
-    inds_to_keep = list(set(range(x.shape[1])) - set(inds_to_remove))
-    x = x[:, inds_to_keep]
-    # print('x.shape, len(mask)', x.shape, len(mask))
-    mask = np.array(mask)[inds_to_keep].tolist()
-    labels = np.array(labels)[inds_to_keep].tolist()
+
 
 
     encode_fields = []
@@ -2205,19 +2217,33 @@ def customized_fit(X_train, standardize, one_hot_fields_len, partial=True):
     else:
         standardize.fit(X_train)
 
-def customized_standardize(X, standardize, m, partial=True):
+def customized_standardize(X, standardize, m, partial=True, scale_only=False):
     # print(X[:, :m].shape, standardize.transform(X[:, m:]).shape)
     if partial:
+        if scale_only:
+            res_non_encode = X[:, m:] * standardize.scale_
+        else:
+            res_non_encode = standardize.transform(X[:, m:])
         res = np.concatenate([X[:, :m], standardize.transform(X[:, m:])], axis=1)
     else:
-        res = standardize.transform(X)
+        if scale_only:
+            res = X * standardize.scale_
+        else:
+            res = standardize.transform(X)
     return res
 
-def customized_inverse_standardize(X, standardize, m, partial=True):
+def customized_inverse_standardize(X, standardize, m, partial=True, scale_only=False):
     if partial:
-        res = np.concatenate([X[:, :m], standardize.inverse_transform(X[:, m:])], axis=1)
+        if scale_only:
+            res_non_encode = X[:, m:] * standardize.scale_
+        else:
+            res_non_encode = standardize.inverse_transform(X[:, m:])
+        res = np.concatenate([X[:, :m], res_non_encode], axis=1)
     else:
-        res = standardize.inverse_transform(X)
+        if scale_only:
+            res = X * standardize.scale_
+        else:
+            res = standardize.inverse_transform(X)
     return res
 
 def decode_fields(x, enc, inds_to_encode, inds_non_encode, encode_fields, adv=False):

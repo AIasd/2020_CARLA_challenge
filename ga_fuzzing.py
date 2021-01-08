@@ -109,7 +109,7 @@ TBD:
 ***** finetune NN estimator and integrate NN estimator into pipeline
 
 -- scenario 1
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 12 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100 --dnn_lib pytorch
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0
 
 
 python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 700 --objective_weights 0 0 0 1 1 -1 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100
@@ -151,7 +151,7 @@ python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 10 --pop_size 100 -r '
 -r 'town07_front_0' -c 'go_straight_town07'
 -r 'town01_left_0' -c 'turn_left_town01'
 -r 'town04_front_0' -c 'pedestrians_cross_street_town04
--r town03_front_1' -c 'change_lane_town03_fixed_npc_num'
+-r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num'
 
 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num'
 
@@ -442,7 +442,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_and_remove_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing
 
 
 from collections import deque
@@ -489,7 +489,6 @@ from dask.distributed import Client, LocalCluster
 
 from pymoo.model.initialization import Initialization
 from pymoo.model.duplicate import NoDuplicateElimination
-from pymoo.model.individual import Individual
 from pymoo.operators.sampling.random_sampling import FloatRandomSampling
 
 from pymoo.model.survival import Survival
@@ -503,7 +502,7 @@ from sklearn.preprocessing import StandardScaler
 
 default_objective_weights = np.array([-1, 1, 1, 1, 1, -1, 0, 0, 0, -1])
 default_objectives = [0, 20, 1, 7, 7, 0, 0, 0, 0, 0]
-default_check_unique_coeff = [0, 0.15, 0.5]
+default_check_unique_coeff = [0, 0.1, 0.5]
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p','--ports', nargs='+', type=int, default=[2003, 2006], help='TCP port(s) to listen to (default: 2003 2006)')
@@ -541,7 +540,7 @@ dashboard_address = arguments.dashboard_address
 route_type = arguments.route_type
 # ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
 scenario_type = arguments.scenario_type
-# [random', 'nsga2', 'nsga2-dt', 'nsga2-emcmc', 'nsga2-un', 'nsga2-un-emcmc']
+# [random', 'nsga2', 'nsga2-dt', 'nsga2-emcmc', 'nsga2-un', 'nsga2-un-emcmc', 'random-un']
 algorithm_name = arguments.algorithm_name
 # ['lbc', 'auto_pilot', 'pid_agent']
 ego_car_model = arguments.ego_car_model
@@ -565,7 +564,7 @@ n_offsprings = arguments.n_offsprings
 # only used when algorithm_name is nsga2-dt
 outer_iterations = arguments.outer_iterations
 
-if algorithm_name in ['nsga2-un', 'nsga2-un-emcmc', 'nsga2-dt-un']:
+if 'un' in algorithm_name:
     use_unique_bugs = True
 else:
     use_unique_bugs = False
@@ -821,7 +820,7 @@ class MyProblem(Problem):
 
         def fun(x, launch_server, counter):
             not_critical_region = dt and not is_critical_region(x[:-1], estimator, critical_unique_leaves)
-            violate_constraints = if_violate_constraints(x, customized_constraints, labels, verbose=True)
+            violate_constraints, _ = if_violate_constraints(x, customized_constraints, labels, verbose=True)
             if not_critical_region or violate_constraints:
                 objectives = default_objectives
                 return objectives, None, None, None, 0, None
@@ -852,7 +851,8 @@ class MyProblem(Problem):
                 'parameters_min_bounds':parameters_min_bounds,
                 'parameters_max_bounds':parameters_max_bounds}
 
-                cur_info = {'counter':counter, 'x':x, 'data':data, 'objectives':objectives,  'loc':loc, 'object_type':object_type, 'labels':labels, 'mask':mask, 'xl':xl, 'xu':xu, 'is_bug':is_bug, 'route_completion':route_completion, 'info': info}
+                cur_info = {'counter':counter, 'x':x, 'data':data, 'objectives':objectives,  'loc':loc, 'object_type':object_type, 'labels':labels, 'mask':mask, 'xl':xl, 'xu':xu, 'is_bug':is_bug, 'route_completion':route_completion,
+                'customized_constraints':customized_constraints, 'info': info}
 
                 print(counter, is_bug, objectives)
 
@@ -1358,7 +1358,7 @@ class MySampling(Sampling):
                     x.append(val)
                 # print(if_violate_constraints(x, problem.customized_constraints, problem.labels), use_unique_bugs, is_distinct(x, X, mask, xl, xu, p, c, th))
 
-                if not if_violate_constraints(x, problem.customized_constraints, problem.labels) and (disable_unique_bugs or not self.use_unique_bugs or is_distinct(x, X, mask, xl, xu, p, c, th)):
+                if not if_violate_constraints(x, problem.customized_constraints, problem.labels)[0] and (disable_unique_bugs or not self.use_unique_bugs or is_distinct(x, X, mask, xl, xu, p, c, th)):
                     x = np.array(x).astype(float)
                     X.append(x)
 
@@ -1439,7 +1439,7 @@ class MyMating(Mating):
 
             _off = []
             for x in _off_first:
-                if not if_violate_constraints(x.X, problem.customized_constraints, problem.labels):
+                if not if_violate_constraints(x.X, problem.customized_constraints, problem.labels)[0]:
                     _off.append(x.X)
             _off = pop.new("X", _off)
 
@@ -1523,10 +1523,38 @@ class NSGA2_DT(NSGA2):
         self.rank_mode = rank_mode
         self.dnn_lib = dnn_lib
 
+        # hack: defined separately w.r.t. MyMating
+        self.n_max_iterations = 1
+
     # mainly used to modify survival
     def _next(self):
         if self.algorithm_name == 'random':
             tmp_off = self.plain_initialization.do(self.problem, self.n_offsprings, algorithm=self)
+        elif self.algorithm_name == 'random-un':
+            tmp_off = []
+            n_infills = 0
+            while len(tmp_off) < self.n_offsprings:
+                n_remaining = self.n_offsprings - len(tmp_off)
+                _off = self.initialization.do(self.problem, n_remaining, algorithm=self)
+
+                _off, _, _ = self.mating.eliminate_duplicates.do(_off, self.problem.unique_bugs, tmp_off, return_indices=True, to_itself=True)
+                if len(tmp_off) == 0:
+                    tmp_off = _off
+                else:
+                    tmp_off = Population.merge(tmp_off, _off)
+                n_infills += 1
+                if n_infills >= self.n_max_iterations:
+                    break
+
+            print('\n'*3, 'unique after random generation len 1', len(tmp_off), '\n'*3)
+
+            if len(tmp_off) < self.n_offsprings:
+                n_remaining = self.n_offsprings - len(tmp_off)
+                remaining_off = self.plain_initialization.do(self.problem, n_remaining, algorithm=self)
+                tmp_off = Population.merge(tmp_off, remaining_off)
+
+                print('\n'*3, 'random generation len 2', len(tmp_off), '\n'*3)
+
         else:
             # do the mating using the current population
             tmp_off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
@@ -1582,20 +1610,19 @@ class NSGA2_DT(NSGA2):
 
                 from sklearn.preprocessing import StandardScaler
 
-                X_train = self.all_pop_run_X
-                X_test = tmp_off.get("X")
+                X_train_ori = self.all_pop_run_X
+                X_test_ori = tmp_off.get("X")
 
 
                 labels_to_encode = get_labels_to_encode(self.problem.labels)
                 partial = True
-                X_train, enc, inds_to_encode, inds_non_encode, encode_fields = encode_and_remove_fields(X_train, self.problem.mask, self.problem.labels, [], labels_to_encode)
+                X_train, enc, inds_to_encode, inds_non_encode, encoded_fields = encode_fields(X_train_ori, self.problem.labels, labels_to_encode)
 
-                # print('encode_and_remove_fields', X_train.shape)
-                #
-                # print('labels_to_encode', labels_to_encode, 'encode_fields', encode_fields)
-                one_hot_fields_len = np.sum(encode_fields)
 
-                xl, xu = encode_bounds(self.problem.xl, self.problem.xu, inds_to_encode, inds_non_encode, encode_fields)
+
+                one_hot_fields_len = np.sum(encoded_fields)
+
+                xl, xu = encode_bounds(self.problem.xl, self.problem.xu, inds_to_encode, inds_non_encode, encoded_fields)
 
                 X_train, X_removed, kept_fields, removed_fields = remove_fields_not_changing(X_train, one_hot_fields_len)
 
@@ -1606,9 +1633,24 @@ class NSGA2_DT(NSGA2):
 
 
 
-                X_test, _, _, _, _ = encode_and_remove_fields(X_test, self.problem.mask, self.problem.labels, [], labels_to_encode)
+                X_test, _, _, _, _ = encode_fields(X_test_ori, self.problem.labels, labels_to_encode)
                 X_test = X_test[:, kept_fields]
 
+                # print(len(self.problem.labels), len(inds_to_encode), len(inds_non_encode), len(kept_fields), one_hot_fields_len, len(removed_fields), X_test.shape)
+                # print(inds_non_encode)
+                # print(kept_fields)
+
+                kept_fields_non_encode =  kept_fields - one_hot_fields_len
+                # print(kept_fields_non_encode)
+                kept_fields_non_encode = kept_fields_non_encode[kept_fields_non_encode >= 0]
+                # print(kept_fields_non_encode)
+                intersection_inds = np.in1d(inds_non_encode, kept_fields_non_encode)
+                intersection_inds = np.array(inds_non_encode)[intersection_inds]
+                # print(intersection_inds)
+
+
+
+                labels_used = np.array(self.problem.labels)[intersection_inds]
 
                 standardize = StandardScaler()
                 customized_fit(X_train, standardize, one_hot_fields_len, partial)
@@ -1630,29 +1672,54 @@ class NSGA2_DT(NSGA2):
                 else:
                     raise
 
-                scores = -1*clf.predict_proba(X_test)[:, 1]
-                inds = np.argsort(scores)[:self.pop_size]
-                print('scores', scores)
-                print('chosen indices', inds)
 
                 if self.rank_mode == 'nn':
+                    scores = -1*clf.predict_proba(X_test)[:, 1]
+                    inds = np.argsort(scores)[:self.pop_size]
+                    print('scores', scores)
+                    print('chosen indices', inds)
                     self.off = tmp_off[inds]
                 elif self.rank_mode == 'adv_nn':
+                    scores = -1*clf.predict_proba(X_test)[:, 1]
+                    inds = np.argsort(scores)[:self.pop_size]
                     X_test_pgd = X_test[inds]
+                    X_test_ori = X_test_ori[inds]
+                    # X_test_pgd = X_test
 
                     from pgd_attack import pgd_attack
                     y_zeros = np.zeros(X_test_pgd.shape[0])
-                    test_x_adv_list, new_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encode_fields)
+                    X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize)
 
-                    test_x_adv_list = customized_inverse_standardize(np.array(test_x_adv_list), standardize, one_hot_fields_len, partial)
-                    X = recover_fields_not_changing(test_x_adv_list, X_removed, kept_fields, removed_fields)
-                    X = decode_fields(X, enc, inds_to_encode, inds_non_encode, encode_fields, adv=True)
+                    X_test_adv_processed = customized_inverse_standardize(X_test_adv, standardize, one_hot_fields_len, partial)
+                    X_test_adv_processed= recover_fields_not_changing(X_test_adv_processed, X_removed, kept_fields, removed_fields)
+                    X_test_adv_processed = decode_fields(X_test_adv_processed, enc, inds_to_encode, inds_non_encode, encoded_fields, adv=True)
+
+
+                    X_combined = np.concatenate([X_test_ori, X_test_adv_processed], axis=0)
+                    X_combined_processed = np.concatenate([X_test_pgd, X_test_adv], axis=0)
+                    print('before considering constraints', X_combined.shape[0])
+
+                    chosen_inds = []
+                    for i, x in enumerate(X_combined):
+                        if not if_violate_constraints(x, self.problem.customized_constraints, self.problem.labels)[0]:
+                            chosen_inds.append(i)
+                    chosen_inds = np.array(chosen_inds)
+
+                    X_combined = X_combined[chosen_inds]
+                    X_combined_processed = X_combined_processed[chosen_inds]
+                    print('after considering constraints', X_combined.shape[0])
+
+                    scores = -1*clf.predict_proba(X_combined_processed)[:, 1]
+                    inds = np.argsort(scores)[:self.pop_size]
+                    print('scores', scores)
+                    print('chosen indices', inds)
+                    X_combined = X_combined[inds]
 
                     from pymoo.model.individual import Individual
                     tmp_individual = Individual()
-                    pop = Population(X.shape[0], individual=tmp_individual)
-                    pop.set("X", X)
-                    pop.set("F", [None for _ in range(X.shape[0])])
+                    pop = Population(X_combined.shape[0], individual=tmp_individual)
+                    pop.set("X", X_combined)
+                    pop.set("F", [None for _ in range(X_combined.shape[0])])
                     self.off = pop
 
 

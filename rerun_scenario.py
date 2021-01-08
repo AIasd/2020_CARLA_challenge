@@ -5,7 +5,7 @@ import random
 import pickle
 import numpy as np
 from datetime import datetime
-from customized_utils import make_hierarchical_dir, convert_x_to_customized_data, exit_handler, customized_routes, parse_route_and_scenario, check_bug, get_labels_to_encode, encode_and_remove_fields, decode_fields, remove_fields_not_changing, recover_fields_not_changing, encode_bounds, max_one_hot_op, customized_standardize, customized_inverse_standardize, customized_fit
+from customized_utils import make_hierarchical_dir, convert_x_to_customized_data, exit_handler, customized_routes, parse_route_and_scenario, check_bug, get_labels_to_encode, encode_fields, decode_fields, remove_fields_not_changing, recover_fields_not_changing, encode_bounds, max_one_hot_op, customized_standardize, customized_inverse_standardize, customized_fit
 import atexit
 
 import traceback
@@ -398,8 +398,8 @@ if __name__ == '__main__':
     elif task == 'adv':
         rerun_save_folder = make_hierarchical_dir(['adv', time_str])
         cutoff = 300
-        cutoff_end = 330
-        parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_out_of_road_new_new_nn'
+        cutoff_end = 350
+        parent_folder = 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_04_21_08_35,none_pytorch_300'
 
         pickle_filename = parent_folder + '/bugs/2/cur_info.pickle'
         with open(pickle_filename, 'rb') as f_in:
@@ -408,28 +408,47 @@ if __name__ == '__main__':
 
         xl_ori = d['xl']
         xu_ori = d['xu']
+        customized_constraints = d['customized_constraints']
 
 
         subfolders = get_sorted_subfolders(parent_folder)
         X, y, objective_list, mask, labels = load_data(subfolders)
 
-
         labels_to_encode = get_labels_to_encode(labels)
         partial = True
 
-        X, enc, inds_to_encode, inds_non_encode, encode_fields = encode_and_remove_fields(X, mask, labels, [], labels_to_encode)
-        one_hot_fields_len = np.sum(encode_fields)
+        X, enc, inds_to_encode, inds_non_encode, encoded_fields = encode_fields(X, labels, labels_to_encode)
+        one_hot_fields_len = np.sum(encoded_fields)
 
-        xl, xu = encode_bounds(xl_ori, xu_ori, inds_to_encode, inds_non_encode, encode_fields)
+        xl, xu = encode_bounds(xl_ori, xu_ori, inds_to_encode, inds_non_encode, encoded_fields)
+        labels_non_encode = np.array(labels)[inds_non_encode]
 
         X, X_removed, kept_fields, removed_fields = remove_fields_not_changing(X, one_hot_fields_len)
-
+        # print(X.shape, X_removed.shape, kept_fields, removed_fields, one_hot_fields_len)
         xl = xl[kept_fields]
         xu = xu[kept_fields]
+        # print('len(xl)', len(xl))
+
+        kept_fields_non_encode =  kept_fields - one_hot_fields_len
+        # print(one_hot_fields_len, len(kept_fields), kept_fields)
+        kept_fields_non_encode = kept_fields_non_encode[kept_fields_non_encode >= 0]
+        # print(kept_fields_non_encode)
+
+        # intersection_inds = np.in1d(inds_non_encode, kept_fields_non_encode)
+        # print(len(inds_non_encode), len(kept_fields_non_encode), len(intersection_inds), inds_non_encode, kept_fields_non_encode, intersection_inds)
+        # intersection_inds = np.array(inds_non_encode)[intersection_inds]
+        labels_used = labels_non_encode[kept_fields_non_encode]
+        # print(len(labels_used), labels_used)
 
 
         X_train, X_test = X[:cutoff], X[cutoff:cutoff_end]
         y_train, y_test = y[:cutoff], y[cutoff:cutoff_end]
+
+        # print(labels)
+        # print(labels_used)
+        # print(X_test)
+        # print(xl)
+        # print(xu)
 
         standardize = StandardScaler()
         customized_fit(X_train, standardize, one_hot_fields_len, partial)
@@ -438,26 +457,27 @@ if __name__ == '__main__':
         xl = customized_standardize(np.array([xl]), standardize, one_hot_fields_len, partial)[0]
         xu = customized_standardize(np.array([xu]), standardize, one_hot_fields_len, partial)[0]
 
+        # print('one_hot_fields_len', one_hot_fields_len)
 
 
-
-        model = train_net(X_train, y_train, X_test, y_test)
+        model = train_net(X_train, y_train, X_test, y_test, batch_train=200, batch_test=2)
 
         y_zeros = np.zeros(X_test.shape[0])
-        test_x_adv_list, new_bug_pred_prob_list = pgd_attack(model, X_test, y_zeros, xl, xu, encode_fields)
+        test_x_adv_list, new_bug_pred_prob_list, initial_bug_pred_prob_list  = pgd_attack(model, X_test, y_zeros, xl, xu, encoded_fields, labels_used, customized_constraints, standardize)
 
 
         print('\n'*2)
         print('y_test :', y_test, 'total bug num :', np.sum(y_test))
         print('new_bug_pred_prob_list :', new_bug_pred_prob_list)
-
+        print('initial_bug_pred_prob_list :', initial_bug_pred_prob_list)
+        print(np.array(test_x_adv_list).shape)
 
         test_x_adv_list = customized_inverse_standardize(np.array(test_x_adv_list), standardize, one_hot_fields_len, partial)
 
         # print('X0', test_x_adv_list[0])
         X = recover_fields_not_changing(test_x_adv_list, X_removed, kept_fields, removed_fields)
         # print('X1', X[0])
-        X = decode_fields(X, enc, inds_to_encode, inds_non_encode, encode_fields, adv=True)
+        X = decode_fields(X, enc, inds_to_encode, inds_non_encode, encoded_fields, adv=True)
         # print('X2', X[0])
 
         is_bug_list = []
