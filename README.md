@@ -71,7 +71,7 @@ Go to the "files" tab, and download the model weights, named "epoch=24.ckpt", an
 
 ## Run Fuzzing
 ```
-python ga_fuzzing.py
+python ga_fuzzing.py -p 2015 -s 8791 -d 8792 --n_gen 6 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 300 --objective_weights -1 1 1 0 0 0 0 0 0 0 --check_unique_coeff 0 0.2 0.5
 ```
 For more API information, checkout the interface inside `ga_fuzzing.py`.
 
