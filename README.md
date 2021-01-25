@@ -27,6 +27,10 @@ conda env create -f environment.yml
 ```
 A conda environment with name `carla99` should be created.
 
+Activate it
+```
+conda activate carla99
+```
 
 
 ### Installation of Carla 0.9.9.4
@@ -35,7 +39,7 @@ See [link](https://github.com/carla-simulator/carla/releases/tag/0.9.9) for more
 
 For convenience, the following commands can be used to install carla 0.9.9.4.
 
-Download CARLA_0.9.9.4.tar.gz and AdditionalMaps_0.9.9.4.tar.gz from [link](https://github.com/carla-simulator/carla/releases/tag/0.9.9) and run
+Download CARLA_0.9.9.4.tar.gz and AdditionalMaps_0.9.9.4.tar.gz from [link](https://github.com/carla-simulator/carla/releases/tag/0.9.9), put it at the same level of this repo, and run
 ```
 mkdir carla_0994_no_rss
 tar -xvzf CARLA_0.9.9.4.tar.gz -C carla_0994_no_rss
@@ -57,7 +61,7 @@ cd ../../..
 A window should pop up.
 
 ### Download a LBC pretrained model
-LBC model is one of the models supported to be tested. A pretrained-model's checkpoint can be found at [Wandb project](https://app.wandb.ai/bradyz/2020_carla_challenge_lbc).
+LBC model is one of the models supported to be tested. A pretrained-model's checkpoint can be found at LBC author's provided [Wandb project](https://app.wandb.ai/bradyz/2020_carla_challenge_lbc).
 
 Navigate to one of the runs, like https://app.wandb.ai/bradyz/2020_carla_challenge_lbc/runs/command_coefficient=0.01_sample_by=even_stage2/files
 
