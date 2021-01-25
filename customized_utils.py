@@ -22,6 +22,9 @@ import subprocess
 import time
 import re
 import math
+from sklearn.preprocessing import StandardScaler
+import pickle
+
 
 def visualize_route(route):
     n = len(route)
@@ -1643,7 +1646,7 @@ def if_violate_constraints(x, customized_constraints, labels, verbose=False):
             violated_constraints.append(constraint)
             involved_labels = involved_labels.union(set(constraint['labels']))
             if verbose:
-                print('\n'*5, 'violate_constraints!!!!', '\n'*5)
+                print('\n'*1, 'violate_constraints!!!!', '\n'*1)
                 print(coeff, features, powers, np.sum(coeff * np.power(features, powers)), constraint['value'], constraint['labels'])
 
     return if_violate, [violated_constraints, involved_labels]
@@ -1812,25 +1815,63 @@ def parse_route_file(route_filename, route_length_lower_bound=50):
 
     return config_list
 
-def is_similar(x_1, x_2, mask, xl, xu, p, c, th, verbose=False, labels=[], diff_th=0.1, y_i=-1, y_j=-1):
+
+def eliminate_duplicates_for_list(mask, xl, xu, p, c, th, X, prev_unique_bugs, tmp_off=[]):
+    new_X = []
+    similar = False
+    for x in X:
+        for x2 in prev_unique_bugs:
+            if is_similar(x, x2, mask, xl, xu, p, c, th):
+                similar = True
+                break
+        if not similar:
+            for x2 in tmp_off:
+                # print(x)
+                # print(x2)
+                # print(mask, xl, xu, p, c, th)
+                # print(len(x), len(x2), len(mask), len(xl), len(xu))
+                if is_similar(x, x2, mask, xl, xu, p, c, th):
+                    similar = True
+                    break
+        if not similar:
+            new_X.append(x)
+    return new_X
+
+def is_similar(x_1, x_2, mask, xl, xu, p, c, th, diff_th=0.1, y_i=-1, y_j=-1, verbose=False, labels=[]):
 
     if y_i == y_j:
         eps = 1e-8
 
+        # only consider those fields that can change when considering diversity
+        variant_fields = (xu - xl) > eps
+        mask = mask[variant_fields]
+        xl = xl[variant_fields]
+        xu = xu[variant_fields]
+        x_1 = x_1[variant_fields]
+        x_2 = x_2[variant_fields]
+        variant_fields_num = np.sum(variant_fields)
+        if verbose:
+            print(variant_fields_num, '/', len(variant_fields), 'fields are used for checking similarity')
+
         int_inds = mask == 'int'
         real_inds = mask == 'real'
+        # print(int_inds, real_inds)
         int_diff_raw = np.abs(x_1[int_inds] - x_2[int_inds])
         int_diff = np.ones(int_diff_raw.shape) * (int_diff_raw > eps)
 
         real_diff_raw = np.abs(x_1[real_inds] - x_2[real_inds]) / (np.abs(xu - xl) + eps)[real_inds]
-
+        # print(int_diff_raw, real_diff_raw)
         real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > c)
 
         diff = np.concatenate([int_diff, real_diff])
-
+        # print(diff, p)
         diff_norm = np.linalg.norm(diff, p)
-        equal = diff_norm < th
 
+        th_num = np.max([np.round(th*variant_fields_num), 1])
+        equal = diff_norm < th_num
+
+        if verbose:
+            print('diff_norm, th_num', diff_norm, th_num)
         # if verbose:
         #     print('diff_raw', int_diff_raw, real_diff_raw, p, c, th, diff, diff_norm)
         #
@@ -1848,8 +1889,8 @@ def is_similar(x_1, x_2, mask, xl, xu, p, c, th, verbose=False, labels=[], diff_
     return equal
 
 
-def is_distinct(x, X, mask, xl, xu, p, c, th, diff_th=0.1):
-
+def is_distinct(x, X, mask, xl, xu, p, c, th, diff_th=0.1, verbose=True):
+    verbose = False
     if len(X) == 0:
         return True
     else:
@@ -1858,10 +1899,13 @@ def is_distinct(x, X, mask, xl, xu, p, c, th, diff_th=0.1):
         xu_arr = np.array(xu)
         x = np.array(x)
         X = np.stack(X)
-        for x_i in X:
-            similar = is_similar(x, x_i, mask_arr, xl_arr, xu_arr, p, c, th, diff_th)
+        for i, x_i in enumerate(X):
+            # if verbose:
+            #     print(i, '- th prev x checking similarity')
+            similar = is_similar(x, x_i, mask_arr, xl_arr, xu_arr, p, c, th, diff_th=diff_th, verbose=verbose)
             if similar:
-                # print('similar\n')
+                if verbose:
+                    print('similar with', i)
                 return False
         return True
 
@@ -1892,7 +1936,7 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1, y
                     else:
                         y_i = -1
                         y_j = -1
-                    similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th, diff_th, y_i=y_i, y_j=y_j)
+                    similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th, diff_th=diff_th, y_i=y_i, y_j=y_j)
                     if similar:
                         break
                 if not similar:
@@ -1909,8 +1953,9 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1, y
                     else:
                         y_i = -1
                         y_j = -1
-                    similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th, diff_th, y_i=y_i, y_j=y_j)
+                    similar = is_similar(data_points[i], data_points[j], mask_arr, xl_arr, xu_arr, p, c, th, diff_th=diff_th, y_i=y_i, y_j=y_j)
                     if similar:
+                        # print(i, j)
                         break
                 if not similar:
                     distinct_inds.append(i)
@@ -1921,6 +1966,12 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1, y
 def check_bug(objectives):
     # speed needs to be larger than 0.1 to avoid false positive
     return objectives[0] > 0.1 or objectives[-3] or objectives[-2] or objectives[-1]
+
+def get_if_bug_list(objectives_list):
+    if_bug_list = []
+    for objective in objectives_list:
+        if_bug_list.append(check_bug(objective))
+    return np.array(if_bug_list)
 
 
 def start_server(port):
@@ -2273,9 +2324,12 @@ def decode_fields(x, enc, inds_to_encode, inds_non_encode, encode_fields, adv=Fa
     return x_decoded
 
 
-def remove_fields_not_changing(x, embed_dims=0):
-
-    cond = np.std(x, axis=0) > 0
+def remove_fields_not_changing(x, embed_dims=0, xl=[], xu=[]):
+    eps = 1e-8
+    if len(xl) > 0:
+        cond = xu - xl > eps
+    else:
+        cond = np.std(x, axis=0) > eps
     kept_fields = np.where(cond)[0]
     if embed_dims > 0:
         kept_fields = list(set(kept_fields).union(set(range(embed_dims))))
@@ -2344,3 +2398,238 @@ def draw_auc_roc_for_scores(scores, y_test):
     plt.plot(fpr_list, tpr_list)
     plt.plot(np.arange(0,1.2,0.2), np.arange(0,1.2,0.2))
     plt.show()
+
+
+
+def process_specific_bug(bug_type_ind, bugs_type_list, bugs_inds_list, bugs, mask, xl, xu, p, c, th):
+    chosen_bugs = np.array(bugs_type_list) == bug_type_ind
+
+    specific_bugs = np.array(bugs)[chosen_bugs]
+    specific_bugs_inds_list = np.array(bugs_inds_list)[chosen_bugs]
+
+    # print('specific_bugs', specific_bugs)
+    unique_specific_bugs, specific_distinct_inds = get_distinct_data_points(specific_bugs, mask, xl, xu, p, c, th)
+
+    # print('\n'*5)
+    # print('mask, xl, xu, p, c, th', mask, xl, xu, p, c, th)
+    # print('\n'*5)
+
+    unique_specific_bugs_inds_list = specific_bugs_inds_list[specific_distinct_inds]
+
+    # print(bug_type_ind, specific_distinct_inds, specific_bugs_inds_list, unique_specific_bugs_inds_list)
+
+    return list(unique_specific_bugs), list(unique_specific_bugs_inds_list), len(unique_specific_bugs)
+
+
+def get_unique_bugs(X, objectives_list, mask, xl, xu, unique_coeff, return_indices=False):
+    p, c, th = unique_coeff
+    bugs_type_list = []
+    bugs = []
+    bugs_inds_list = []
+    for i, (x, objectives) in enumerate(zip(X, objectives_list)):
+        if check_bug(objectives):
+            bug_type = 5
+            if objectives[0] > 0.1:
+                bug_type = 1
+            elif objectives[-3]:
+                bug_type = 2
+            elif objectives[-2]:
+                bug_type = 3
+            if objectives[-1]:
+                if bug_type > 4:
+                    bug_type = 4
+            bugs_type_list.append(bug_type)
+            bugs.append(x)
+            bugs_inds_list.append(i)
+
+
+
+    unique_collision_bugs, unique_collision_bugs_inds_list, unique_collision_num = process_specific_bug(1, bugs_type_list, bugs_inds_list, bugs, mask, xl, xu, p, c, th)
+    unique_offroad_bugs, unique_offroad_bugs_inds_list, unique_offroad_num = process_specific_bug(2, bugs_type_list, bugs_inds_list, bugs, mask, xl, xu, p, c, th)
+    unique_wronglane_bugs, unique_wronglane_bugs_inds_list, unique_wronglane_num = process_specific_bug(3, bugs_type_list, bugs_inds_list, bugs, mask, xl, xu, p, c, th)
+    unique_redlight_bugs, unique_redlight_bugs_inds_list, unique_redlight_num = process_specific_bug(4, bugs_type_list, bugs_inds_list, bugs, mask, xl, xu, p, c, th)
+
+
+    unique_bugs = unique_collision_bugs + unique_offroad_bugs + unique_wronglane_bugs + unique_redlight_bugs
+    unique_bugs_num = len(unique_bugs)
+    unique_bugs_inds_list = unique_collision_bugs_inds_list + unique_offroad_bugs_inds_list + unique_wronglane_bugs_inds_list + unique_redlight_bugs_inds_list
+
+
+    print('unique bugs num:', unique_bugs_num, unique_collision_num, unique_offroad_num, unique_wronglane_num, unique_redlight_num)
+
+
+
+    if return_indices:
+        return unique_bugs, unique_bugs_inds_list
+    else:
+        return unique_bugs
+
+
+def process_X(initial_X, labels, xl_ori, xu_ori, cutoff, cutoff_end, partial, unique_bugs_len, standardize_prev=None):
+
+    labels_to_encode = get_labels_to_encode(labels)
+    X, enc, inds_to_encode, inds_non_encode, encoded_fields = encode_fields(initial_X, labels, labels_to_encode)
+    one_hot_fields_len = np.sum(encoded_fields)
+
+    xl, xu = encode_bounds(xl_ori, xu_ori, inds_to_encode, inds_non_encode, encoded_fields)
+
+    labels_non_encode = np.array(labels)[inds_non_encode]
+    # print(np.array(X).shape)
+    X, X_removed, kept_fields, removed_fields = remove_fields_not_changing(X, one_hot_fields_len, xl=xl, xu=xu)
+    # print(np.array(X).shape)
+
+    param_for_recover_and_decode = (X_removed, kept_fields, removed_fields, enc, inds_to_encode, inds_non_encode, encoded_fields, xl_ori, xu_ori, unique_bugs_len)
+
+
+    xl = xl[kept_fields]
+    xu = xu[kept_fields]
+
+    kept_fields_non_encode =  kept_fields - one_hot_fields_len
+    kept_fields_non_encode = kept_fields_non_encode[kept_fields_non_encode >= 0]
+    labels_used = labels_non_encode[kept_fields_non_encode]
+
+    X_train, X_test = X[:cutoff], X[cutoff:cutoff_end]
+    # print('X_train.shape, X_test.shape', X_train.shape, X_test.shape, one_hot_fields_len)
+    if standardize_prev:
+        standardize = standardize_prev
+    else:
+        standardize = StandardScaler()
+        customized_fit(X_train, standardize, one_hot_fields_len, partial)
+    X_train = customized_standardize(X_train, standardize, one_hot_fields_len, partial)
+    X_test = customized_standardize(X_test, standardize, one_hot_fields_len, partial)
+    xl = customized_standardize(np.array([xl]), standardize, one_hot_fields_len, partial)[0]
+    xu = customized_standardize(np.array([xu]), standardize, one_hot_fields_len, partial)[0]
+
+    return X_train, X_test, xl, xu, labels_used, standardize, one_hot_fields_len, param_for_recover_and_decode
+
+
+def inverse_process_X(initial_test_x_adv_list, standardize, one_hot_fields_len, partial, X_removed, kept_fields, removed_fields, enc, inds_to_encode, inds_non_encode, encoded_fields):
+    test_x_adv_list = customized_inverse_standardize(initial_test_x_adv_list, standardize, one_hot_fields_len, partial)
+    X = recover_fields_not_changing(test_x_adv_list, X_removed, kept_fields, removed_fields)
+    X_final_test = decode_fields(X, enc, inds_to_encode, inds_non_encode, encoded_fields, adv=True)
+    return X_final_test
+
+
+def get_sorted_subfolders(parent_folder):
+    bug_folder = os.path.join(parent_folder, 'bugs')
+    non_bug_folder = os.path.join(parent_folder, 'non_bugs')
+    sub_folders = [os.path.join(bug_folder, sub_name) for sub_name in os.listdir(bug_folder)] + [os.path.join(non_bug_folder, sub_name) for sub_name in os.listdir(non_bug_folder)]
+
+    ind_sub_folder_list = []
+    for sub_folder in sub_folders:
+        if os.path.isdir(sub_folder):
+            ind = int(re.search('.*bugs/([0-9]*)', sub_folder).group(1))
+            ind_sub_folder_list.append((ind, sub_folder))
+
+    ind_sub_folder_list_sorted = sorted(ind_sub_folder_list)
+    subfolders = [filename for i, filename in ind_sub_folder_list_sorted]
+    return subfolders
+
+def load_data(subfolders):
+    data_list = []
+    is_bug_list = []
+
+    objectives_list = []
+    mask, labels = None, None
+    for sub_folder in subfolders:
+        if os.path.isdir(sub_folder):
+            pickle_filename = os.path.join(sub_folder, 'cur_info.pickle')
+
+            with open(pickle_filename, 'rb') as f_in:
+                cur_info = pickle.load(f_in)
+                data, objectives, is_bug, mask, labels = reformat(cur_info)
+                data_list.append(data)
+
+                is_bug_list.append(is_bug)
+                objectives_list.append(objectives)
+
+
+    return data_list, np.array(is_bug_list), np.array(objectives_list), mask, labels
+
+def reformat(cur_info):
+    objectives = cur_info['objectives']
+    is_bug = cur_info['is_bug']
+
+    ego_linear_speed, min_d, d_angle_norm, offroad_d, wronglane_d, dev_dist, is_collision, is_offroad, is_wrong_lane, is_run_red_light = objectives
+    accident_x, accident_y = cur_info['loc']
+
+
+    # route_completion = cur_info['route_completion']
+
+    # result_info = [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, accident_x, accident_y, is_bug, route_completion]
+
+
+    data, x, xl, xu, mask, labels = cur_info['data'], cur_info['x'][:-1], cur_info['xl'], cur_info['xu'], cur_info['mask'], cur_info['labels']
+
+    assert len(x) == len(xl)
+
+    return x, objectives, int(is_bug), mask, labels
+
+def pretrain_regression_nets(parent_folder, cutoff, cutoff_end):
+    pickle_filename = get_picklename(parent_folder)
+
+    with open(pickle_filename, 'rb') as f_in:
+        d = pickle.load(f_in)
+
+    xl_ori = d['xl']
+    xu_ori = d['xu']
+    customized_constraints = d['customized_constraints']
+
+    subfolders = get_sorted_subfolders(parent_folder)
+    initial_X, y, initial_objectives_list, mask, labels = load_data(subfolders)
+
+
+    # we are not using it so set it to 0 for placeholding
+    unique_bugs_len = 0
+    partial = True
+    # print('pretrain initial_X.shape', np.array(initial_X).shape)
+    # print('pretrain len(labels)', len(labels))
+    print(np.array(initial_X).shape, cutoff, cutoff_end)
+    X_train, X_test, xl, xu, labels_used, standardize, one_hot_fields_len, param_for_recover_and_decode = process_X(initial_X, labels, xl_ori, xu_ori, cutoff, cutoff_end, partial, unique_bugs_len)
+
+    (X_removed, kept_fields, removed_fields, enc, inds_to_encode, inds_non_encode, encoded_fields, _, _, unique_bugs_len) = param_for_recover_and_decode
+
+    y_0 = np.array([obj[0] for obj in initial_objectives_list])
+    y_1 = np.array([obj[1] for obj in initial_objectives_list])
+    y_2 = np.array([obj[2] for obj in initial_objectives_list])
+
+    y_train_0, y_test_0 = y_0[:cutoff], y_0[cutoff:cutoff_end]
+    y_train_1, y_test_1 = y_1[:cutoff], y_1[cutoff:cutoff_end]
+    y_train_2, y_test_2 = y_2[:cutoff], y_0[cutoff:cutoff_end]
+    # print('pretrain labels_used', labels_used)
+    # print('X_train.shape', X_train.shape)
+    from pgd_attack import train_regression_net
+    clf_0, conf_0 = train_regression_net(X_train, y_train_0, X_test, y_test_0, batch_train=200, return_test_err=True)
+    clf_1, conf_1 = train_regression_net(X_train, y_train_1, X_test, y_test_1, batch_train=200, return_test_err=True)
+    clf_2, conf_2 = train_regression_net(X_train, y_train_2, X_test, y_test_2, batch_train=200, return_test_err=True)
+
+    return clf_0, clf_1, clf_2, conf_0, conf_1, conf_2, standardize
+
+
+def get_picklename(parent_folder):
+    pickle_filename = parent_folder + '/bugs/'
+    assert os.path.isdir(pickle_filename)
+    i = 1
+    while True:
+        if os.path.isdir(pickle_filename+str(i)):
+            pickle_filename = pickle_filename + str(i) + '/cur_info.pickle'
+            break
+        i+=1
+    return pickle_filename
+
+def determine_y_upon_weights(objective_list, objective_weights):
+    collision_activated = np.sum(objective_weights[:3]!=0)==3
+    out_of_road_activated = np.sum(objective_weights[3:6]!=0)==3
+    red_light_activated = objective_weights[-1]!=0
+
+    y = np.zeros(len(objective_list))
+    for i, obj in enumerate(objective_list):
+        if collision_activated and out_of_road_activated:
+            y[i] = check_bug(obj)
+        elif collision_activated:
+            if obj[0] > 0.1:
+                y[i] = 1
+        elif out_of_road_activated:
+            if obj[-2] == 1 or obj[-3] == 1:
+                y[i] = 1
+    return y

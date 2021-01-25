@@ -511,7 +511,7 @@ def check_unique_bug_num(folder, path1, path2):
 
         p = 0
         c = 0.15
-        th = int(len(mask)*0.5)
+        th = 0.5
 
         filtered_bugs, inds = get_distinct_data_points(bugs, mask, xl, xu, p, c, th)
         print(cutoff, len(filtered_bugs), len(bugs))
@@ -589,7 +589,7 @@ def calculate_pairwise_dist(path_list):
 
         p = 0
         c = 0.15
-        th = int(len(mask)*0.5)
+        th = 0.5
 
         objectives = np.stack(d['objectives'])
         df_objectives = np.array(default_objectives)
@@ -688,10 +688,10 @@ def draw_unique_bug_num_over_simulations(path_list, filename='num_of_unique_bugs
 
             bugs = X[y>0]
 
-
+            eps = 1e-8
             p = 0
-            c = 0.1
-            th = int(len(mask)*0.5)
+            c = 0.2
+            th = 0.5
 
             filtered_bugs, inds = get_distinct_data_points(bugs, mask, xl, xu, p, c, th, y=y)
             print(cutoff, len(filtered_bugs), len(bugs))
@@ -798,7 +798,14 @@ if __name__ == '__main__':
     town05_right_path_list = [('ga-adv-nn', 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_adv_nn_pytorch_300_adv_top/bugs/nsga2_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('ga-nn', 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_nn_pytorch_300/bugs/nsga2_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('ga-none', 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_none_pytorch_300/bugs/nsga2_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('random-adv-nn', 'run_results/random/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_adv_nn_pytorch_300/bugs/random_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('random-nn', 'run_results/random/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_nn_pytorch_300/bugs/random_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('random-none', 'run_results/random/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_none_pytorch_300/bugs/random_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('nsga2-un', 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_none_pytorch_300/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('nsga2-un-nn', 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_nn_pytorch_300/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz')]
 
     town05_right_out_of_road_path_list = [('adv-nn', 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_out_of_road_adv_nn_pytorch_300_adv_top/bugs/nsga2_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('nn', 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_out_of_road_nn_pytorch_300/bugs/nsga2_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('none', 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_out_of_road_none_pytorch_300/bugs/nsga2_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz')]
-    draw_unique_bug_num_over_simulations(town05_right_path_list, filename='num_of_unique_bugs_town05_right', scene_name='collision', legend=True)
+
+
+
+    new_town05_right_path_list = [('nsga2-un', 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_all_adv_nn_pytorch_700_300_1.0_0.75_0.75_coeff_0.0_0.1_0.5/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz')]
+
+
+
+    draw_unique_bug_num_over_simulations(new_town05_right_path_list, filename='num_of_unique_bugs_town05_right', scene_name='all', legend=True)
     # draw_unique_bug_num_over_simulations(town05_right_out_of_road_path_list, filename='num_of_unique_bugs_out_of_road_town05_right', scene_name='out_of_road', legend=True)
     # analyze different objectives
     # analyze_objectives(objectives_path_list1, filename='objectives_bug_num_over_simulations_town05_right', scene_name='leading car slows down / stops')

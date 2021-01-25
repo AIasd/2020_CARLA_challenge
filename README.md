@@ -1,5 +1,5 @@
 ## Introduction
-This repo consists of code accompanying the submission "AutoFuzz: Grammar-Based Fuzzing forSelf-Driving Car Controller". AutoFuzz is a grammar-based input fuzzing tool for self-driving car, which analyzes CARLA specification to generate semantically and temporally valid test scenario.
+This repo consists of code accompanying "AutoFuzz: Grammar-Based Fuzzing for Self-Driving Car Controller". AutoFuzz is a grammar-based input fuzzing tool for end-to-end self-driving car controllers. It analyzes CARLA specification to generate semantically and temporally valid test scenario with support of multiple search methods.
 
 
 ## Setup
@@ -7,8 +7,9 @@ This repo consists of code accompanying the submission "AutoFuzz: Grammar-Based 
 * OS: Ubuntu 18.04
 * CPU: at least 8 cores
 * GPU: at least 8GB memory
-* Carla 0.9.9 (for installation details, see below)
-* Python 3.7 with packages listed in `requirements.yml`
+* Python 3.7
+* Carla 0.9.9.4 (for installation details, see below)
+
 
 ### Cloning this Repository
 
@@ -17,22 +18,23 @@ Clone this repo with all its submodules
 ```
 git clone https://github.com/AIasd/2020_CARLA_challenge.git --recursive
 ```
+### Create Conda Environment and Install Python Packages
+All python packages used are specified in `environment.yml`.
 
-All python packages used are specified in `requirements.yml`.
+With conda installed, create the conda environment and install python packages used:
+```
+conda env create -f environment.yml
+```
+A conda environment with name `carla99` should be created.
 
+
+
+### Installation of Carla 0.9.9.4
 This code uses CARLA 0.9.9.4. You will need to first install CARLA 0.9.9.4, along with the additional maps.
 See [link](https://github.com/carla-simulator/carla/releases/tag/0.9.9) for more instructions.
 
+For convenience, the following commands can be used to install carla 0.9.9.4.
 
-
-### Installation of Carla 0.9.9
-The following commands can be used to install carla 0.9.9
-
-Create a new conda environment:
-```
-conda create --name carla99 python=3.7
-conda activate carla99
-```
 Download CARLA_0.9.9.4.tar.gz and AdditionalMaps_0.9.9.4.tar.gz from [link](https://github.com/carla-simulator/carla/releases/tag/0.9.9) and run
 ```
 mkdir carla_0994_no_rss
@@ -55,7 +57,7 @@ cd ../../..
 A window should pop up.
 
 ### Download a LBC pretrained model
-Download the checkpoint from [Wandb project](https://app.wandb.ai/bradyz/2020_carla_challenge_lbc).
+LBC model is one of the models supported to be tested. A pretrained-model's checkpoint can be found at [Wandb project](https://app.wandb.ai/bradyz/2020_carla_challenge_lbc).
 
 Navigate to one of the runs, like https://app.wandb.ai/bradyz/2020_carla_challenge_lbc/runs/command_coefficient=0.01_sample_by=even_stage2/files
 
@@ -67,7 +69,7 @@ Go to the "files" tab, and download the model weights, named "epoch=24.ckpt", an
 ```
 python ga_fuzzing.py
 ```
-For more API information, checkout `ga_fuzzing.py`.
+For more API information, checkout the interface inside `ga_fuzzing.py`.
 
 
 
@@ -112,7 +114,7 @@ Stage 2 (~36 hrs on 2080Ti):
 CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir path/to/data --teacher_path path/to/model/from/stage1
 ```
 
-## Fixing
+## Model Fixing
 
 
 Stage 2 finetuning:
@@ -123,4 +125,4 @@ CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir pat
 
 
 # Reference
-This repo is built on top of [here](https://github.com/bradyz/2020_CARLA_challenge) and [here](https://github.com/msu-coinlab/pymoo)
+This repo is partially built on top of [here](https://github.com/bradyz/2020_CARLA_challenge) and [here](https://github.com/msu-coinlab/pymoo)

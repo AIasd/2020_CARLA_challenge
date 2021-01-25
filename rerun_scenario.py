@@ -5,13 +5,13 @@ import random
 import pickle
 import numpy as np
 from datetime import datetime
-from customized_utils import make_hierarchical_dir, convert_x_to_customized_data, exit_handler, customized_routes, parse_route_and_scenario, check_bug, get_labels_to_encode, encode_fields, decode_fields, remove_fields_not_changing, recover_fields_not_changing, encode_bounds, max_one_hot_op, customized_standardize, customized_inverse_standardize, customized_fit
+from customized_utils import make_hierarchical_dir, convert_x_to_customized_data, exit_handler, customized_routes, parse_route_and_scenario, check_bug, get_labels_to_encode, encode_fields, decode_fields, remove_fields_not_changing, recover_fields_not_changing, encode_bounds, max_one_hot_op, customized_standardize, customized_inverse_standardize, customized_fit, get_unique_bugs, get_if_bug_list, process_X, inverse_process_X, get_sorted_subfolders, load_data, get_picklename
 import atexit
 
 import traceback
 from distutils.dir_util import copy_tree
 
-from regression_analysis import get_sorted_subfolders, load_data
+
 
 
 import json
@@ -22,8 +22,15 @@ import torch.utils.data as Data
 import torchvision.utils
 from torchvision import models
 
-from sklearn.preprocessing import StandardScaler
-from pgd_attack import train_net, pgd_attack
+
+from pgd_attack import train_net, pgd_attack, extract_embed
+
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-p','--port', type=int, default=2033, help='TCP port(s) to listen to')
+arguments = parser.parse_args()
+port = arguments.port
 
 
 os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
@@ -38,7 +45,7 @@ torch.backends.cudnn.benchmark = False
 os.environ['HAS_DISPLAY'] = '0'
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-port = 2033
+
 ego_car_model = 'lbc'
 is_save = True
 
@@ -373,6 +380,9 @@ def rerun_list_of_scenarios(rerun_save_folder, scenario_file, data, mode):
     print('objectives_avg :', objectives_avg / len(chosen_subfolder_names))
 
 
+
+
+
 if __name__ == '__main__':
     time_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
@@ -384,8 +394,46 @@ if __name__ == '__main__':
 
     atexit.register(exit_handler, [port])
 
-    # ['rerun', 'adv']
+    # ['rerun', 'adv', 'tsne']
     task = 'adv'
+    use_adv = True
+    use_unique_bugs = True
+    test_unique_bugs = True
+    unique_coeff = [0, 0.1, 0.5]
+
+    parent_folder = 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_all_adv_nn_pytorch_700_300_1.0_0.75_0.75_coeff_0.0_0.1_0.5'
+    # 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/50_14_collision_adv_nn_pytorch_700_300_1.0_0.7_coeff_0.0_0.05_0.25'
+    # 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/collision_adv_nn_pytorch_700_300_0.0_0.0_coeff_0.0_0.1_0.5'
+    # 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_50_14_collision_0.05_0.25_adv_nn_pytorch_300_eps_0'
+    # 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/50_14_collision_adv_nn_pytorch_700_300_1.0_0.7_coeff_0.0_0.05_0.25'
+    # 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/all_adv_nn_pytorch_700_300_0.0_0.0_coeff_0.0_0.1_0.5'
+    # 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_all_adv_nn_pytorch_700_300_1.0_0.75_0.75_coeff_0.0_0.1_0.5'
+    pickle_filename = get_picklename(parent_folder)
+
+
+
+    parent_tsne_folder = 'tmp_tsne'
+
+    # only used for adv
+    rerun_save_folder = make_hierarchical_dir(['adv', time_str])
+    cutoff = 600
+    cutoff_end = 650
+    eps = 1.0
+    adv_conf_th = 0.75
+    # 1.01
+
+    save_path = 'tmp_X_and_objectives'+'_'.join([str(use_unique_bugs), str(eps), str(adv_conf_th), str(unique_coeff[0]), str(unique_coeff[1]), str(unique_coeff[2]), str(cutoff), str(cutoff_end)])
+    save_path = os.path.join(parent_tsne_folder, save_path)
+
+
+
+    # 'tmp_X_and_objectives'
+    # 'tmp_X_and_objectives_prev_all_True'
+    if not os.path.exists(parent_tsne_folder):
+        os.mkdir(parent_tsne_folder)
+
+
+    consider_unique_for_tsne = True
 
     if task == 'rerun':
         # ['bugs', 'non_bugs']
@@ -396,12 +444,8 @@ if __name__ == '__main__':
         rerun_list_of_scenarios(rerun_save_folder, scenario_file, data, mode)
 
     elif task == 'adv':
-        rerun_save_folder = make_hierarchical_dir(['adv', time_str])
-        cutoff = 300
-        cutoff_end = 350
-        parent_folder = 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_04_21_08_35,none_pytorch_300'
 
-        pickle_filename = parent_folder + '/bugs/2/cur_info.pickle'
+
         with open(pickle_filename, 'rb') as f_in:
             d = pickle.load(f_in)
         # hack: since we are only using the elements after the first five
@@ -412,84 +456,203 @@ if __name__ == '__main__':
 
 
         subfolders = get_sorted_subfolders(parent_folder)
-        X, y, objective_list, mask, labels = load_data(subfolders)
 
-        labels_to_encode = get_labels_to_encode(labels)
+        initial_X, y, initial_objectives_list, mask, labels = load_data(subfolders)
+
+        # objectives[0] > 0.1 or objectives[-3] or objectives[-2] or objectives[-1]
+        # new_y = []
+        # for ob in initial_objectives_list:
+        #     # if ob[0] > 0.1:
+        #     if ob[-2] == 1:
+        #         new_y.append(1)
+        #     else:
+        #         new_y.append(0)
+        # y = np.array(new_y)
+
+
+        X_final_test = np.array(initial_X[cutoff:cutoff_end])
+
+
+        unique_bugs = get_unique_bugs(initial_X[:cutoff], initial_objectives_list[:cutoff], mask, xl_ori, xu_ori, unique_coeff)
+        unique_bugs_len = len(unique_bugs)
+
+        # check out the initial additional unique bugs
+        get_unique_bugs(initial_X[:cutoff_end], initial_objectives_list[:cutoff_end], mask, xl_ori, xu_ori, unique_coeff)
+
+
         partial = True
 
-        X, enc, inds_to_encode, inds_non_encode, encoded_fields = encode_fields(X, labels, labels_to_encode)
-        one_hot_fields_len = np.sum(encoded_fields)
-
-        xl, xu = encode_bounds(xl_ori, xu_ori, inds_to_encode, inds_non_encode, encoded_fields)
-        labels_non_encode = np.array(labels)[inds_non_encode]
-
-        X, X_removed, kept_fields, removed_fields = remove_fields_not_changing(X, one_hot_fields_len)
-        # print(X.shape, X_removed.shape, kept_fields, removed_fields, one_hot_fields_len)
-        xl = xl[kept_fields]
-        xu = xu[kept_fields]
-        # print('len(xl)', len(xl))
-
-        kept_fields_non_encode =  kept_fields - one_hot_fields_len
-        # print(one_hot_fields_len, len(kept_fields), kept_fields)
-        kept_fields_non_encode = kept_fields_non_encode[kept_fields_non_encode >= 0]
-        # print(kept_fields_non_encode)
-
-        # intersection_inds = np.in1d(inds_non_encode, kept_fields_non_encode)
-        # print(len(inds_non_encode), len(kept_fields_non_encode), len(intersection_inds), inds_non_encode, kept_fields_non_encode, intersection_inds)
-        # intersection_inds = np.array(inds_non_encode)[intersection_inds]
-        labels_used = labels_non_encode[kept_fields_non_encode]
-        # print(len(labels_used), labels_used)
 
 
-        X_train, X_test = X[:cutoff], X[cutoff:cutoff_end]
+        X_train, X_test, xl, xu, labels_used, standardize, one_hot_fields_len, param_for_recover_and_decode = process_X(initial_X, labels, xl_ori, xu_ori, cutoff, cutoff_end, partial, unique_bugs_len)
+
+        (X_removed, kept_fields, removed_fields, enc, inds_to_encode, inds_non_encode, encoded_fields, _, _, unique_bugs_len) = param_for_recover_and_decode
+
         y_train, y_test = y[:cutoff], y[cutoff:cutoff_end]
-
-        # print(labels)
-        # print(labels_used)
-        # print(X_test)
-        # print(xl)
-        # print(xu)
-
-        standardize = StandardScaler()
-        customized_fit(X_train, standardize, one_hot_fields_len, partial)
-        X_train = customized_standardize(X_train, standardize, one_hot_fields_len, partial)
-        X_test = customized_standardize(X_test, standardize, one_hot_fields_len, partial)
-        xl = customized_standardize(np.array([xl]), standardize, one_hot_fields_len, partial)[0]
-        xu = customized_standardize(np.array([xu]), standardize, one_hot_fields_len, partial)[0]
-
-        # print('one_hot_fields_len', one_hot_fields_len)
-
+        print('np.sum(y_train), np.sum(y_test)', np.sum(y_train), np.sum(y_test))
 
         model = train_net(X_train, y_train, X_test, y_test, batch_train=200, batch_test=2)
 
-        y_zeros = np.zeros(X_test.shape[0])
-        test_x_adv_list, new_bug_pred_prob_list, initial_bug_pred_prob_list  = pgd_attack(model, X_test, y_zeros, xl, xu, encoded_fields, labels_used, customized_constraints, standardize)
+        print('\n'*3)
+        train_conf = model.predict_proba(X_train)[:, 1]
+        print('train_conf', sorted(train_conf))
+        test_conf = model.predict_proba(X_test)[:, 1]
+        print('test_conf', sorted(test_conf))
+        th_conf = sorted(train_conf, reverse=True)[np.sum(y_train)//4]
+        print(th_conf)
+        print(np.sum(y_train), np.sum(y_test), np.sum(test_conf>th_conf))
+        print('\n'*3)
+
+        adv_conf_th = th_conf
+        attack_stop_conf = 0.75
+        # adv_conf_th = 0.0
+
+        if use_adv:
+            y_zeros = np.zeros(X_test.shape[0])
 
 
-        print('\n'*2)
-        print('y_test :', y_test, 'total bug num :', np.sum(y_test))
-        print('new_bug_pred_prob_list :', new_bug_pred_prob_list)
-        print('initial_bug_pred_prob_list :', initial_bug_pred_prob_list)
-        print(np.array(test_x_adv_list).shape)
+            if use_unique_bugs:
+                initial_test_x_adv_list, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(model, X_test, y_zeros, xl, xu, encoded_fields, labels_used, customized_constraints, standardize, prev_X=unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf)
+            else:
+                initial_test_x_adv_list, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(model, X_test, y_zeros, xl, xu, encoded_fields, labels_used, customized_constraints, standardize, eps=eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf)
 
-        test_x_adv_list = customized_inverse_standardize(np.array(test_x_adv_list), standardize, one_hot_fields_len, partial)
 
-        # print('X0', test_x_adv_list[0])
-        X = recover_fields_not_changing(test_x_adv_list, X_removed, kept_fields, removed_fields)
-        # print('X1', X[0])
-        X = decode_fields(X, enc, inds_to_encode, inds_non_encode, encoded_fields, adv=True)
-        # print('X2', X[0])
+            print('\n'*2)
+            print('y_test :', y_test, 'total bug num :', np.sum(y_test))
+            print('new_bug_pred_prob_list :', new_bug_pred_prob_list)
+            print('initial_bug_pred_prob_list :', initial_bug_pred_prob_list)
+            print('initial_bug_pred_prob_list median :', np.median(initial_bug_pred_prob_list))
+            print(np.array(initial_test_x_adv_list).shape)
+
+
+
+            X_final_test = inverse_process_X(np.array(initial_test_x_adv_list), standardize, one_hot_fields_len, partial, X_removed, kept_fields, removed_fields, enc, inds_to_encode, inds_non_encode, encoded_fields)
+
+
+
 
         is_bug_list = []
+        new_objectives_list = []
 
-        for i, test_x_adv in enumerate(X):
+        for i, test_x_adv in enumerate(X_final_test):
             np.clip(test_x_adv, xl_ori, xu_ori)
             test_x_adv = np.append(test_x_adv, port)
 
-            print(test_x_adv)
+            # print(test_x_adv)
 
             is_bug, objectives = rerun_simulation(pickle_filename, True, rerun_save_folder, i, str(i), scenario_file, ego_car_model=ego_car_model, x=test_x_adv)
 
             is_bug_list.append(is_bug)
             print(np.sum(is_bug_list), '/', len(is_bug_list))
+
+            new_objectives_list.append(objectives)
+
+
+
+        if use_adv:
+            embed = extract_embed(model, np.concatenate([X_train, X_test, np.array(initial_test_x_adv_list)]))
+
+
+
+            X_and_objectives = {
+            'embed':embed,
+            'initial_objectives_list':initial_objectives_list.tolist(),
+            'cutoff':cutoff,
+            'cutoff_end':cutoff_end,
+            'new_objectives_list':new_objectives_list}
+            np.savez(save_path, **X_and_objectives)
+
+
         print('is_bug_list :', is_bug_list)
+
+        if test_unique_bugs:
+            get_unique_bugs(initial_X[:cutoff]+X_final_test.tolist(), initial_objectives_list[:cutoff].tolist()+new_objectives_list, mask, xl_ori, xu_ori, unique_coeff)
+
+        print('adv_conf_th', adv_conf_th)
+        print('attack_stop_conf', attack_stop_conf)
+        print(parent_folder)
+
+    elif task == 'tsne':
+
+        if consider_unique_for_tsne:
+            with open(pickle_filename, 'rb') as f_in:
+                d_info = pickle.load(f_in)
+            # hack: since we are only using the elements after the first five
+
+            xl_ori = d_info['xl']
+            xu_ori = d_info['xu']
+            subfolders = get_sorted_subfolders(parent_folder)
+            initial_X, _, initial_objectives_list, mask, _ = load_data(subfolders)
+
+
+
+
+
+
+        d = np.load(save_path+'.npz')
+        cutoff = d['cutoff']
+        cutoff_end = d['cutoff_end']
+        embed = d['embed']
+
+
+
+        prev_objectives_list = np.array(d['initial_objectives_list'][:cutoff])
+        cur_objectives_list = np.array(d['initial_objectives_list'][cutoff:cutoff_end])
+        cur_objectives_list_adv = np.array(d['new_objectives_list'])
+
+        if_bug_list = get_if_bug_list(prev_objectives_list)
+        if_bug_list_cur = get_if_bug_list(cur_objectives_list)
+        if_bug_list_cur_adv = get_if_bug_list(cur_objectives_list_adv)
+
+
+
+
+
+        from sklearn.manifold import TSNE
+        from matplotlib import pyplot as plt
+        X_embed = TSNE(n_components=2, perplexity=30.0, n_iter=3000).fit_transform(embed)
+
+
+
+        prev_X = X_embed[:cutoff]
+
+        if consider_unique_for_tsne:
+            _, unique_bugs_inds = get_unique_bugs(initial_X[:cutoff], initial_objectives_list[:cutoff], mask, xl_ori, xu_ori, unique_coeff, return_indices=True)
+            prev_X_bug_unique = prev_X[unique_bugs_inds]
+
+        prev_X_normal = prev_X[if_bug_list==0]
+        prev_X_bug = prev_X[if_bug_list==1]
+
+        cur_X = X_embed[cutoff:cutoff_end]
+        cur_X_normal = cur_X[if_bug_list_cur==0]
+        cur_X_bug = cur_X[if_bug_list_cur==1]
+
+        cur_X_adv = X_embed[cutoff_end:]
+        cur_X_adv_normal = cur_X_adv[if_bug_list_cur_adv==0]
+        cur_X_adv_bug = cur_X_adv[if_bug_list_cur_adv==1]
+
+
+        print(prev_X.shape, cur_X.shape, cur_X_adv.shape)
+
+
+        plt.scatter(prev_X_normal[:, 0], prev_X_normal[:, 1], c='yellow', label='prev X normal', alpha=0.5, s=2)
+        plt.scatter(prev_X_bug[:, 0], prev_X_bug[:, 1], c='blue', label='prev X bug', alpha=0.5, s=2, marker='^')
+        if consider_unique_for_tsne:
+            plt.scatter(prev_X_bug_unique[:, 0], prev_X_bug_unique[:, 1], c='black', label='prev X unique bug', alpha=0.5, s=2, marker='^')
+
+        plt.scatter(cur_X_normal[:, 0], cur_X_normal[:, 1], c='green', label='cur X normal', alpha=0.5, s=2)
+        plt.scatter(cur_X_bug[:, 0], cur_X_bug[:, 1], c='green', label='cur X bug', alpha=0.5, s=2, marker='^')
+
+        plt.scatter(cur_X_adv_normal[:, 0], cur_X_adv_normal[:, 1], c='red', label='cur X adv normal', alpha=0.5, s=2)
+        plt.scatter(cur_X_adv_bug[:, 0], cur_X_adv_bug[:, 1], c='red', label='cur X adv bug', alpha=0.5, s=2, marker='^')
+
+
+        for i in range(cur_X.shape[0]):
+            plt.plot((cur_X[i, 0], cur_X_adv[i, 0]), (cur_X[i, 1], cur_X_adv[i, 1]), alpha=0.5, linewidth=0.5, c='gray')
+        plt.legend(loc=2, prop={'size': 3}, framealpha=0.5)
+        plt.savefig(os.path.join(parent_tsne_folder, 'tsne_'+save_path+'.pdf'))
+
+# unique bugs num: 316 178 5 95 38
+# unique bugs num: 339 193 5 100 41
+# unique bugs num: 341 201 5 95 40
+# unique bugs num: 347 206 5 95 41

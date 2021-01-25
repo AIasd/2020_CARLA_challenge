@@ -5,7 +5,7 @@ import torch.optim as optim
 import torch.utils.data as Data
 import torchvision.utils
 from torchvision import models
-from customized_utils import if_violate_constraints, customized_standardize, customized_inverse_standardize
+from customized_utils import if_violate_constraints, customized_standardize, customized_inverse_standardize, recover_fields_not_changing, decode_fields, is_distinct
 
 class VanillaDataset(Data.Dataset):
     def __init__(self, X, y, one_hot=False):
@@ -31,6 +31,10 @@ class SimpleNet(nn.Module):
             self.device = torch.device("cuda")
         else:
             self.device = device
+    def extract_embed(self, x):
+        out = self.fc1(x)
+        out = self.tanh(out)
+        return out
     def forward(self, x):
         out = self.fc1(x)
         out = self.tanh(out)
@@ -62,12 +66,47 @@ class SimpleNetMulti(SimpleNet):
         out = self.forward(x)
         return out.cpu().detach().numpy()
 
+class SimpleRegressionNet(nn.Module):
+    def __init__(self, input_size, hidden_size, num_classes, device=None):
+        super(SimpleRegressionNet, self).__init__()
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.tanh = nn.Tanh()
+        self.fc2 = nn.Linear(hidden_size, num_classes)
 
-def validation(model, test_loader, device, one_hot=True):
+        if not device:
+            self.device = torch.device("cuda")
+        else:
+            self.device = device
+    def extract_embed(self, x):
+        out = self.fc1(x)
+        out = self.tanh(out)
+        return out
+    def forward(self, x):
+        out = self.fc1(x)
+        out = self.tanh(out)
+        out = self.fc2(out)
+        return out
+    def predict(self, x):
+        x = torch.from_numpy(x).to(self.device).float()
+        out = self.forward(x)
+        return out.cpu().detach().numpy()
+
+
+
+def extract_embed(model, X):
+    X_torch = torch.from_numpy(X).cuda().float()
+    output = model.extract_embed(X_torch)
+    return output.cpu().detach().numpy()
+
+def validation(model, test_loader, device, one_hot=True, regression=False):
     mean_loss = []
     mean_acc = []
     model.eval()
-    criterion = nn.BCELoss()
+    if regression:
+        one_hot = False
+        criterion = nn.MSELoss()
+    else:
+        criterion = nn.BCELoss()
     for i, (x_batch, y_batch) in enumerate(test_loader):
         x_batch = x_batch.to(device).float()
         y_batch = y_batch.to(device).float()
@@ -76,6 +115,7 @@ def validation(model, test_loader, device, one_hot=True):
             y_batch = y_batch.long()
         y_pred_batch = model(x_batch).squeeze()
         loss = criterion(y_pred_batch, y_batch)
+        diff_np = torch.abs(y_pred_batch - y_batch).cpu().detach().numpy()
         loss_np = loss.cpu().detach().numpy()
 
         y_batch_np = y_batch.cpu().detach().numpy()
@@ -91,15 +131,18 @@ def validation(model, test_loader, device, one_hot=True):
     mean_loss = np.mean(mean_loss)
     mean_acc = np.mean(mean_acc)
 
-    return mean_loss, mean_acc
+    return mean_loss, mean_acc, diff_np
 
 
 
-def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, customized_constraints, standardize, device=None, eps=1.01, alpha=8/255, iters=40):
+
+
+
+def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, customized_constraints, standardize, prev_X=[], base_ind=0, unique_coeff=None, mask=None, param_for_recover_and_decode=None, check_prev_x_all=False, device=None, eps=1.01, adv_conf_th=0, attack_stop_conf=1, alpha=1/255, iters=255, max_projections_steps=3):
     if not device:
         device = torch.device("cuda")
     n = len(images)
-    m = np.sum(encoded_fields)
+    encoded_fields_len = np.sum(encoded_fields)
 
     images_all = torch.from_numpy(images).to(device).float()
     labels_all = torch.from_numpy(labels).to(device).float()
@@ -112,15 +155,33 @@ def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, custo
 
     new_images_all = []
     new_outputs_all = []
+    prev_x_all = []
     initial_outputs_all = []
+
+
+    if len(prev_X) > 0:
+        X_removed, kept_fields, removed_fields, enc, inds_to_encode, inds_non_encode, encoded_fields, xl_ori, xu_ori, unique_bugs_len = param_for_recover_and_decode
+        p, c, th = unique_coeff
+
+
+    if_low_conf_examples = np.zeros(n)
 
     # we deal with images sequentially
     for j in range(n):
         images = torch.unsqueeze(images_all[j], 0)
         labels = labels_all[j]
         ori_images = torch.unsqueeze(ori_images_all[j], 0)
+        ori_images_encode = ori_images[:, :encoded_fields_len]
+        ori_images_non_encode = ori_images[:, encoded_fields_len:]
+
         prev_outputs = torch.zeros(1).to(device).float()
         prev_images = None
+        current_x = None
+        prev_x = None
+
+        max_violate_times = 10
+        violate_times = 0
+
 
         for i in range(iters):
 
@@ -129,30 +190,81 @@ def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, custo
             model.zero_grad()
 
 
-
-
-
             cost = loss(outputs, labels).to(device)
             cost.backward()
 
-            print('\n'*2)
-            print('-'*20, j, i, outputs.squeeze().cpu().detach().numpy(), '-'*20)
-            if i == 0:
-                initial_outputs_all.append(outputs.squeeze().cpu().detach().numpy())
 
-            # if forward prob not improving break
-            if outputs < prev_outputs:
+            outputs_np = outputs.squeeze().cpu().detach().numpy()
+            # print('\n'*2)
+            # print(i, outputs_np)
+            # print('\n'*2)
+            if i == 0:
+                initial_outputs_all.append(outputs_np)
+                print('\n'*2, j, 'initial outputs', outputs_np, '\n'*2)
+
+            # check uniqueness of new x
+
+
+            distinct = True
+            if len(prev_X) > 0:
+                ind = base_ind + j
+                current_x = images.squeeze().cpu().detach().numpy()
+                current_x = customized_inverse_standardize(np.array([current_x]), standardize, encoded_fields_len, True)[0]
+                current_x = recover_fields_not_changing(np.array([current_x]), np.array(X_removed[ind]), kept_fields, removed_fields)[0]
+                current_x = decode_fields(np.array([current_x]), enc, inds_to_encode, inds_non_encode, encoded_fields, adv=True)[0]
+
+                distinct = is_distinct(current_x, prev_X, mask, xl_ori, xu_ori, p, c, th)
+                # print('distinct 1', distinct)
+                if check_prev_x_all and len(prev_x_all) > 0:
+                    distinct = distinct and is_distinct(current_x, np.array(prev_x_all), mask, xl_ori, xu_ori, p, c, th)
+                    # print('distinct 2', distinct)
+
+
+
+            # if new x is close to previous X or forward prob not improving, break
+            cond1 = not distinct and i > 0
+            cond2 = (outputs - prev_outputs) < 1e-3
+            cond4 = i>0 and prev_outputs.cpu().detach().numpy() >= attack_stop_conf
+            # print('prev_outputs.cpu().detach().numpy()', prev_outputs.cpu().detach().numpy())
+            if cond1 or cond2 or cond4:
+                if cond1:
+                    print('cond1')
+                elif cond2:
+                    print('cond2')
+                elif cond4:
+                    print('cond4')
                 break
             else:
+                # print('update x with the current one')
                 prev_images = torch.clone(images)
                 prev_outputs = torch.clone(outputs)
+                prev_x = current_x
+                if i==0 and prev_outputs.cpu().detach().numpy() > adv_conf_th:
+                    print('cond3')
+                    if_low_conf_examples[j] = 1
+                    print('num_of_high_conf_examples', np.sum(if_low_conf_examples), '/', j+1)
+                    break
 
             adv_images = images + alpha*images.grad.sign()
-            eta = torch.clip(adv_images - ori_images, min=-eps, max=eps)
+            # print('images.grad', images.grad.cpu().detach().numpy(), '\n'*2)
+            eta = adv_images - ori_images
+
+            # print('ori_images', ori_images.cpu().detach().numpy(), '\n'*2)
+            # print('\n'*2, 'eta', eta.cpu().detach().numpy(), '\n'*2)
+            # eta[:, :encoded_fields_len] = torch.clip(eta[:, :encoded_fields_len], min=-eps, max=eps)
+            # print('eps', eps)
+            # print('\n'*2, 'eta clipped', eta.cpu().detach().numpy(), '\n'*2)
+            eta = torch.clip(eta, min=-eps, max=eps)
+            # print('\n'*2, 'eta clipped 2', eta.cpu().detach().numpy(), '\n'*2)
+            # print('\n'*2, 'xl', xl.cpu().detach().numpy(), '\n'*2)
+            # print('\n'*2, 'xu', xu.cpu().detach().numpy(), '\n'*2)
+
+            eta = eta * (xu - xl)
+            # print('\n'*2, 'eta * (xu - xl)', eta.cpu().detach().numpy(), '\n'*2)
             images = torch.max(torch.min(ori_images + eta, xu), xl).detach_()
 
 
-            one_hotezed_images_embed = torch.zeros([images.shape[0], m])
+            one_hotezed_images_embed = torch.zeros([images.shape[0], encoded_fields_len])
             s = 0
 
             for field_len in encoded_fields:
@@ -162,12 +274,13 @@ def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, custo
                 # print(field_len, max_inds.cpu().detach().numpy())
                 # print(one_hotezed_images_embed.cpu().detach().numpy())
                 s += field_len
-            images[:, :m] = one_hotezed_images_embed
+            images[:, :encoded_fields_len] = one_hotezed_images_embed
 
 
-            images_non_encode = images[:, m:]
-            ori_images_non_encode = ori_images[:, m:]
+            images_non_encode = images[:, encoded_fields_len:]
             images_delta_non_encode = images_non_encode - ori_images_non_encode
+            xl_non_encode_np = xl[encoded_fields_len:].squeeze().cpu().numpy()
+            xu_non_encode_np = xu[encoded_fields_len:].squeeze().cpu().numpy()
 
             # keep checking violation, exit only when satisfying
             ever_violate = False
@@ -176,62 +289,93 @@ def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, custo
             ori_images_non_encode_np = ori_images_non_encode.squeeze().cpu().numpy()
             images_delta_non_encode_np = images_delta_non_encode.squeeze().cpu().numpy()
 
-            while True:
+            satisfy_constraints = False
+            for k in range(max_projections_steps):
                 # print('images_non_encode_np', images_non_encode_np.shape)
-                images_non_encode_np_inv_std = customized_inverse_standardize(np.array([images_non_encode_np]), standardize, m, False)[0]
-                print('\n'*10)
-                # print(labels_used)
-                print(images_non_encode_np_inv_std)
-                if_violate, [violated_constraints, involved_labels] = if_violate_constraints(images_non_encode_np_inv_std, customized_constraints, labels_used, verbose=True)
+                images_non_encode_np_inv_std = customized_inverse_standardize(np.array([images_non_encode_np]), standardize, encoded_fields_len, False)[0]
+                if_violate, [violated_constraints, involved_labels] = if_violate_constraints(images_non_encode_np_inv_std, customized_constraints, labels_used, verbose=False)
                 # if violate, pick violated constraints, project perturbation back to linear constraints via LR
                 if if_violate:
                     ever_violate = True
                     # print(len(images_delta_non_encode_np), m)
                     # print(images_delta_non_encode_np)
-                    images_delta_non_encode_np_inv_std = customized_inverse_standardize(np.array([images_delta_non_encode_np]), standardize, m, False, True)
+                    images_delta_non_encode_np_inv_std = customized_inverse_standardize(np.array([images_delta_non_encode_np]), standardize, encoded_fields_len, False, True)
 
                     new_images_delta_non_encode_np_inv_std = project_into_constraints(images_delta_non_encode_np_inv_std[0], violated_constraints, labels_used, involved_labels)
 
                     # print(ori_images.squeeze().cpu().numpy())
-                    print(images_delta_non_encode_np_inv_std[0])
-                    print(new_images_delta_non_encode_np_inv_std)
+                    # print(images_delta_non_encode_np_inv_std[0])
+                    # print(new_images_delta_non_encode_np_inv_std)
                 else:
+                    satisfy_constraints = True
                     break
 
-                new_images_delta_non_encode_np = customized_standardize(np.array([new_images_delta_non_encode_np_inv_std]), standardize, m, False, True)[0]
+                new_images_delta_non_encode_np = customized_standardize(np.array([new_images_delta_non_encode_np_inv_std]), standardize, encoded_fields_len, False, True)[0]
 
 
                 # print(new_images_delta_non_encode_np.shape, new_images_delta_non_encode_np.shape)
 
+
+
                 images_non_encode_np = ori_images_non_encode_np + new_images_delta_non_encode_np
+
+
+                # print('-- check violation before clip')
+                # images_non_encode_np_inv_std_tmp = customized_inverse_standardize(np.array([images_non_encode_np]), standardize, m, False)[0]
+                # _, _ = if_violate_constraints(images_non_encode_np_inv_std_tmp, customized_constraints, labels_used, verbose=True)
+                # print(images_non_encode_np_inv_std_tmp)
+                # print('++ check violation before clip')
+
+
+                eta = np.clip(images_non_encode_np - ori_images_non_encode_np, -eps, eps)
+                # eta *= (1/(violate_times+1))
+                images_non_encode_np = np.maximum(np.minimum(ori_images_non_encode_np + eta, xu_non_encode_np), xl_non_encode_np)
+
+                # print('-- check violation after clip')
+                images_non_encode_np_inv_std_tmp = customized_inverse_standardize(np.array([images_non_encode_np]), standardize, encoded_fields_len, False)[0]
+                if_violate_after_clip, _ = if_violate_constraints(images_non_encode_np_inv_std_tmp, customized_constraints, labels_used, verbose=False)
+                # print(images_non_encode_np_inv_std_tmp)
+                # print('++ check violation after clip')
+
+                if if_violate_after_clip:
+                    satisfy_constraints = False
 
                 # print(ori_images_non_encode_np)
                 # print(new_images_delta_non_encode_np)
                 # print(images_non_encode_np)
 
-                ori_images_non_encode_np_inv_std = customized_inverse_standardize(np.array([ori_images_non_encode_np]), standardize, m, False)[0]
-                images_non_encode_np_inv_std = customized_inverse_standardize(np.array([images_non_encode_np]), standardize, m, False)[0]
+                # ori_images_non_encode_np_inv_std = customized_inverse_standardize(np.array([ori_images_non_encode_np]), standardize, m, False)[0]
+                # images_non_encode_np_inv_std = customized_inverse_standardize(np.array([images_non_encode_np]), standardize, m, False)[0]
                 # print(standardize.mean_, standardize.scale_)
                 # print(ori_images_non_encode_np_inv_std)
                 # print(new_images_delta_non_encode_np_inv_std)
-                print(images_non_encode_np_inv_std)
+                # print(images_non_encode_np_inv_std)
 
+
+            if not satisfy_constraints or violate_times > max_violate_times:
+                break
             if ever_violate:
+                violate_times += 1
+                # print('ever_violate', ever_violate, m)
                 images_non_encode = torch.from_numpy(images_non_encode_np).to(device)
-                images[:, m:] = images_non_encode
+                images[:, encoded_fields_len:] = images_non_encode
 
 
+            # if i == iters - 1:
+            #     print('iter', i, ':', 'cost :', cost.cpu().detach().numpy(), 'outputs :', outputs.cpu().detach().numpy())
 
-            # elif after perturbation, similar to previous bugs, break
-
-            # else update and continue
-
-
-            if i == iters - 1:
-                print('iter', i, ':', 'cost :', cost.cpu().detach().numpy(), 'outputs :', outputs.cpu().detach().numpy())
+        print('\n'*2, 'final outputs', prev_outputs.squeeze().cpu().detach().numpy(), '\n'*2)
 
         new_images_all.append(prev_images.squeeze().cpu().detach().numpy())
         new_outputs_all.append(prev_outputs.squeeze().cpu().detach().numpy())
+        prev_x_all.append(prev_x)
+
+
+    print('\n'*2)
+    print('num_of_high_conf_examples', np.sum(if_low_conf_examples), '/', n)
+    print('\n'*2)
+    print(if_low_conf_examples)
+    print(np.array(new_outputs_all))
 
     return np.array(new_images_all), np.array(new_outputs_all), np.array(initial_outputs_all)
 
@@ -258,11 +402,17 @@ def train_net(X_train, y_train, X_test, y_test, batch_train=200, batch_test=20, 
 
     model.cuda()
 
-
     # optimizer = torch.optim.LBFGS(model.parameters())
     optimizer = torch.optim.Adam(model.parameters())
 
     d_train = VanillaDataset(X_train, y_train)
+
+    # class_sample_count = [np.sum(y_train==0), np.sum(y_train==1)]
+    # class_sample_count = [y_train.shape[0]/2, y_train.shape[0]/2]
+    # weights = 1 / torch.Tensor(class_sample_count)
+    # sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, batch_train)
+    # train_loader = Data.DataLoader(d_train, batch_size=batch_train, sampler=sampler)
+
     train_loader = Data.DataLoader(d_train, batch_size=batch_train, shuffle=True)
 
     if len(y_test) > 0:
@@ -279,17 +429,7 @@ def train_net(X_train, y_train, X_test, y_test, batch_train=200, batch_test=20, 
             if one_hot:
                 y_batch = y_batch.long()
 
-            # LBFGS
-            # def closure():
-            #     optimizer.zero_grad()
-            #     y_pred_batch = model(x_batch).squeeze()
-            #     loss = criterion(y_pred_batch, y_batch)
-            #     loss.backward()
-            #     return loss
-            # optimizer.step(closure)
 
-
-            # Adam
             optimizer.zero_grad()
             y_pred_batch = model(x_batch).squeeze()
 
@@ -298,18 +438,80 @@ def train_net(X_train, y_train, X_test, y_test, batch_train=200, batch_test=20, 
             optimizer.step()
 
             counter += 1
-            # if epoch % 1 == 0:
-            #     print ('Epoch [%d/%d], Step %d, Loss: %.4f'
-            #            %(epoch+1, num_epochs, counter, loss))
-            #     print('train', y_pred_batch, y_batch)
             if epoch % 1 == 0 and len(y_test) > 0:
-                mean_loss, mean_acc = validation(model, test_loader, device, one_hot)
+                mean_loss, mean_acc, _ = validation(model, test_loader, device, one_hot)
                 print ('Epoch [%d/%d], Step %d, Test Mean Loss: %.4f, Test Mean Accuracy: %.4f'
                        %(epoch+1, num_epochs, counter, mean_loss, mean_acc))
                 model.train()
 
     return model
 
+
+def train_regression_net(X_train, y_train, X_test, y_test, batch_train=200, batch_test=20, device=None, hidden_layer_size=100, return_test_err=False):
+    if not device:
+        device = torch.device("cuda")
+    input_size = X_train.shape[1]
+    hidden_size = hidden_layer_size
+    num_epochs = 200
+
+
+    num_classes = 1
+    model = SimpleRegressionNet(input_size, hidden_size, num_classes)
+    criterion = nn.MSELoss()
+
+
+    model.cuda()
+
+    # optimizer = torch.optim.LBFGS(model.parameters())
+    optimizer = torch.optim.Adam(model.parameters())
+
+    d_train = VanillaDataset(X_train, y_train)
+
+    # class_sample_count = [np.sum(y_train==0), np.sum(y_train==1)]
+    # class_sample_count = [y_train.shape[0]/2, y_train.shape[0]/2]
+    # weights = 1 / torch.Tensor(class_sample_count)
+    # sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, batch_train)
+    # train_loader = Data.DataLoader(d_train, batch_size=batch_train, sampler=sampler)
+
+    train_loader = Data.DataLoader(d_train, batch_size=batch_train, shuffle=True)
+
+    if len(y_test) > 0:
+        d_test = VanillaDataset(X_test, y_test)
+        test_loader = Data.DataLoader(d_test, batch_size=batch_test, shuffle=True)
+
+
+    # Train the Model
+    counter = 0
+    for epoch in range(num_epochs):
+        for i, (x_batch, y_batch) in enumerate(train_loader):
+            x_batch = x_batch.to(device).float()
+            y_batch = y_batch.to(device).float()
+
+            optimizer.zero_grad()
+            y_pred_batch = model(x_batch).squeeze()
+
+            loss = criterion(y_pred_batch, y_batch)
+            loss.backward()
+            optimizer.step()
+
+            counter += 1
+            # if epoch % 1 == 0 and len(y_test) > 0:
+            #     mean_loss, _ = validation(model, test_loader, device, regression=True)
+            #     print ('Epoch [%d/%d], Step %d, Test Mean Loss: %.4f'
+            #            %(epoch+1, num_epochs, counter, mean_loss))
+            #     model.train()
+    if return_test_err:
+        if len(y_test) > 0:
+            _, _, diff_np = validation(model, test_loader, device, regression=True)
+            conf = np.percentile(diff_np, 95)
+        else:
+            conf = 0
+
+
+    if return_test_err:
+        return model, conf
+    else:
+        return model
 
 
 class linearRegression(torch.nn.Module):
@@ -328,8 +530,8 @@ def project_into_constraints(x, violated_constraints
 , labels, involved_labels):
     assert len(labels) == len(x), str(len(labels))+' VS '+str(len(x))
     labels_to_id = {label:i for i, label in enumerate(labels)}
-    print(labels_to_id)
-    print(involved_labels)
+    # print(labels_to_id)
+    # print(involved_labels)
     involved_ids = np.array([labels_to_id[label] for label in involved_labels])
     map_ids = {involved_id:i for i, involved_id in enumerate(involved_ids)}
 
@@ -337,7 +539,7 @@ def project_into_constraints(x, violated_constraints
     r = len(involved_ids)
     A_train = np.zeros((m, r))
     x_new = x.copy()
-    print('involved_ids', involved_ids)
+    # print('involved_ids', involved_ids)
     x_start = x[involved_ids]
     y_train = np.zeros(m)
 
@@ -356,25 +558,29 @@ def LR(A_train, x_start, y_train):
     # y_train ~ m * 1, target values
     # m = constraints number
     # r = number of variables involved
+    # print('x_start.shape', x_start.shape)
     x_start = torch.from_numpy(x_start).cuda().float()
 
     inputDim = A_train.shape[1]
     outputDim = 1
-    learningRate = 0.01
-    epochs = 200
-    eps = 1e-5
+    learningRate = 3e-4
+    epochs = 300
+    eps = 1e-7
     model = linearRegression(inputDim, outputDim, x_start)
     model.cuda()
 
     criterion = torch.nn.MSELoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=learningRate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learningRate)
 
     for epoch in range(epochs):
+        # print('A_train.shape', A_train.shape)
+
         inputs = torch.from_numpy(A_train).cuda().float()
-        labels = torch.from_numpy(y_train).cuda().float()
+        labels = torch.from_numpy(y_train).cuda().float().unsqueeze(0)
 
         optimizer.zero_grad()
         outputs = model(inputs)
+        # print('outputs.size(), labels.size()', outputs.size(), labels.size())
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
