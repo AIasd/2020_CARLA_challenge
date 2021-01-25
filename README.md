@@ -27,7 +27,7 @@ conda env create -f environment.yml
 ```
 A conda environment with name `carla99` should be created.
 
-Activate it
+Activate this environment by running:
 ```
 conda activate carla99
 ```
@@ -65,7 +65,7 @@ LBC model is one of the models supported to be tested. A pretrained-model's chec
 
 Navigate to one of the runs, like https://app.wandb.ai/bradyz/2020_carla_challenge_lbc/runs/command_coefficient=0.01_sample_by=even_stage2/files
 
-Go to the "files" tab, and download the model weights, named "epoch=24.ckpt", and pass in the file path as the `TEAM_CONFIG` in `run_agent.sh`. Move this model's checkpoint to the `models` folder.
+Go to the "files" tab, and download the model weights, named "epoch=24.ckpt", and pass in the file path as the `TEAM_CONFIG` in `run_agent.sh`. Move this model's checkpoint to the `models` folder (May need to create `models` folder under this repo's folder).
 
 
 
