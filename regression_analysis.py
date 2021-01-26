@@ -132,14 +132,9 @@ python ga_fuzzing.py -p 2027 2030 -s 8803 -d 8804 --n_gen 14 --pop_size 50 -r 't
 
 
 
-python ga_fuzzing.py -p 2015 2024 -s 8791 -d 8792 --n_gen 2 --pop_size 26 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 52 --objective_weights -1 1 1 1 1 -1 0 0 0 -1 --n_offsprings 500 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --use_single_nn 0 --initial_fit_th 20 --min_bug_num_to_fit_dnn 1
+python ga_fuzzing.py -p 2015 2024 -s 8791 -d 8792 --n_gen 2 --pop_size 15 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 30 --objective_weights -1 1 1 1 1 -1 0 0 0 -1 --n_offsprings 500 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --use_single_nn 0 --initial_fit_th 10 --min_bug_num_to_fit_dnn 1
 
 
-
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 500 --initial_fit_th 300 --check_unique_coeff 0 0.2 0.5
-
-
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 500 --initial_fit_th 300 --check_unique_coeff 0 0.2 0.5
 
 
 

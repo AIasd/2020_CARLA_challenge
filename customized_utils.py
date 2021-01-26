@@ -2608,8 +2608,8 @@ def get_picklename(parent_folder):
 
 def determine_y_upon_weights(objective_list, objective_weights):
     collision_activated = np.sum(objective_weights[:3]!=0) > 0
-    offroad_activated = np.abs(objective_weights[3]) > 0
-    wronglane_activated = np.abs(objective_weights[4]) > 0
+    offroad_activated = (np.abs(objective_weights[3]) > 0) | (np.abs(objective_weights[5]) > 0)
+    wronglane_activated = (np.abs(objective_weights[4]) > 0) | (np.abs(objective_weights[5]) > 0)
     red_light_activated = np.abs(objective_weights[-1]) > 0
 
     y = np.zeros(len(objective_list))
@@ -2630,11 +2630,11 @@ def determine_y_upon_weights(objective_list, objective_weights):
 def get_all_y(objective_list, objective_weights):
     # is_collision, is_offroad, is_wrong_lane, is_run_red_light
     collision_activated = np.sum(objective_weights[:3]!=0)>0
-    offroad_activated = np.abs(objective_weights[3]) > 0
-    wronglane_activated = np.abs(objective_weights[4]) > 0
+    offroad_activated = (np.abs(objective_weights[3]) > 0) | (np.abs(objective_weights[5]) > 0)
+    wronglane_activated = (np.abs(objective_weights[4]) > 0) | (np.abs(objective_weights[5]) > 0)
     red_light_activated = np.abs(objective_weights[-1]) > 0
 
-    y_list = np.array([np.zeros(len(objective_list)) for _ in range(4)])
+    y_list = np.zeros((4, len(objective_list)))
 
     for i, obj in enumerate(objective_list):
         if collision_activated:

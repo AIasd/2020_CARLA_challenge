@@ -557,7 +557,7 @@ min_bug_num_to_fit_dnn = arguments.min_bug_num_to_fit_dnn
 pgd_eps = arguments.pgd_eps
 adv_conf_th = arguments.adv_conf_th
 attack_stop_conf = arguments.attack_stop_conf
-use_single_nn = arguments.use_single_nn,
+use_single_nn = arguments.use_single_nn
 
 
 os.environ['HAS_DISPLAY'] = arguments.has_display
@@ -1684,9 +1684,6 @@ class NSGA2_DT(NSGA2):
                     tmp_objectives_plus = tmp_objectives + confs
 
 
-
-
-
                     tmp_pop_minus = Population(X_train.shape[0]+X_test.shape[0], individual=Individual())
                     # print(X_train.shape)
                     # print(X_test.shape)
@@ -1726,6 +1723,9 @@ class NSGA2_DT(NSGA2):
                 else:
                     one_clf = True
                     adv_conf_th = self.adv_conf_th
+                    attack_stop_conf = self.attack_stop_conf
+
+                    print('self.use_single_nn', self.use_single_nn)
                     if self.use_single_nn:
                         y_train = determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)
 
@@ -1741,8 +1741,12 @@ class NSGA2_DT(NSGA2):
                         cur_y = y_train
 
                         if self.adv_conf_th < 0:
+                            print(sorted(prob_train, reverse=True))
+                            print('cur_y', cur_y)
+                            print('np.abs(self.adv_conf_th)', np.abs(self.adv_conf_th))
+                            print(int(np.sum(cur_y)//np.abs(self.adv_conf_th)))
                             adv_conf_th = sorted(prob_train, reverse=True)[int(np.sum(cur_y)//np.abs(self.adv_conf_th))]
-
+                            attack_stop_conf = np.max([self.attack_stop_conf, adv_conf_th])
 
                     else:
                         from customized_utils import get_all_y
@@ -1750,7 +1754,11 @@ class NSGA2_DT(NSGA2):
                         y_list = get_all_y(self.problem.objectives_list, self.problem.objective_weights)
                         clf_list = []
                         bug_type_nn_activated = []
+                        print('self.problem.objectives_list', self.problem.objectives_list)
+                        print('self.problem.objective_weights', self.problem.objective_weights)
+                        print('y_list', y_list)
                         for i, y_train in enumerate(y_list):
+                            print('np.sum(y_train)', np.sum(y_train), 'self.min_bug_num_to_fit_dnn', self.min_bug_num_to_fit_dnn)
                             if np.sum(y_train) >= self.min_bug_num_to_fit_dnn:
                                 if self.dnn_lib == 'sklearn':
                                     clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
@@ -1765,6 +1773,7 @@ class NSGA2_DT(NSGA2):
                         if len(clf_list) > 1:
                             if self.adv_conf_th < 0:
                                 adv_conf_th = []
+                                attack_stop_conf = []
 
                             from scipy import stats
                             one_clf = False
@@ -1775,8 +1784,12 @@ class NSGA2_DT(NSGA2):
                                 bug_type = bug_type_nn_activated[j]
                                 cur_y = y_list[bug_type]
                                 print('np.sum(cur_y)', np.sum(cur_y), 'np.abs(self.adv_conf_th)', np.abs(self.adv_conf_th), 'np.sum(cur_y)//np.abs(self.adv_conf_th)', np.sum(cur_y)//np.abs(self.adv_conf_th))
+
                                 th_conf = sorted(prob_train, reverse=True)[int(np.sum(cur_y)//np.abs(self.adv_conf_th))]
                                 adv_conf_th.append(th_conf)
+                                attack_stop_conf.append(np.max([th_conf, self.attack_stop_conf]))
+                                print('adv_conf_th', adv_conf_th)
+                                print('attack_stop_conf', attack_stop_conf)
 
                                 y_j_bug_perc = np.mean(cur_y)*100
                                 scores_on_all_nn[:, j] = [(stats.percentileofscore(prob_train, prob_test_i) - (100 - y_j_bug_perc)) / y_j_bug_perc for prob_test_i in prob_test]
@@ -1799,7 +1812,7 @@ class NSGA2_DT(NSGA2):
                         else:
                             clf = clf_list[0]
 
-
+                    print('\n', 'adv_conf_th', adv_conf_th, '\n')
                     if one_clf == True:
                         scores = clf.predict_proba(X_test)[:, 1]
                     else:
@@ -1840,17 +1853,17 @@ class NSGA2_DT(NSGA2):
 
                             if len(X_test_pgd) <= self.tmp_off_type_1_len:
                                 y_zeros = np.zeros(X_test_pgd.shape[0])
-                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=self.attack_stop_conf, associated_clf_id=associated_clf_id)
+                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id)
 
                             else:
                                 y_zeros_3 = np.zeros(X_test_pgd.shape[0]-self.tmp_off_type_1_len)
 
-                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd[self.tmp_off_type_1_len:], y_zeros_3, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=[], eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=self.attack_stop_conf, associated_clf_id=associated_clf_id)
+                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd[self.tmp_off_type_1_len:], y_zeros_3, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=[], eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id)
 
                                 if self.tmp_off_type_1_len > 0:
                                     y_zeros_1 = np.zeros(self.tmp_off_type_1_len)
 
-                                    X_test_adv_1, new_bug_pred_prob_list_1, initial_bug_pred_prob_list_1 = pgd_attack(clf, X_test_pgd[:self.tmp_off_type_1_len], y_zeros_1, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=self.attack_stop_conf, associated_clf_id=associated_clf_id)
+                                    X_test_adv_1, new_bug_pred_prob_list_1, initial_bug_pred_prob_list_1 = pgd_attack(clf, X_test_pgd[:self.tmp_off_type_1_len], y_zeros_1, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id)
 
                                     X_test_adv = np.concatenate([X_test_adv, X_test_adv_1])
                                     new_bug_pred_prob_list = np.concatenate([new_bug_pred_prob_list, new_bug_pred_prob_list_1])
@@ -1858,7 +1871,7 @@ class NSGA2_DT(NSGA2):
 
                         else:
                             y_zeros = np.zeros(X_test_pgd.shape[0])
-                            X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=self.attack_stop_conf, associated_clf_id=associated_clf_id)
+                            X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id)
 
 
                         X_test_adv_processed = inverse_process_X(X_test_adv, standardize, one_hot_fields_len, partial, X_removed, kept_fields, removed_fields, enc, inds_to_encode, inds_non_encode, encoded_fields)

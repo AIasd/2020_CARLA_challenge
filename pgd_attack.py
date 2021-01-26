@@ -140,8 +140,8 @@ def validation(model, test_loader, device, one_hot=True, regression=False):
 
 def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, customized_constraints, standardize, prev_X=[], base_ind=0, unique_coeff=None, mask=None, param_for_recover_and_decode=None, check_prev_x_all=False, device=None, eps=1.01, adv_conf_th=0, attack_stop_conf=1, alpha=1/255, iters=255, max_projections_steps=3, associated_clf_id=[]):
     if len(associated_clf_id) > 0:
-        unique_clf_ids = np.unique(associated_clf_id)
-        assert len(model) == len(unique_clf_ids), str(len(model))+' VS '+ str(len(unique_clf_ids))
+        print(len(model))
+        print(associated_clf_id)
         multiple_models = True
     else:
         multiple_models = False
@@ -192,11 +192,23 @@ def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, custo
         if multiple_models:
             model_id = associated_clf_id[j]
             cur_model = model[model_id]
-            cur_adv_conf_th = adv_conf_th[model_id]
+            print('adv_conf_th', adv_conf_th)
+            if type(adv_conf_th) == type([]) and len(adv_conf_th) > 0:
+                cur_adv_conf_th = adv_conf_th[model_id]
+                print('cur_adv_conf_th 1', cur_adv_conf_th)
+            else:
+                cur_adv_conf_th = adv_conf_th
+                print('cur_adv_conf_th 2', cur_adv_conf_th)
+            if type(attack_stop_conf) == type([]) and len(attack_stop_conf) > 0:
+                cur_attack_stop_conf = attack_stop_conf[model_id]
+            else:
+                cur_attack_stop_conf = attack_stop_conf
+
             print('model_id', model_id)
         else:
             cur_model = model
             cur_adv_conf_th = adv_conf_th
+            cur_attack_stop_conf = attack_stop_conf
         for i in range(iters):
 
             images.requires_grad = True
@@ -238,7 +250,7 @@ def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, custo
             # if new x is close to previous X or forward prob not improving, break
             cond1 = not distinct and i > 0
             cond2 = (outputs - prev_outputs) < 1e-3
-            cond4 = i>0 and prev_outputs.cpu().detach().numpy() >= attack_stop_conf
+            cond4 = i>0 and prev_outputs.cpu().detach().numpy() >= cur_attack_stop_conf
             # print('prev_outputs.cpu().detach().numpy()', prev_outputs.cpu().detach().numpy())
             if cond1 or cond2 or cond4:
                 if cond1:
@@ -253,7 +265,7 @@ def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, custo
                 prev_images = torch.clone(images)
                 prev_outputs = torch.clone(outputs)
                 prev_x = current_x
-                if i==0 and prev_outputs.cpu().detach().numpy() > adv_conf_th:
+                if i==0 and prev_outputs.cpu().detach().numpy() > cur_adv_conf_th:
                     print('cond3')
                     if_low_conf_examples[j] = 1
                     print('num_of_high_conf_examples', np.sum(if_low_conf_examples), '/', j+1)
