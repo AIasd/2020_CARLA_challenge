@@ -1872,18 +1872,7 @@ def is_similar(x_1, x_2, mask, xl, xu, p, c, th, diff_th=0.1, y_i=-1, y_j=-1, ve
 
         if verbose:
             print('diff_norm, th_num', diff_norm, th_num)
-        # if verbose:
-        #     print('diff_raw', int_diff_raw, real_diff_raw, p, c, th, diff, diff_norm)
-        #
-        #     x_1_r = np.concatenate([x_1[int_inds], x_1[real_inds]])
-        #     x_2_r = np.concatenate([x_2[int_inds], x_2[real_inds]])
-        #     print(diff[42], x_1_r[42], x_2_r[42], diff[62], x_1_r[62], x_2_r[62])
-        #     if len(labels)>0:
-        #         labels = np.array(labels)
-        #         # print(labels[int_inds])
-        #         # print(labels[real_inds])
-        #         labels_r = np.concatenate([labels[int_inds], labels[real_inds]])
-        #         print(labels_r[42], labels_r[62])
+
     else:
         equal = False
     return equal
@@ -1894,15 +1883,15 @@ def is_distinct(x, X, mask, xl, xu, p, c, th, diff_th=0.1, verbose=True):
     if len(X) == 0:
         return True
     else:
-        mask_arr = np.array(mask)
-        xl_arr = np.array(xl)
-        xu_arr = np.array(xu)
+        mask_np = np.array(mask)
+        xl_np = np.array(xl)
+        xu_np = np.array(xu)
         x = np.array(x)
         X = np.stack(X)
         for i, x_i in enumerate(X):
             # if verbose:
             #     print(i, '- th prev x checking similarity')
-            similar = is_similar(x, x_i, mask_arr, xl_arr, xu_arr, p, c, th, diff_th=diff_th, verbose=verbose)
+            similar = is_similar(x, x_i, mask_np, xl_np, xu_np, p, c, th, diff_th=diff_th, verbose=verbose)
             if similar:
                 if verbose:
                     print('similar with', i)
@@ -2618,18 +2607,43 @@ def get_picklename(parent_folder):
     return pickle_filename
 
 def determine_y_upon_weights(objective_list, objective_weights):
-    collision_activated = np.sum(objective_weights[:3]!=0)==3
-    out_of_road_activated = np.sum(objective_weights[3:6]!=0)==3
-    red_light_activated = objective_weights[-1]!=0
+    collision_activated = np.sum(objective_weights[:3]!=0) > 0
+    offroad_activated = np.abs(objective_weights[3]) > 0
+    wronglane_activated = np.abs(objective_weights[4]) > 0
+    red_light_activated = np.abs(objective_weights[-1]) > 0
 
     y = np.zeros(len(objective_list))
     for i, obj in enumerate(objective_list):
-        if collision_activated and out_of_road_activated:
-            y[i] = check_bug(obj)
-        elif collision_activated:
-            if obj[0] > 0.1:
-                y[i] = 1
-        elif out_of_road_activated:
-            if obj[-2] == 1 or obj[-3] == 1:
-                y[i] = 1
+        cond = 0
+        if collision_activated:
+            cond |= obj[0] > 0.1
+        if offroad_activated:
+            cond |= obj[-3] == 1
+        if wronglane_activated:
+            cond |= obj[-2] == 1
+        if red_light_activated:
+            cond |= obj[-1] == 1
+        y[i] = cond
+
     return y
+
+def get_all_y(objective_list, objective_weights):
+    # is_collision, is_offroad, is_wrong_lane, is_run_red_light
+    collision_activated = np.sum(objective_weights[:3]!=0)>0
+    offroad_activated = np.abs(objective_weights[3]) > 0
+    wronglane_activated = np.abs(objective_weights[4]) > 0
+    red_light_activated = np.abs(objective_weights[-1]) > 0
+
+    y_list = np.array([np.zeros(len(objective_list)) for _ in range(4)])
+
+    for i, obj in enumerate(objective_list):
+        if collision_activated:
+            y_list[0, i] = obj[0] > 0.1
+        if offroad_activated:
+            y_list[1, i] = obj[-3] == 1
+        if wronglane_activated:
+            y_list[2, i] = obj[-2] == 1
+        if red_light_activated:
+            y_list[3, i] = obj[-1] == 1
+
+    return y_list

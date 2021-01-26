@@ -28,23 +28,23 @@ other search methods
 
 
 
-attack the one with higher ranking in the training sample confidence also dnn only be activated when the number of bugs found reach at least 30 for that type of bug?
-
-or maybe consider single objective in the paper?
-
-
-fine tune pgd_adv (stop threshold and run adv_nn threshold, 2 dnn VS 2 heads (collision and out-of-road separately) to attack?)
+# attack the one with higher ranking in the training sample confidence also dnn only be activated when the number of bugs found reach at least 30 for that type of bug?
 
 
 
-# ** GA+DT baseline debug
-** clean up code by the end of this week
+
+
+
+
+# ** NSGA2-SM baseline debug
+# ** clean up code by the end of this week
 # ** check single objective (collision / out-of-road in general and consider it as bug) performance under 0.2 0.5
 
+debug forward d
+debug ga-adv multi dnn (stop threshold and run adv_nn threshold, 2 dnn VS 2 heads (collision and out-of-road separately) to attack?)
+try GA+DT
 
-
-
-
+writing
 
 tsne of settled attack methods during rerun (use rerun results as baseline results)
 
@@ -104,25 +104,32 @@ clean up code a bit for reproducing
 
 
 
-python ga_fuzzing.py -p 2015 -s 8791 -d 8792 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 500 --rank_mode adv_nn --initial_fit_th 300 --dnn_lib pytorch --pgd_eps 0.0 --check_unique_coeff 0 0.2 0.5 --adv_conf_th 0.0 --attack_stop_conf 0.0
+python ga_fuzzing.py -p 2015 2024 -s 8791 -d 8792 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 1 1 -1 0 0 0 -1 --n_offsprings 500 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --use_single_nn 0
+
+# 393
+python ga_fuzzing.py -p 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 1 1 -1 0 0 0 -1 --rank_mode none --check_unique_coeff 0 0.1 0.5
+
+# 404
+python ga_fuzzing.py -p 2021 -s 8797 -d 8798 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --check_unique_coeff 0 0.1 0.5 --pgd_eps 0.0 --adv_conf_th 0.0 --attack_stop_conf 0.0
+
+python ga_fuzzing.py -p 2027 2030 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --pgd_eps 0.0 --adv_conf_th 0.0 --attack_stop_conf 0.0
+
+python ga_fuzzing.py -p  -s 8803 -d 8804 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5
 
 
-python ga_fuzzing.py -p 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 500 --rank_mode adv_nn --initial_fit_th 300 --dnn_lib pytorch --pgd_eps 1.0 --check_unique_coeff 0 0.2 0.5 --adv_conf_th 0.75 --attack_stop_conf 0.75
-
-
-python ga_fuzzing.py -p 2021 -s 8797 -d 8798 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights 0 0 0 1 1 -1 0 0 0 0 --n_offsprings 500 --rank_mode adv_nn --initial_fit_th 300 --dnn_lib pytorch --pgd_eps 0.0 --check_unique_coeff 0 0.2 0.5 --adv_conf_th 0.0 --attack_stop_conf 0.0
-
-python ga_fuzzing.py -p 2024 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights 0 0 0 1 1 -1 0 0 0 0 --n_offsprings 500 --rank_mode adv_nn --initial_fit_th 300 --dnn_lib pytorch --pgd_eps 1.0 --check_unique_coeff 0 0.2 0.5 --adv_conf_th 0.75 --attack_stop_conf 0.75
 
 
 
 
+python ga_fuzzing.py -p 2015 2024 -s 8791 -d 8792 --n_gen 2 --pop_size 26 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 52 --objective_weights -1 1 1 1 1 -1 0 0 0 -1 --n_offsprings 500 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --use_single_nn 0 --initial_fit_th 20 --min_bug_num_to_fit_dnn 1
 
 
-python ga_fuzzing.py -p 2027 -s 8803 -d 8804 --n_gen 3 --pop_size 2 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 6 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 20 --rank_mode regression_nn --initial_fit_th 2 --dnn_lib pytorch --pgd_eps 1.0 --check_unique_coeff 0 0.2 0.5 --use_single_objective 0
+
+python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 500 --initial_fit_th 300 --check_unique_coeff 0 0.2 0.5
 
 
-python ga_fuzzing.py -p 2027 -s 8803 -d 8804 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 500 --rank_mode regression_nn --initial_fit_th 300 --dnn_lib pytorch --pgd_eps 1.0 --check_unique_coeff 0 0.2 0.5 --use_single_objective 0
+python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 500 --initial_fit_th 300 --check_unique_coeff 0 0.2 0.5
+
 
 
 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num'

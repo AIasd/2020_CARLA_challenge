@@ -517,7 +517,7 @@ parser.add_argument("--root_folder", type=str, default='run_results')
 parser.add_argument("--episode_max_time", type=int, default=60)
 parser.add_argument("--n_gen", type=int, default=2)
 parser.add_argument("--pop_size", type=int, default=100)
-parser.add_argument("--n_offsprings", type=int, default=300)
+parser.add_argument("--n_offsprings", type=int, default=500)
 parser.add_argument("--has_run_num", type=int, default=1000)
 parser.add_argument("--outer_iterations", type=int, default=3)
 parser.add_argument('--objective_weights', nargs='+', type=float, default=default_objective_weights)
@@ -526,10 +526,11 @@ parser.add_argument('--use_single_objective', type=int, default=1)
 parser.add_argument('--rank_mode', type=str, default='none')
 parser.add_argument('--dnn_lib', type=str, default='pytorch')
 parser.add_argument('--initial_fit_th', type=int, default=300)
-parser.add_argument('--min_bug_num_to_fit_dnn', type=int, default=30)
+parser.add_argument('--min_bug_num_to_fit_dnn', type=int, default=20)
 parser.add_argument('--pgd_eps', type=float, default=1.01)
-parser.add_argument('--adv_conf_th', type=float, default=0.75)
+parser.add_argument('--adv_conf_th', type=float, default=-4)
 parser.add_argument('--attack_stop_conf', type=float, default=0.75)
+parser.add_argument('--use_single_nn', type=int, default=1)
 
 arguments = parser.parse_args()
 
@@ -556,6 +557,7 @@ min_bug_num_to_fit_dnn = arguments.min_bug_num_to_fit_dnn
 pgd_eps = arguments.pgd_eps
 adv_conf_th = arguments.adv_conf_th
 attack_stop_conf = arguments.attack_stop_conf
+use_single_nn = arguments.use_single_nn,
 
 
 os.environ['HAS_DISPLAY'] = arguments.has_display
@@ -1341,12 +1343,14 @@ class MySampling(Sampling):
 
         tmp_off = algorithm.tmp_off
         # print(tmp_off)
+        tmp_off_and_X = []
         if len(tmp_off) > 0:
             tmp_off = [off.X for off in tmp_off]
+            tmp_off_and_X = tmp_off
         # print(tmp_off)
 
 
-        def subroutine(X, disable_unique_x_for_X=False):
+        def subroutine(X, tmp_off_and_X):
             def sample_one_feature(typ, lower, upper, dist, label):
                 assert lower <= upper, label+','+str(lower)+'>'+str(upper)
                 if typ == 'int':
@@ -1377,40 +1381,23 @@ class MySampling(Sampling):
 
 
                 if not if_violate_constraints(x, problem.customized_constraints, problem.labels)[0]:
-                    if not self.use_unique_bugs or (disable_unique_x_for_X or is_distinct(x, X, mask, xl, xu, p, c, th)):
+                    if not self.use_unique_bugs or is_distinct(x, tmp_off_and_X, mask, xl, xu, p, c, th):
                         x = np.array(x).astype(float)
                         X.append(x)
+                        tmp_off_and_X = tmp_off + X
 
-                        if self.use_unique_bugs and len(X) == n_samples:
-                            if disable_unique_x_for_X:
-                                X = eliminate_duplicates_for_list(mask, xl, xu, p, c, th, X, problem.unique_bugs)
-                            else:
-                                X = eliminate_duplicates_for_list(mask, xl, xu, p, c, th, X, problem.unique_bugs, tmp_off=tmp_off)
+                        # if self.use_unique_bugs:
+                        #     if disable_unique_x_for_X:
+                        #         X = eliminate_duplicates_for_list(mask, xl, xu, p, c, th, X, problem.unique_bugs)
+                        #     else:
+                        #         X = eliminate_duplicates_for_list(mask, xl, xu, p, c, th, X, problem.unique_bugs, tmp_off=tmp_off)
 
             return X, sample_time
 
 
         X = []
-        X, sample_time_1 = subroutine(X, disable_unique_x_for_X=False)
+        X, sample_time_1 = subroutine(X, tmp_off_and_X)
 
-        # sample_time_2 = 0
-        # if self.use_unique_bugs:
-        #     algorithm.tmp_off_type_1_len = len(X)
-        #
-        #     X, sample_time_2 = subroutine(X, disable_unique_x_for_X=True)
-        #     print(len(X), 'samples after second round of sampling')
-        #     algorithm.tmp_off_type_1and2_len = len(X)
-
-        # X = []
-        # X, sample_time_1 = subroutine(X, disable_unique_x_for_X=False)
-        # sample_time_2 = 0
-        # print(len(X), 'samples after first round of sampling')
-        # if self.use_unique_bugs:
-        #     algorithm.tmp_off_type_1_len = len(X)
-        #
-        #     X, sample_time_2 = subroutine(X, disable_unique_x_for_X=True)
-        #     print(len(X), 'samples after second round of sampling')
-        #     algorithm.tmp_off_type_1and2_len = len(X)
 
         X = np.stack(X)
         print('\n'*3, 'We sampled', X.shape[0], '/', n_samples, 'samples', 'by sampling', sample_time_1, 'times' '\n'*3)
@@ -1575,6 +1562,10 @@ class NSGA2_DT(NSGA2):
         self.adv_conf_th = adv_conf_th
         self.attack_stop_conf = attack_stop_conf
 
+
+
+        self.use_single_nn = use_single_nn
+
     # mainly used to modify survival
     def _next(self):
 
@@ -1643,7 +1634,7 @@ class NSGA2_DT(NSGA2):
         # additional step to rank and select self.off after gathering initial population
         if self.rank_mode != 'none':
 
-            if (self.rank_mode in ['nn', 'adv_nn'] and len(self.problem.objectives_list) >= self.initial_fit_th and len(self.problem.bugs) >= self.min_bug_num_to_fit_dnn) or (self.rank_mode in ['regression_nn'] and len(self.problem.objectives_list) >= self.pop_size):
+            if (self.rank_mode in ['nn', 'adv_nn'] and len(self.problem.objectives_list) >= self.initial_fit_th and  np.sum(determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)) > self.min_bug_num_to_fit_dnn) or (self.rank_mode in ['regression_nn'] and len(self.problem.objectives_list) >= self.pop_size):
 
                 if self.rank_mode in ['regression_nn']:
                     # only consider collision case for now
@@ -1733,28 +1724,94 @@ class NSGA2_DT(NSGA2):
                         print('no more offsprings to run (regression nn)')
                         self.off = []
                 else:
-                    y_train = determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)
+                    one_clf = True
+                    adv_conf_th = self.adv_conf_th
+                    if self.use_single_nn:
+                        y_train = determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)
+
+                        if self.dnn_lib == 'sklearn':
+                            clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
+                            clf.fit(X_train, y_train)
+                        elif dnn_lib == 'pytorch':
+                            clf = train_net(X_train, y_train, [], [], batch_train=200)
+                        else:
+                            raise
+
+                        prob_train = clf.predict_proba(X_train)[:, 1].squeeze()
+                        cur_y = y_train
+
+                        if self.adv_conf_th < 0:
+                            adv_conf_th = sorted(prob_train, reverse=True)[int(np.sum(cur_y)//np.abs(self.adv_conf_th))]
 
 
-
-                    if self.dnn_lib == 'sklearn':
-                        clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
-                        clf.fit(X_train, y_train)
-                    elif dnn_lib == 'pytorch':
-                        clf = train_net(X_train, y_train, [], [], batch_train=200)
                     else:
-                        raise
+                        from customized_utils import get_all_y
+
+                        y_list = get_all_y(self.problem.objectives_list, self.problem.objective_weights)
+                        clf_list = []
+                        bug_type_nn_activated = []
+                        for i, y_train in enumerate(y_list):
+                            if np.sum(y_train) >= self.min_bug_num_to_fit_dnn:
+                                if self.dnn_lib == 'sklearn':
+                                    clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
+                                    clf.fit(X_train, y_train)
+                                elif dnn_lib == 'pytorch':
+                                    clf = train_net(X_train, y_train, [], [], batch_train=200)
+                                else:
+                                    raise
+                                clf_list.append(clf)
+                                bug_type_nn_activated.append(i)
+
+                        if len(clf_list) > 1:
+                            if self.adv_conf_th < 0:
+                                adv_conf_th = []
+
+                            from scipy import stats
+                            one_clf = False
+                            scores_on_all_nn = np.zeros([X_test.shape[0], len(clf_list)])
+                            for j, clf in enumerate(clf_list):
+                                prob_test = clf.predict_proba(X_test)[:, 1].squeeze()
+                                prob_train = clf.predict_proba(X_train)[:, 1].squeeze()
+                                bug_type = bug_type_nn_activated[j]
+                                cur_y = y_list[bug_type]
+                                print('np.sum(cur_y)', np.sum(cur_y), 'np.abs(self.adv_conf_th)', np.abs(self.adv_conf_th), 'np.sum(cur_y)//np.abs(self.adv_conf_th)', np.sum(cur_y)//np.abs(self.adv_conf_th))
+                                th_conf = sorted(prob_train, reverse=True)[int(np.sum(cur_y)//np.abs(self.adv_conf_th))]
+                                adv_conf_th.append(th_conf)
+
+                                y_j_bug_perc = np.mean(cur_y)*100
+                                scores_on_all_nn[:, j] = [(stats.percentileofscore(prob_train, prob_test_i) - (100 - y_j_bug_perc)) / y_j_bug_perc for prob_test_i in prob_test]
+
+                                print('-'*50)
+                                print(j)
+                                print('y_j_bug_perc', y_j_bug_perc)
+                                print('prob_train', prob_train)
+                                print('prob_test', prob_test)
+                                print('scores_on_all_nn[:, j]', scores_on_all_nn[:, j])
+                                print('-'*50)
+
+                            print(scores_on_all_nn)
+                            associated_clf_id = np.argmax(scores_on_all_nn, axis=1)
+
+                            print(associated_clf_id)
+
+                            # TBD: change the name to plural for less confusion
+                            clf = clf_list
+                        else:
+                            clf = clf_list[0]
 
 
-                    scores = clf.predict_proba(X_test)[:, 1]
+                    if one_clf == True:
+                        scores = clf.predict_proba(X_test)[:, 1]
+                    else:
+                        scores = np.max(scores_on_all_nn, axis=1)
 
                     # when using unique bugs give preference to unique inputs
                     if self.use_unique_bugs:
                         scores[:self.tmp_off_type_1_len] += 100
                         # scores[:self.tmp_off_type_1and2_len] += 100
                     scores *= -1
-
                     inds = np.argsort(scores)[:self.pop_size]
+
                     print('scores', scores)
                     print('chosen indices', inds)
                     # print('self.tmp_off', self.tmp_off)
@@ -1764,67 +1821,44 @@ class NSGA2_DT(NSGA2):
                     elif self.rank_mode == 'adv_nn':
                         X_test_pgd = X_test[inds]
                         X_test_ori = X_test_ori[inds]
-                        # X_test_pgd = X_test
+
+                        if one_clf == True:
+                            associated_clf_id = []
+                        else:
+                            associated_clf_id = associated_clf_id[inds]
 
 
 
                         # conduct pgd with constraints differently for different types of inputs
                         if self.use_unique_bugs:
-                            # print(self.problem.unique_bugs)
-                            # print(self.tmp_off.get("X"))
-                            # unique_bugs_len = len(self.problem.unique_bugs)
 
                             unique_coeff = (self.problem.p, self.problem.c, self.problem.th)
                             mask = self.problem.mask
 
-                            # param_for_recover_and_decode = (X_removed, kept_fields, removed_fields, enc, inds_to_encode, inds_non_encode, encoded_fields, self.problem.xl, self.problem.xu, unique_bugs_len)
-
 
                             print('self.tmp_off_type_1_len, len(X_test_pgd)', self.tmp_off_type_1_len, len(X_test_pgd))
 
-                            # print('self.tmp_off_type_1_len, self.tmp_off_type_1and2_len, len(X_test_pgd)', self.tmp_off_type_1_len, self.tmp_off_type_1and2_len, len(X_test_pgd))
                             if len(X_test_pgd) <= self.tmp_off_type_1_len:
                                 y_zeros = np.zeros(X_test_pgd.shape[0])
-                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=self.adv_conf_th, attack_stop_conf=self.attack_stop_conf)
-
-                            # elif len(X_test_pgd) <= self.tmp_off_type_1and2_len:
-                            #
-                            #     y_zeros_1 = np.zeros(self.tmp_off_type_1_len)
-                            #     X_test_adv_1, new_bug_pred_prob_list_1, initial_bug_pred_prob_list_1 = pgd_attack(clf, X_test_pgd[:self.tmp_off_type_1_len], y_zeros_1, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps)
-                            #
-                            #     y_zeros_2 = np.zeros(self.tmp_off_type_1and2_len - self.tmp_off_type_1_len)
-                            #     X_test_adv_2, new_bug_pred_prob_list_2, initial_bug_pred_prob_list_2 = pgd_attack(clf, X_test_pgd[self.tmp_off_type_1_len:], y_zeros_2, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=self.tmp_off_type_1_len, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, eps=self.pgd_eps)
-                            #
-                            #     X_test_adv = np.concatenate([X_test_adv_1, X_test_adv_2])
-                            #     new_bug_pred_prob_list = np.concatenate([new_bug_pred_prob_list_1, new_bug_pred_prob_list_2])
-                            #     initial_bug_pred_prob_list = np.concatenate([initial_bug_pred_prob_list_1, initial_bug_pred_prob_list_2])
+                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=self.attack_stop_conf, associated_clf_id=associated_clf_id)
 
                             else:
                                 y_zeros_3 = np.zeros(X_test_pgd.shape[0]-self.tmp_off_type_1_len)
 
-                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd[self.tmp_off_type_1_len:], y_zeros_3, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=[], eps=self.pgd_eps, adv_conf_th=self.adv_conf_th, attack_stop_conf=self.attack_stop_conf)
+                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd[self.tmp_off_type_1_len:], y_zeros_3, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=[], eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=self.attack_stop_conf, associated_clf_id=associated_clf_id)
 
                                 if self.tmp_off_type_1_len > 0:
                                     y_zeros_1 = np.zeros(self.tmp_off_type_1_len)
 
-                                    X_test_adv_1, new_bug_pred_prob_list_1, initial_bug_pred_prob_list_1 = pgd_attack(clf, X_test_pgd[:self.tmp_off_type_1_len], y_zeros_1, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=self.adv_conf_th, attack_stop_conf=self.attack_stop_conf)
+                                    X_test_adv_1, new_bug_pred_prob_list_1, initial_bug_pred_prob_list_1 = pgd_attack(clf, X_test_pgd[:self.tmp_off_type_1_len], y_zeros_1, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=self.attack_stop_conf, associated_clf_id=associated_clf_id)
 
                                     X_test_adv = np.concatenate([X_test_adv, X_test_adv_1])
                                     new_bug_pred_prob_list = np.concatenate([new_bug_pred_prob_list, new_bug_pred_prob_list_1])
                                     initial_bug_pred_prob_list = np.concatenate([initial_bug_pred_prob_list, initial_bug_pred_prob_list_1])
-                                #
-                                # if self.tmp_off_type_1and2_len - self.tmp_off_type_1_len > 0:
-                                #     y_zeros_2 = np.zeros(self.tmp_off_type_1and2_len - self.tmp_off_type_1_len)
-                                #
-                                #     X_test_adv_2, new_bug_pred_prob_list_2, initial_bug_pred_prob_list_2 = pgd_attack(clf, X_test_pgd[self.tmp_off_type_1_len:self.tmp_off_type_1and2_len], y_zeros_2, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=self.tmp_off_type_1_len, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, eps=self.pgd_eps)
-                                #
-                                #     X_test_adv = np.concatenate([X_test_adv, X_test_adv_2])
-                                #     new_bug_pred_prob_list = np.concatenate([new_bug_pred_prob_list, new_bug_pred_prob_list_2])
-                                #     initial_bug_pred_prob_list = np.concatenate([initial_bug_pred_prob_list, initial_bug_pred_prob_list_2])
 
                         else:
                             y_zeros = np.zeros(X_test_pgd.shape[0])
-                            X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, eps=self.pgd_eps, adv_conf_th=self.adv_conf_th, attack_stop_conf=self.attack_stop_conf)
+                            X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=self.attack_stop_conf, associated_clf_id=associated_clf_id)
 
 
                         X_test_adv_processed = inverse_process_X(X_test_adv, standardize, one_hot_fields_len, partial, X_removed, kept_fields, removed_fields, enc, inds_to_encode, inds_non_encode, encoded_fields)
@@ -2222,7 +2256,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     else:
         now = datetime.now()
         p, c, th = check_unique_coeff
-        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, dnn_lib, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th)])
+        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th)])
 
 
     cur_parent_folder = make_hierarchical_dir([root_folder, algorithm_name, route_type, scenario_type, ego_car_model, time_str])
@@ -2300,7 +2334,8 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       initial_fit_th=initial_fit_th,
                       min_bug_num_to_fit_dnn=min_bug_num_to_fit_dnn,
                       dnn_lib=dnn_lib, use_unique_bugs=use_unique_bugs, pgd_eps=pgd_eps,
-                      adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf)
+                      adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf,
+                      use_single_nn=use_single_nn)
 
 
 

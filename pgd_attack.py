@@ -138,7 +138,14 @@ def validation(model, test_loader, device, one_hot=True, regression=False):
 
 
 
-def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, customized_constraints, standardize, prev_X=[], base_ind=0, unique_coeff=None, mask=None, param_for_recover_and_decode=None, check_prev_x_all=False, device=None, eps=1.01, adv_conf_th=0, attack_stop_conf=1, alpha=1/255, iters=255, max_projections_steps=3):
+def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, customized_constraints, standardize, prev_X=[], base_ind=0, unique_coeff=None, mask=None, param_for_recover_and_decode=None, check_prev_x_all=False, device=None, eps=1.01, adv_conf_th=0, attack_stop_conf=1, alpha=1/255, iters=255, max_projections_steps=3, associated_clf_id=[]):
+    if len(associated_clf_id) > 0:
+        unique_clf_ids = np.unique(associated_clf_id)
+        assert len(model) == len(unique_clf_ids), str(len(model))+' VS '+ str(len(unique_clf_ids))
+        multiple_models = True
+    else:
+        multiple_models = False
+
     if not device:
         device = torch.device("cuda")
     n = len(images)
@@ -182,12 +189,19 @@ def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, custo
         max_violate_times = 10
         violate_times = 0
 
-
+        if multiple_models:
+            model_id = associated_clf_id[j]
+            cur_model = model[model_id]
+            cur_adv_conf_th = adv_conf_th[model_id]
+            print('model_id', model_id)
+        else:
+            cur_model = model
+            cur_adv_conf_th = adv_conf_th
         for i in range(iters):
 
             images.requires_grad = True
-            outputs = model(images).squeeze()
-            model.zero_grad()
+            outputs = cur_model(images).squeeze()
+            cur_model.zero_grad()
 
 
             cost = loss(outputs, labels).to(device)
@@ -200,7 +214,7 @@ def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, custo
             # print('\n'*2)
             if i == 0:
                 initial_outputs_all.append(outputs_np)
-                print('\n'*2, j, 'initial outputs', outputs_np, '\n'*2)
+                print('\n', j, 'initial outputs', outputs_np, '\n')
 
             # check uniqueness of new x
 
@@ -364,7 +378,7 @@ def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, custo
             # if i == iters - 1:
             #     print('iter', i, ':', 'cost :', cost.cpu().detach().numpy(), 'outputs :', outputs.cpu().detach().numpy())
 
-        print('\n'*2, 'final outputs', prev_outputs.squeeze().cpu().detach().numpy(), '\n'*2)
+        print('\n', 'final outputs', prev_outputs.squeeze().cpu().detach().numpy(), '\n')
 
         new_images_all.append(prev_images.squeeze().cpu().detach().numpy())
         new_outputs_all.append(prev_outputs.squeeze().cpu().detach().numpy())
