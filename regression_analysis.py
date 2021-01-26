@@ -103,18 +103,29 @@ clean up code a bit for reproducing
 
 
 
-
+# all multi adv
 python ga_fuzzing.py -p 2015 2024 -s 8791 -d 8792 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 1 1 -1 0 0 0 -1 --n_offsprings 500 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --use_single_nn 0
 
-# 393
+# all nsga2-un 393
 python ga_fuzzing.py -p 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 1 1 -1 0 0 0 -1 --rank_mode none --check_unique_coeff 0 0.1 0.5
 
-# 404
+# collision nsga2-un 404
 python ga_fuzzing.py -p 2021 -s 8797 -d 8798 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --check_unique_coeff 0 0.1 0.5 --pgd_eps 0.0 --adv_conf_th 0.0 --attack_stop_conf 0.0
 
-python ga_fuzzing.py -p 2027 2030 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --pgd_eps 0.0 --adv_conf_th 0.0 --attack_stop_conf 0.0
+# collision nsga2-nn 430
+python ga_fuzzing.py -p  -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --pgd_eps 0.0 --adv_conf_th 0.0 --attack_stop_conf 0.0
 
-python ga_fuzzing.py -p  -s 8803 -d 8804 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5
+# collision nsga2-adv-nn
+python ga_fuzzing.py -p 2027 2030 -s 8803 -d 8804 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5
+
+
+
+
+# collision random-adv-un
+python ga_fuzzing.py -p 2027 2030 -s 8803 -d 8804 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name random-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5
+
+
+
 
 
 
