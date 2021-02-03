@@ -794,7 +794,7 @@ customized_bounds_and_distributions = {
         'vehicle_x_min_0': -4.5,
         'vehicle_x_max_0': -2.5,
         'vehicle_y_min_0': -25,
-        'vehicle_y_max_0': -3,
+        'vehicle_y_max_0': 10,
         'vehicle_yaw_min_0': 270,
         'vehicle_yaw_max_0': 270,
         'vehicle_initial_speed_min_0': 2,

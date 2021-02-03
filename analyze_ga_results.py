@@ -690,7 +690,7 @@ def draw_unique_bug_num_over_simulations(path_list, filename='num_of_unique_bugs
 
             eps = 1e-8
             p = 0
-            c = 0.2
+            c = 0.1
             th = 0.5
 
             filtered_bugs, inds = get_distinct_data_points(bugs, mask, xl, xu, p, c, th, y=y)
@@ -801,11 +801,23 @@ if __name__ == '__main__':
 
 
 
-    new_town05_right_path_list = [('nsga2-un', 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_all_adv_nn_pytorch_700_300_1.0_0.75_0.75_coeff_0.0_0.1_0.5/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz')]
+    new_town05_right_path_list = [
+    ('nsga2-un', '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_00_34_26,50_14_none_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'),
+
+    ('nsga2-un-nn', '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_09_00_46,50_14_adv_nn_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'),
+
+    ('nsga2-un-adv-nn', '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_18_55_45,50_14_adv_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'),
+
+    ('random-un', '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/random-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_19_14_07,50_14_none_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5/bugs/random-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'),
+
+    ('random-un-adv-nn', '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/random-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_19_00_19,50_14_adv_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5/bugs/random-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'),
+
+    ('regression-nn', '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/regression-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_27_00_30_36,50_14_none_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5/bugs/regression-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'),
+    ]
 
 
 
-    draw_unique_bug_num_over_simulations(new_town05_right_path_list, filename='num_of_unique_bugs_town05_right', scene_name='all', legend=True)
+    draw_unique_bug_num_over_simulations(new_town05_right_path_list, filename='num_of_unique_bugs_town05_right', scene_name='collision', legend=True)
     # draw_unique_bug_num_over_simulations(town05_right_out_of_road_path_list, filename='num_of_unique_bugs_out_of_road_town05_right', scene_name='out_of_road', legend=True)
     # analyze different objectives
     # analyze_objectives(objectives_path_list1, filename='objectives_bug_num_over_simulations_town05_right', scene_name='leading car slows down / stops')

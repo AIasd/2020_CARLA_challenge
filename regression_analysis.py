@@ -68,6 +68,11 @@ tsne of settled attack methods during rerun (use rerun results as baseline resul
 
 
 
+tsne of different types of bug
+tune parameters for advnn
+
+
+
 
 
 
@@ -102,28 +107,96 @@ clean up code a bit for reproducing
 
 
 
+fix memory error
+implement BADGE
+run BALD_conf and BatchBALD_conf and BADGE
 
-# all multi adv
+
+
+
+# all multi adv aggressive 389 for 650
+python ga_fuzzing.py -p 2015 2024 -s 8791 -d 8792 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 1 1 -1 0 0 0 -1 --n_offsprings 500 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --use_single_nn 0 --adv_conf_th -8
+
+# all multi adv 394
 python ga_fuzzing.py -p 2015 2024 -s 8791 -d 8792 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 1 1 -1 0 0 0 -1 --n_offsprings 500 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --use_single_nn 0
 
 # all nsga2-un 393
 python ga_fuzzing.py -p 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 1 1 -1 0 0 0 -1 --rank_mode none --check_unique_coeff 0 0.1 0.5
 
+
+
+
+
 # collision nsga2-un 404
 python ga_fuzzing.py -p 2021 -s 8797 -d 8798 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --check_unique_coeff 0 0.1 0.5 --pgd_eps 0.0 --adv_conf_th 0.0 --attack_stop_conf 0.0
 
-# collision nsga2-nn 430
+# collision nsga2-un-nn 430
 python ga_fuzzing.py -p  -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --pgd_eps 0.0 --adv_conf_th 0.0 --attack_stop_conf 0.0
 
-# collision nsga2-adv-nn
+# collision nsga2-un-adv-nn 450
 python ga_fuzzing.py -p 2027 2030 -s 8803 -d 8804 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5
 
+# collision regression-nn 386
+python ga_fuzzing.py -p 2015 -s 8797 -d 8798 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name regression-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --check_unique_coeff 0 0.1 0.5
 
 
-
-# collision random-adv-un
+# collision random-un-adv-nn 318
 python ga_fuzzing.py -p 2027 2030 -s 8803 -d 8804 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name random-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5
 
+# collision random-un 335
+python ga_fuzzing.py -p 2033 2036 -s 8805 -d 8806 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name random-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --check_unique_coeff 0 0.1 0.5
+
+
+
+# collision random-un-nn 372
+python ga_fuzzing.py -p 2015 2018 -s 8803 -d 8804 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name random-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --pgd_eps 0.0 --adv_conf_th 0.0 --attack_stop_conf 0.0
+
+
+
+
+
+
+# collision nsga2-un 202
+python ga_fuzzing.py -p 2021 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --check_unique_coeff 0 0.1 0.5 --pgd_eps 0.0 --adv_conf_th 0.0 --attack_stop_conf 0.0
+
+# collision nsga2-un-nn 203
+python ga_fuzzing.py -p 2027 2030 -s 8803 -d 8804 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --pgd_eps 0.0 --adv_conf_th 0.0 --attack_stop_conf 0.0
+
+# collision nsga2-un-adv-nn 184
+python ga_fuzzing.py -p 2034 -s 8806 -d 8807 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5
+
+# collision nsga2-un-adv-nn aggressive 159
+python ga_fuzzing.py -p 2034 -s 8806 -d 8807 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --adv_conf_th -8
+
+
+
+
+1.BADGE (distance^2+critical)
+2.diverse mini-batch: clustering feature vector on top uncertain+critical cases and take centroids
+3.BatchBALD (uncertain + diversity + critical)
+4.core-set on top uncertain+critical cases (or consider distance based on feature vector distance + uncertain + critical)
+5.disagreement among models (average uncertainty - average individual uncertainty or maybe only the former) + average critical + feature vector distance
+
+uncertain measurements: BALD (average entropy - mean individual entropy, where individual is applying dropout on a DNN), gradient (as in BADGE)
+
+
+
+# collision nsga2-un 301
+python ga_fuzzing.py -p 2021 2024 -s 8800 -d 8801 --n_gen 10 --pop_size 100 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 1000 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --check_unique_coeff 0 0.05 0.25 --pgd_eps 0.0 --adv_conf_th 0.0 --attack_stop_conf 0.0
+
+# collision nsga2-un-adv-nn 271
+python ga_fuzzing.py -p 2015 2018 -s 8806 -d 8807 --n_gen 10 --pop_size 100 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 1000 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.05 0.25 --adv_conf_th 0.8 --attack_stop_conf 0.8 --initial_fit_th 500
+
+
+
+
+
+
+# collision nsga2-un
+python ga_fuzzing.py -p 2021 2024 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --check_unique_coeff 0 0.1 0.5 --pgd_eps 0.0 --adv_conf_th 0.0 --attack_stop_conf 0.0
+
+# collision nsga2-un-adv-nn
+python ga_fuzzing.py -p 2015 2018 -s 8806 -d 8807 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --adv_conf_th 0.0 --attack_stop_conf 0.0 --initial_fit_th 400
 
 
 
@@ -132,8 +205,113 @@ python ga_fuzzing.py -p 2027 2030 -s 8803 -d 8804 --n_gen 14 --pop_size 50 -r 't
 
 
 
-python ga_fuzzing.py -p 2015 2024 -s 8791 -d 8792 --n_gen 2 --pop_size 15 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 30 --objective_weights -1 1 1 1 1 -1 0 0 0 -1 --n_offsprings 500 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --use_single_nn 0 --initial_fit_th 10 --min_bug_num_to_fit_dnn 1
 
+
+
+
+
+# collision nsga2-un 427
+python ga_fuzzing.py -p 2021 2024 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --check_unique_coeff 0 0.1 0.5
+
+# collision nsga2-un-nn server running 401
+python ga_fuzzing.py -p 2021 2024 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --pgd_eps 0.0 --adv_conf_th 0.0 --attack_stop_conf 0.0
+
+
+# collision nsga2-un-adv-nn 339
+python ga_fuzzing.py -p 2027 2030 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5
+
+
+
+
+
+# collision nsga2-un 114
+python ga_fuzzing.py -p 2015 -s 8779 -d 8780 --n_gen 14 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --check_unique_coeff 0 0.1 0.5
+
+# collision nsga2-un-nn 104
+python ga_fuzzing.py -p 2018 -s 8781 -d 8782 --n_gen 14 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5 --pgd_eps 0.0 --adv_conf_th 0.0 --attack_stop_conf 0.0
+
+# collision nsga2-un-adv-nn 80
+python ga_fuzzing.py -p 2021 -s 8785 -d 8786 --n_gen 14 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --check_unique_coeff 0 0.1 0.5
+
+
+
+
+
+
+
+
+
+
+
+python ga_fuzzing.py -p 2015 2024 -s 8791 -d 8792 --n_gen 5 --pop_size 2 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 4 --objective_weights -1 1 1 0 0 0 0 0 0 0 --n_offsprings 50 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --initial_fit_th 2 --min_bug_num_to_fit_dnn 0 --uncertainty BADGE_none --model_type one_output
+
+
+
+# 413
+python ga_fuzzing.py -p 2012 2015 -s 8788 -d 8789 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BatchBALD_none
+
+# 377 for 650
+python ga_fuzzing.py -p 2012 2015 -s 8791 -d 8792 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BatchBALD_conf
+
+# TBD
+python ga_fuzzing.py -p 2018 2021 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BALD_conf
+
+# 417
+python ga_fuzzing.py -p 2021 -s 8797 -d 8798 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
+
+# 428
+python ga_fuzzing.py -p 2024 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BUGCONF_none
+
+
+
+# running
+python ga_fuzzing.py -p 2012 -s 8788 -d 8789 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_conf --model_type one_output
+
+# running
+python ga_fuzzing.py -p 2018 -s 8802 -d 8803 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output
+
+# running
+python ga_fuzzing.py -p 2015 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_conf --model_type one_output
+
+# running
+python ga_fuzzing.py -p 2021 -s 8804 -d 8805 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output
+
+# running
+python ga_fuzzing.py -p 2024 -s 8806 -d 8807 --n_gen 14 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_conf --model_type one_output
+
+
+# TBD
+python ga_fuzzing.py -p 2015 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type BNN
+
+# TBD
+python ga_fuzzing.py -p 2021 -s 8804 -d 8805 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type BNN
+
+
+
+
+
+
+try to add sample for the regression_analysis
+more samples (also add random samples)
+print out tp fp tn fn results
+record dnn performance at each generation
+
+
+
+
+
+# 402
+python ga_fuzzing.py -p 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
+
+# 356
+python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BUGCONF_none
+
+
+# 174
+python ga_fuzzing.py -p 2021 -s 8797 -d 8798 --n_gen 14 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
+
+# 170
+python ga_fuzzing.py -p 2021 2024 -s 8797 -d 8798 --n_gen 14 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BUGCONF_none
 
 
 
@@ -436,6 +614,12 @@ Ex:
 
 
 
+# DNN architecture
+more examples for training? higher threshold and stop_conf?
+another scenario?
+also draw train examples on tsne graphs
+read paper for better sampling?
+
 '''
 import sys
 import os
@@ -476,7 +660,7 @@ from sklearn.linear_model import LinearRegression
 from customized_utils import encode_fields, decode_fields, remove_fields_not_changing, recover_fields_not_changing, get_labels_to_encode, customized_standardize, customized_fit, load_data, get_sorted_subfolders
 
 
-
+from pgd_attack import VanillaDataset
 
 
 
@@ -586,7 +770,7 @@ def regression_analysis(X, is_bug_list, objective_list, cutoff, cutoff_end, tria
         print(name, np.mean(performance[name]), np.std(performance[name]))
 
 
-def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, trial_num, encode_fields):
+def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, trial_num, encoded_fields):
 
     # from matplotlib import pyplot as plt
     # plt.hist(objective_list[:, 1])
@@ -603,7 +787,7 @@ def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, t
 
 
 
-    one_hot_fields_len = len(encode_fields)
+    one_hot_fields_len = len(encoded_fields)
 
     customized_fit(X_train, standardize, one_hot_fields_len, partial=True)
     X_train = customized_standardize(X_train, standardize, one_hot_fields_len, partial=True)
@@ -637,7 +821,7 @@ def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, t
         for name, clf in zip(names, classifiers):
             if name == "Neural Net" and dnn_lib == 'pytorch':
                 from pgd_attack import train_net
-                clf = train_net(X_train, y_train, [], [], model_type='one_output')
+                clf = train_net(X_train, y_train, [], [], batch_train=64, model_type='BNN')
                 y_pred = clf.predict(X_test).squeeze()
                 prob = clf.predict_proba(X_test)[:, 1]
             else:
@@ -666,6 +850,255 @@ def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, t
 
     for name in names:
         print(name, np.mean(performance[name]), np.std(performance[name]))
+
+
+def active_learning(X, is_bug_list, objective_list, cutoff, cutoff_mid, cutoff_end, trial_num, encoded_fields, retrain_num):
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+    import torch.optim as optim
+    from torchvision import transforms
+    from copy import deepcopy
+    from matplotlib import pyplot as plt
+    from pgd_attack import train_net
+    from acquisition import move_data, BALD, Random, BatchBALD, BUGCONF, BADGE
+
+    acquisition_batch_size = 50
+    lr = 3e-4
+    num_train = cutoff
+    num_pool = cutoff_mid - cutoff
+    train_batch_size = 60
+    test_batch_size = 20
+
+    def train(model, device, train_loader, optimizer, epoch_num):
+        model.train()
+        target_list = []
+        for epoch in range(epoch_num):
+            for batch_idx, (data, target) in enumerate(train_loader):
+                data, target = data.to(device).float(), target.to(device).float()
+                optimizer.zero_grad()
+                output = model(data, return_logits=True).squeeze()
+                # print(output, target)
+                loss = F.binary_cross_entropy(output, target)
+                loss.backward()
+                optimizer.step()
+                if batch_idx % 10 == 0:
+                    print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                        epoch, batch_idx * len(data), len(train_loader.dataset),
+                        100. * batch_idx / len(train_loader), loss.item()))
+                if epoch == 0:
+                    target_list.append(target.cpu().detach().numpy())
+            if epoch == 0:
+                target_list = np.concatenate(target_list)
+                print('train bug num', np.sum(target_list>0))
+        return np.sum(target_list>0)
+
+    def test(model, device, test_loader):
+        model.eval()
+        test_loss = 0
+        correct = 0
+
+        target_list = []
+        output_one_hot_list = []
+        with torch.no_grad():
+            for data, target in test_loader:
+                data, target = data.to(device).float(), target.to(device).float()
+                output = model(data, return_logits=True).squeeze()
+                test_loss += F.binary_cross_entropy(output, target, reduction='sum').item()  # sum up batch loss
+
+
+                output_one_hot = model.predict_proba(data)
+                pred = output_one_hot.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+                correct += pred.eq(target.view_as(pred)).sum().item()
+                target_list.append(target.cpu().detach().numpy())
+                output_one_hot_list.append(output_one_hot[:, 1].cpu().detach().numpy())
+
+        test_loss /= len(test_loader.dataset)
+        accuracy = float(correct) / len(test_loader.dataset)
+
+        print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+            test_loss, correct, len(test_loader.dataset),
+            100. * accuracy))
+
+        target_list = np.concatenate(target_list)
+        output_one_hot_list = np.concatenate(output_one_hot_list)
+
+        ranks = np.argsort(output_one_hot_list*-1)
+        print('rank', np.mean(ranks[target_list==1]))
+        print('\n')
+        return accuracy
+
+    def active(model, acquirer, device, data, optimizer):
+        train_data, pool_data, test_data = data
+        epoch_num = 30
+        test_accuracies = []
+        train_bug_nums = []
+        from pgd_attack import BNN
+
+        while len(pool_data) > 0:
+            model = BNN(train_data[0][0].size()[0], 1)
+            model.cuda()
+            optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+            print(f'Acquiring {acquirer.__class__.__name__} batch. Pool size: {len(pool_data)}')
+            # get the indices of the best batch of data
+            batch_indices = acquirer.select_batch(model, pool_data, uncertainty_conf=True)
+            # move that data from the pool to the training set
+            move_data(batch_indices, pool_data, train_data)
+            # train on it
+            train_loader = torch.utils.data.DataLoader(train_data,
+                batch_size=train_batch_size, pin_memory=True, shuffle=True)
+            train_bug_nums.append(train(model, device, train_loader, optimizer, epoch_num))
+
+            # test the accuracy
+            test_loader = torch.utils.data.DataLoader(test_data,
+                batch_size=test_batch_size, pin_memory=True, shuffle=True)
+            test_accuracies.append(test(model, device, test_loader))
+
+        return test_accuracies, train_bug_nums
+
+
+
+    y = np.array([float(obj[0] > 0.1) for obj in objective_list])
+
+    X_train, X_extra, X_test = X[:cutoff], X[cutoff:cutoff_mid], X[cutoff_mid:cutoff_end]
+    y_train, y_extra, y_test = y[:cutoff], y[cutoff:cutoff_mid], y[cutoff_mid:cutoff_end]
+
+    standardize = StandardScaler()
+    one_hot_fields_len = len(encoded_fields)
+    customized_fit(X_train, standardize, one_hot_fields_len, partial=True)
+    X_train = customized_standardize(X_train, standardize, one_hot_fields_len, partial=True)
+    X_extra = customized_standardize(X_extra, standardize, one_hot_fields_len, partial=True)
+    X_test = customized_standardize(X_test, standardize, one_hot_fields_len, partial=True)
+
+
+
+
+
+
+
+
+    model = train_net(X_train, y_train, X_test, y_test, batch_train=64, hidden_size=20, model_type='BNN')
+
+
+
+
+
+
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if use_cuda else "cpu")
+
+    # load the dataset and pre-process
+    dataset = VanillaDataset(np.concatenate([X_train, X_extra]), np.concatenate([y_train, y_extra]), to_tensor=True)
+
+    # subset_indices = np.random.choice(len(dataset), size=num_train+num_pool, replace=False)
+
+    subset_indices = np.arange(len(dataset))
+    train_indices = subset_indices[:num_train]
+    pool_indices = subset_indices[-num_pool:]
+    train_data = torch.utils.data.Subset(dataset, train_indices)
+
+    test_data =  VanillaDataset(X_test, y_test, to_tensor=True)
+
+
+
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    fig.suptitle('test accuracies and train bug numbers')
+
+
+    pre_acquisition_model_state = model.state_dict()
+
+    for acquisition_strategy in [BADGE, BALD, BatchBALD, BUGCONF, Random]:
+        # reset the model
+        model.load_state_dict(deepcopy(pre_acquisition_model_state))
+        # init the acquirer
+        acquirer = acquisition_strategy(acquisition_batch_size, device)
+        # and an optimizer
+        optimizer = optim.Adam(model.parameters(), lr=lr)
+        # get all the data
+        train_data = torch.utils.data.Subset(dataset, train_indices)
+        pool_data = torch.utils.data.Subset(dataset, pool_indices)
+        data = (train_data, pool_data, test_data)
+        # train the model with active learning
+        accuracies, train_bug_nums = active(model, acquirer, device, data, optimizer)
+
+        ax1.plot(train_bug_nums, label=acquisition_strategy.__name__)
+        ax2.plot(accuracies, label=acquisition_strategy.__name__)
+
+    plt.legend()
+    plt.show()
+
+
+
+
+
+def draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_end, encoded_fields):
+
+    y = np.array([obj[0] > 0.1 for obj in objective_list])
+
+    X_train, X_test = X[:cutoff], X[cutoff:cutoff_end]
+    y_train, y_test = y[:cutoff], y[cutoff:cutoff_end]
+    standardize = StandardScaler()
+    one_hot_fields_len = len(encoded_fields)
+    customized_fit(X_train, standardize, one_hot_fields_len, partial=True)
+    X_train = customized_standardize(X_train, standardize, one_hot_fields_len, partial=True)
+    X_test = customized_standardize(X_test, standardize, one_hot_fields_len, partial=True)
+
+
+    from pgd_attack import train_net
+    clf = train_net(X_train, y_train, X_test, y_test, model_type='one_output')
+    y_pred = clf.predict(X_test).squeeze()
+    test_prob = clf.predict_proba(X_test)[:, 1]
+    print(X_test.shape)
+    embed = clf.extract_embed(X_test)
+
+
+    test_ind_0 = y_test == 0
+    test_ind_1 = y_test == 1
+
+    pred_ind_0 = y_pred == 0
+    pred_ind_1 = y_pred == 1
+
+    print('test_ind_0', np.sum(test_ind_0))
+    print('test_ind_1', np.sum(test_ind_1))
+    print('pred_ind_0', np.sum(pred_ind_0))
+    print('pred_ind_1', np.sum(pred_ind_1))
+    print('TP', np.sum(test_ind_1 & pred_ind_1))
+    print('FP', np.sum(test_ind_0 & pred_ind_1))
+    print('TN', np.sum(test_ind_0 & pred_ind_0))
+    print('FN', np.sum(test_ind_1 & pred_ind_0))
+    from scipy.stats import rankdata
+    test_prob_rank = rankdata(test_prob)
+    test_prob_FN = test_prob[test_ind_1 & pred_ind_0]
+    test_prob_rank_FN = test_prob_rank[test_ind_1 & pred_ind_0]
+
+    print('test_prob_FN', test_prob_FN)
+    print('test_prob_rank_FN', test_prob_rank_FN)
+
+    print('test_prob[test_ind_1]', test_prob[test_ind_1])
+    print('test_prob_rank[test_ind_1]', test_prob_rank[test_ind_1])
+    print('np.mean(test_prob_rank[test_ind_1])', np.mean(test_prob_rank[test_ind_1]))
+
+    from sklearn.manifold import TSNE
+    from matplotlib import pyplot as plt
+    X_embed = TSNE(n_components=2, perplexity=30.0, n_iter=3000).fit_transform(embed)
+
+
+
+    X_embed_0 = X_embed[test_ind_0]
+    X_embed_1 = X_embed[test_ind_1]
+    test_prob_0 = test_prob[test_ind_0]
+    test_prob_1 = test_prob[test_ind_1]
+
+    print(X_embed_0)
+    print(test_prob_0)
+
+    plt.scatter(X_embed_0[:, 0], X_embed_0[:, 1], c=test_prob_0, label='normal', alpha=0.5, s=20, marker='.', cmap='Blues')
+    plt.scatter(X_embed_1[:, 0], X_embed_1[:, 1], c=test_prob_1, label='bug', alpha=0.5, s=20, marker='^', cmap='Reds')
+
+    plt.legend(loc=2, prop={'size': 10}, framealpha=0.5)
+    plt.savefig('tmp_tsne/tsne_confidence.pdf')
+
+
 
 
 
@@ -725,12 +1158,38 @@ def analyze_objective_data(X, is_bug_list, objective_list):
 
 
 if __name__ == '__main__':
-    mode = 'continuous'
+    mode = 'active'
     trial_num = 15
     cutoff = 300
-    cutoff_end = 350
+    cutoff_end = 700
 
-    parent_folder = 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_50_14_collision_0.05_0.25_adv_nn_pytorch_300_eps_0'
+    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_00_34_26,50_14_none_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5'
+
+    cutoff_mid = 500
+    retrain_num = 50
+
+
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_00_34_26,50_14_none_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5'
+
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/random-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_19_14_07,50_14_none_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5'
+
+
+
+
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_front_0/change_lane_town05_fixed_npc_num/lbc/2021_01_28_00_24_00,50_14_none_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5'
+
+
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_front_0/change_lane_town05_fixed_npc_num/lbc/2021_01_28_00_24_05,50_14_adv_nn_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5'
+
+
+
+
+
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_01_27_00_30_43,50_14_none_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5'
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_00_34_26,50_14_none_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5'
+
+
+
 
     # 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_50_14_collision_0.05_0.25_adv_nn_pytorch_300_eps_0'
     # 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/50_8_collision_adv_nn_pytorch_300_eps_0_th_0'
@@ -741,9 +1200,14 @@ if __name__ == '__main__':
     X, encoded_fields = encode_and_remove_x(X, mask, labels)
 
 
+
     if mode == 'analysis':
         analyze_objective_data(X, is_bug_list, objective_list)
+    elif mode == 'tsne':
+        draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_end, encoded_fields)
     elif mode == 'discrete':
         classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_end, trial_num, encoded_fields)
+    elif mode == 'active':
+        active_learning(X, is_bug_list, objective_list, cutoff, cutoff_mid, cutoff_end, trial_num, encoded_fields, retrain_num)
     else:
         regression_analysis(X, is_bug_list, objective_list, cutoff, cutoff_end, trial_num, encoded_fields)

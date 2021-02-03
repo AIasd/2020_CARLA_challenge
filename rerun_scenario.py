@@ -401,7 +401,7 @@ if __name__ == '__main__':
     test_unique_bugs = True
     unique_coeff = [0, 0.1, 0.5]
 
-    parent_folder = 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_all_adv_nn_pytorch_700_300_1.0_0.75_0.75_coeff_0.0_0.1_0.5'
+    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_01_27_11_07_18,50_14_adv_nn_700_300_1.01_-8.0_0.75_coeff_0.0_0.1_0.5'
     # 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/50_14_collision_adv_nn_pytorch_700_300_1.0_0.7_coeff_0.0_0.05_0.25'
     # 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/collision_adv_nn_pytorch_700_300_0.0_0.0_coeff_0.0_0.1_0.5'
     # 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_50_14_collision_0.05_0.25_adv_nn_pytorch_300_eps_0'
@@ -416,9 +416,9 @@ if __name__ == '__main__':
 
     # only used for adv
     rerun_save_folder = make_hierarchical_dir(['adv', time_str])
-    cutoff = 600
-    cutoff_end = 650
-    eps = 1.0
+    cutoff = 300
+    cutoff_end = 350
+    eps = 0.0
     adv_conf_th = 0.75
     # 1.01
 
@@ -504,7 +504,7 @@ if __name__ == '__main__':
         print('\n'*3)
 
         adv_conf_th = th_conf
-        attack_stop_conf = 0.75
+        attack_stop_conf = np.max([0.75, th_conf])
         # adv_conf_th = 0.0
 
         if use_adv:
@@ -583,10 +583,6 @@ if __name__ == '__main__':
             xu_ori = d_info['xu']
             subfolders = get_sorted_subfolders(parent_folder)
             initial_X, _, initial_objectives_list, mask, _ = load_data(subfolders)
-
-
-
-
 
 
         d = np.load(save_path+'.npz')

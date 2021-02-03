@@ -4,27 +4,93 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.utils.data as Data
 import torchvision.utils
+import torch.nn.functional as F
 from torchvision import models
 from customized_utils import if_violate_constraints, customized_standardize, customized_inverse_standardize, recover_fields_not_changing, decode_fields, is_distinct
 
 class VanillaDataset(Data.Dataset):
-    def __init__(self, X, y, one_hot=False):
+    def __init__(self, X, y, one_hot=False, to_tensor=False):
         self.X = X
         self.y = y
         self.one_hot = one_hot
+        self.to_tensor = to_tensor
 
     def __len__(self):
         return len(self.y)
 
     def __getitem__(self, idx):
-        return (self.X[idx], self.y[idx])
+        if self.to_tensor:
+            return (torch.from_numpy(np.array(self.X[idx])), torch.from_numpy(np.array(self.y[idx])))
+        else:
+            return (self.X[idx], self.y[idx])
+
+class BNN(nn.Module):
+    def __init__(self, input_size, output_size, device=None):
+        super(BNN, self).__init__()
+
+        # self.layers = nn.Sequential(
+        #     nn.Linear(input_size, 150),
+        #     nn.Dropout(0.5),
+        #     nn.ReLU(),
+        #     # nn.Linear(20, 20),
+        #     # nn.Dropout(0.5),
+        #     # nn.ReLU(),
+        #     nn.Linear(150, output_size),
+        #     nn.Sigmoid())
+
+        self.fc1 = nn.Linear(input_size, 150)
+        self.dropout = nn.Dropout(0.5)
+        self.relu1 = nn.ReLU()
+        self.fc_end = nn.Linear(150, output_size)
+        self.sigmoid = nn.Sigmoid()
+
+        if not device:
+            self.device = torch.device("cuda")
+        else:
+            self.device = device
+
+    def forward(self, x, return_logits=False):
+        # x = torch.flatten(x, 1)
+        # logits = self.layers(x.float())
+
+        x = self.fc1(x)
+        x = self.dropout(x)
+        x = self.relu1(x)
+        x = self.fc_end(x)
+        logits = self.sigmoid(x)
+
+        return logits
+
+    def predict(self, x):
+        x = torch.from_numpy(x).to(self.device).float()
+        out = self.forward(x)
+        out = torch.round(out)
+        return out.cpu().detach().numpy()
+    def predict_proba(self, x):
+        if isinstance(x, np.ndarray):
+            is_numpy = True
+        else:
+            is_numpy = False
+        if is_numpy:
+            x = torch.from_numpy(x).to(self.device).float()
+
+        out = self.forward(x)
+        out = torch.stack([1 - out, out], dim=1).squeeze()
+        # print(out.cpu().detach().numpy().shape)
+
+        if is_numpy:
+            return out.cpu().detach().numpy()
+        else:
+            return out
 
 class SimpleNet(nn.Module):
     def __init__(self, input_size, hidden_size, num_classes, device=None):
         super(SimpleNet, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
-        self.tanh = nn.Tanh()
-        self.fc2 = nn.Linear(hidden_size, num_classes)
+        self.relu1 = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.relu2 = nn.ReLU()
+        self.fc_end = nn.Linear(hidden_size, num_classes)
         self.sigmoid = nn.Sigmoid()
 
         if not device:
@@ -32,13 +98,18 @@ class SimpleNet(nn.Module):
         else:
             self.device = device
     def extract_embed(self, x):
+        x = torch.from_numpy(x).to(self.device).float()
         out = self.fc1(x)
-        out = self.tanh(out)
-        return out
+        out = self.relu1(out)
+        out = self.fc2(out)
+        out = self.relu2(out)
+        return out.cpu().detach().numpy()
     def forward(self, x):
         out = self.fc1(x)
-        out = self.tanh(out)
+        out = self.relu1(out)
         out = self.fc2(out)
+        out = self.relu2(out)
+        out = self.fc_end(out)
         out = self.sigmoid(out)
         return out
     def predict(self, x):
@@ -47,12 +118,56 @@ class SimpleNet(nn.Module):
         out = torch.round(out)
         return out.cpu().detach().numpy()
     def predict_proba(self, x):
-        x = torch.from_numpy(x).to(self.device).float()
+        if isinstance(x, np.ndarray):
+            is_numpy = True
+        else:
+            is_numpy = False
+        if is_numpy:
+            x = torch.from_numpy(x).to(self.device).float()
         out = self.forward(x)
 
         out = torch.stack([1 - out, out], dim=1).squeeze()
         # print(out.cpu().detach().numpy().shape)
-        return out.cpu().detach().numpy()
+        if is_numpy:
+            return out.cpu().detach().numpy()
+        else:
+            return out
+
+# class SimpleNet(nn.Module):
+#     def __init__(self, input_size, hidden_size, num_classes, device=None):
+#         super(SimpleNet, self).__init__()
+#         self.fc1 = nn.Linear(input_size, hidden_size)
+#         self.tanh = nn.Tanh()
+#         self.fc_last = nn.Linear(hidden_size, num_classes)
+#         self.sigmoid = nn.Sigmoid()
+#
+#         if not device:
+#             self.device = torch.device("cuda")
+#         else:
+#             self.device = device
+#     def extract_embed(self, x):
+#         x = torch.from_numpy(x).to(self.device).float()
+#         out = self.fc1(x)
+#         out = self.tanh(out)
+#         return out.cpu().detach().numpy()
+#     def forward(self, x):
+#         out = self.fc1(x)
+#         out = self.tanh(out)
+#         out = self.fc_last(out)
+#         out = self.sigmoid(out)
+#         return out
+#     def predict(self, x):
+#         x = torch.from_numpy(x).to(self.device).float()
+#         out = self.forward(x)
+#         out = torch.round(out)
+#         return out.cpu().detach().numpy()
+#     def predict_proba(self, x):
+#         x = torch.from_numpy(x).to(self.device).float()
+#         out = self.forward(x)
+#
+#         out = torch.stack([1 - out, out], dim=1).squeeze()
+#         # print(out.cpu().detach().numpy().shape)
+#         return out.cpu().detach().numpy()
 
 
 class SimpleNetMulti(SimpleNet):
@@ -405,17 +520,22 @@ def pgd_attack(model, images, labels, xl, xu, encoded_fields, labels_used, custo
 
     return np.array(new_images_all), np.array(new_outputs_all), np.array(initial_outputs_all)
 
-def train_net(X_train, y_train, X_test, y_test, batch_train=200, batch_test=20, model_type='one_output', device=None):
+def train_net(X_train, y_train, X_test, y_test, batch_train=64, batch_test=20, hidden_size=150, model_type='one_output', device=None):
     if not device:
         device = torch.device("cuda")
     input_size = X_train.shape[1]
-    hidden_size = 150
 
-    num_epochs = 20
+
+    num_epochs = 30
 
     if model_type == 'one_output':
         num_classes = 1
         model = SimpleNet(input_size, hidden_size, num_classes)
+        criterion = nn.BCELoss()
+        one_hot = False
+    elif model_type == 'BNN':
+        num_classes = 1
+        model = BNN(input_size, num_classes)
         criterion = nn.BCELoss()
         one_hot = False
     elif model_type == 'two_output':
@@ -433,13 +553,17 @@ def train_net(X_train, y_train, X_test, y_test, batch_train=200, batch_test=20, 
 
     d_train = VanillaDataset(X_train, y_train)
 
+
+    train_loader = Data.DataLoader(d_train, batch_size=batch_train, shuffle=True)
+
+
     # class_sample_count = [np.sum(y_train==0), np.sum(y_train==1)]
     # class_sample_count = [y_train.shape[0]/2, y_train.shape[0]/2]
     # weights = 1 / torch.Tensor(class_sample_count)
     # sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, batch_train)
     # train_loader = Data.DataLoader(d_train, batch_size=batch_train, sampler=sampler)
 
-    train_loader = Data.DataLoader(d_train, batch_size=batch_train, shuffle=True)
+
 
     if len(y_test) > 0:
         d_test = VanillaDataset(X_test, y_test)

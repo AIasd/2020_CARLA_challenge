@@ -531,7 +531,8 @@ parser.add_argument('--pgd_eps', type=float, default=1.01)
 parser.add_argument('--adv_conf_th', type=float, default=-4)
 parser.add_argument('--attack_stop_conf', type=float, default=0.75)
 parser.add_argument('--use_single_nn', type=int, default=1)
-
+parser.add_argument('--uncertainty', type=str, default='Random')
+parser.add_argument('--model_type', type=str, default='BNN')
 arguments = parser.parse_args()
 
 
@@ -558,6 +559,13 @@ pgd_eps = arguments.pgd_eps
 adv_conf_th = arguments.adv_conf_th
 attack_stop_conf = arguments.attack_stop_conf
 use_single_nn = arguments.use_single_nn
+uncertainty = arguments.uncertainty
+
+model_type = arguments.model_type
+# ['BNN', 'one_output']
+# BALD and BatchBALD only support BNN
+if uncertainty.split('_')[0] in ['BALD', 'BatchBALD']:
+    model_type = 'BNN'
 
 
 os.environ['HAS_DISPLAY'] = arguments.has_display
@@ -1562,8 +1570,8 @@ class NSGA2_DT(NSGA2):
         self.adv_conf_th = adv_conf_th
         self.attack_stop_conf = attack_stop_conf
 
-
-
+        self.uncertainty = uncertainty
+        self.model_type = model_type
         self.use_single_nn = use_single_nn
 
     # mainly used to modify survival
@@ -1633,9 +1641,10 @@ class NSGA2_DT(NSGA2):
 
         # additional step to rank and select self.off after gathering initial population
         if self.rank_mode != 'none':
-
-            if (self.rank_mode in ['nn', 'adv_nn'] and len(self.problem.objectives_list) >= self.initial_fit_th and  np.sum(determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)) > self.min_bug_num_to_fit_dnn) or (self.rank_mode in ['regression_nn'] and len(self.problem.objectives_list) >= self.pop_size):
-
+            # print(self.rank_mode in ['nn', 'adv_nn'])
+            # print(len(self.problem.objectives_list), self.initial_fit_th)
+            # print(np.sum(determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)), self.min_bug_num_to_fit_dnn)
+            if (self.rank_mode in ['nn', 'adv_nn'] and len(self.problem.objectives_list) >= self.initial_fit_th and  np.sum(determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)) >= self.min_bug_num_to_fit_dnn) or (self.rank_mode in ['regression_nn'] and len(self.problem.objectives_list) >= self.pop_size):
                 if self.rank_mode in ['regression_nn']:
                     # only consider collision case for now
                     from customized_utils import pretrain_regression_nets
@@ -1662,7 +1671,7 @@ class NSGA2_DT(NSGA2):
                 # print('process_X X_train.shape, X_test.shape', X_train.shape, X_test.shape)
                 (X_removed, kept_fields, removed_fields, enc, inds_to_encode, inds_non_encode, encoded_fields, _, _, unique_bugs_len) = param_for_recover_and_decode
 
-
+                print('process_X finished')
                 if self.rank_mode in ['regression_nn']:
                     # only consider collision case for now
 
@@ -1721,112 +1730,149 @@ class NSGA2_DT(NSGA2):
                         print('no more offsprings to run (regression nn)')
                         self.off = []
                 else:
-                    one_clf = True
-                    adv_conf_th = self.adv_conf_th
-                    attack_stop_conf = self.attack_stop_conf
 
-                    print('self.use_single_nn', self.use_single_nn)
-                    if self.use_single_nn:
+                    if uncertainty:
+                        from pgd_attack import VanillaDataset
+                        from acquisition import map_acquisition
+                        # [None, 'BUGCONF', 'Random', 'BALD', 'BatchBALD']
+                        print('uncertainty', self.uncertainty)
+                        uncertainty_key, uncertainty_conf = self.uncertainty.split('_')
+
+                        acquisition_strategy = map_acquisition(uncertainty_key)
+                        acquirer = acquisition_strategy(self.pop_size)
+
+
+
+                        if uncertainty_conf == 'conf':
+                            uncertainty_conf = True
+                        else:
+                            uncertainty_conf = False
+
+                        pool_data = VanillaDataset(X_test, np.zeros(X_test.shape[0]), to_tensor=True)
+                        pool_data = torch.utils.data.Subset(pool_data, np.arange(len(pool_data)))
+
                         y_train = determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)
+                        clf = train_net(X_train, y_train, [], [], batch_train=60, model_type=self.model_type)
 
-                        if self.dnn_lib == 'sklearn':
-                            clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
-                            clf.fit(X_train, y_train)
-                        elif dnn_lib == 'pytorch':
-                            clf = train_net(X_train, y_train, [], [], batch_train=200)
+                        if self.use_unique_bugs:
+                            unique_len = self.tmp_off_type_1_len
                         else:
-                            raise
-
-                        prob_train = clf.predict_proba(X_train)[:, 1].squeeze()
-                        cur_y = y_train
-
-                        if self.adv_conf_th < 0:
-                            print(sorted(prob_train, reverse=True))
-                            print('cur_y', cur_y)
-                            print('np.abs(self.adv_conf_th)', np.abs(self.adv_conf_th))
-                            print(int(np.sum(cur_y)//np.abs(self.adv_conf_th)))
-                            adv_conf_th = sorted(prob_train, reverse=True)[int(np.sum(cur_y)//np.abs(self.adv_conf_th))]
-                            attack_stop_conf = np.max([self.attack_stop_conf, adv_conf_th])
-
+                            unique_len = 0
+                        inds = acquirer.select_batch(clf, pool_data, unique_len=unique_len, uncertainty_conf=uncertainty_conf)
+                        print('chosen indices', inds)
                     else:
-                        from customized_utils import get_all_y
+                        one_clf = True
+                        adv_conf_th = self.adv_conf_th
+                        attack_stop_conf = self.attack_stop_conf
 
-                        y_list = get_all_y(self.problem.objectives_list, self.problem.objective_weights)
-                        clf_list = []
-                        bug_type_nn_activated = []
-                        print('self.problem.objectives_list', self.problem.objectives_list)
-                        print('self.problem.objective_weights', self.problem.objective_weights)
-                        print('y_list', y_list)
-                        for i, y_train in enumerate(y_list):
-                            print('np.sum(y_train)', np.sum(y_train), 'self.min_bug_num_to_fit_dnn', self.min_bug_num_to_fit_dnn)
-                            if np.sum(y_train) >= self.min_bug_num_to_fit_dnn:
-                                if self.dnn_lib == 'sklearn':
-                                    clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
-                                    clf.fit(X_train, y_train)
-                                elif dnn_lib == 'pytorch':
-                                    clf = train_net(X_train, y_train, [], [], batch_train=200)
-                                else:
-                                    raise
-                                clf_list.append(clf)
-                                bug_type_nn_activated.append(i)
+                        print('self.use_single_nn', self.use_single_nn)
+                        if self.use_single_nn:
+                            y_train = determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)
 
-                        if len(clf_list) > 1:
+                            if self.dnn_lib == 'sklearn':
+                                clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
+                                clf.fit(X_train, y_train)
+                            elif dnn_lib == 'pytorch':
+                                clf = train_net(X_train, y_train, [], [], batch_train=200)
+                            else:
+                                raise
+
+                            prob_train = clf.predict_proba(X_train)[:, 1].squeeze()
+                            cur_y = y_train
+
                             if self.adv_conf_th < 0:
-                                adv_conf_th = []
-                                attack_stop_conf = []
+                                print(sorted(prob_train, reverse=True))
+                                print('cur_y', cur_y)
+                                print('np.abs(self.adv_conf_th)', np.abs(self.adv_conf_th))
+                                print(int(np.sum(cur_y)//np.abs(self.adv_conf_th)))
+                                adv_conf_th = sorted(prob_train, reverse=True)[int(np.sum(cur_y)//np.abs(self.adv_conf_th))]
+                                attack_stop_conf = np.max([self.attack_stop_conf, adv_conf_th])
 
-                            from scipy import stats
-                            one_clf = False
-                            scores_on_all_nn = np.zeros([X_test.shape[0], len(clf_list)])
-                            for j, clf in enumerate(clf_list):
-                                prob_test = clf.predict_proba(X_test)[:, 1].squeeze()
-                                prob_train = clf.predict_proba(X_train)[:, 1].squeeze()
-                                bug_type = bug_type_nn_activated[j]
-                                cur_y = y_list[bug_type]
-                                print('np.sum(cur_y)', np.sum(cur_y), 'np.abs(self.adv_conf_th)', np.abs(self.adv_conf_th), 'np.sum(cur_y)//np.abs(self.adv_conf_th)', np.sum(cur_y)//np.abs(self.adv_conf_th))
-
-                                th_conf = sorted(prob_train, reverse=True)[int(np.sum(cur_y)//np.abs(self.adv_conf_th))]
-                                adv_conf_th.append(th_conf)
-                                attack_stop_conf.append(np.max([th_conf, self.attack_stop_conf]))
-                                print('adv_conf_th', adv_conf_th)
-                                print('attack_stop_conf', attack_stop_conf)
-
-                                y_j_bug_perc = np.mean(cur_y)*100
-                                scores_on_all_nn[:, j] = [(stats.percentileofscore(prob_train, prob_test_i) - (100 - y_j_bug_perc)) / y_j_bug_perc for prob_test_i in prob_test]
-
-                                print('-'*50)
-                                print(j)
-                                print('y_j_bug_perc', y_j_bug_perc)
-                                print('prob_train', prob_train)
-                                print('prob_test', prob_test)
-                                print('scores_on_all_nn[:, j]', scores_on_all_nn[:, j])
-                                print('-'*50)
-
-                            print(scores_on_all_nn)
-                            associated_clf_id = np.argmax(scores_on_all_nn, axis=1)
-
-                            print(associated_clf_id)
-
-                            # TBD: change the name to plural for less confusion
-                            clf = clf_list
                         else:
-                            clf = clf_list[0]
+                            from customized_utils import get_all_y
 
-                    print('\n', 'adv_conf_th', adv_conf_th, '\n')
-                    if one_clf == True:
-                        scores = clf.predict_proba(X_test)[:, 1]
-                    else:
-                        scores = np.max(scores_on_all_nn, axis=1)
+                            y_list = get_all_y(self.problem.objectives_list, self.problem.objective_weights)
+                            clf_list = []
+                            bug_type_nn_activated = []
+                            print('self.problem.objectives_list', self.problem.objectives_list)
+                            print('self.problem.objective_weights', self.problem.objective_weights)
+                            print('y_list', y_list)
+                            for i, y_train in enumerate(y_list):
+                                print('np.sum(y_train)', np.sum(y_train), 'self.min_bug_num_to_fit_dnn', self.min_bug_num_to_fit_dnn)
+                                if np.sum(y_train) >= self.min_bug_num_to_fit_dnn:
+                                    if self.dnn_lib == 'sklearn':
+                                        clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
+                                        clf.fit(X_train, y_train)
+                                    elif dnn_lib == 'pytorch':
+                                        clf = train_net(X_train, y_train, [], [], batch_train=200)
+                                    else:
+                                        raise
+                                    clf_list.append(clf)
+                                    bug_type_nn_activated.append(i)
 
-                    # when using unique bugs give preference to unique inputs
-                    if self.use_unique_bugs:
-                        scores[:self.tmp_off_type_1_len] += 100
-                        # scores[:self.tmp_off_type_1and2_len] += 100
-                    scores *= -1
-                    inds = np.argsort(scores)[:self.pop_size]
+                            if len(clf_list) > 1:
+                                if self.adv_conf_th < 0:
+                                    adv_conf_th = []
+                                    attack_stop_conf = []
 
-                    print('scores', scores)
-                    print('chosen indices', inds)
+                                from scipy import stats
+                                one_clf = False
+                                scores_on_all_nn = np.zeros([X_test.shape[0], len(clf_list)])
+                                for j, clf in enumerate(clf_list):
+                                    prob_test = clf.predict_proba(X_test)[:, 1].squeeze()
+                                    prob_train = clf.predict_proba(X_train)[:, 1].squeeze()
+                                    bug_type = bug_type_nn_activated[j]
+                                    cur_y = y_list[bug_type]
+                                    print('np.sum(cur_y)', np.sum(cur_y), 'np.abs(self.adv_conf_th)', np.abs(self.adv_conf_th), 'np.sum(cur_y)//np.abs(self.adv_conf_th)', np.sum(cur_y)//np.abs(self.adv_conf_th))
+
+                                    th_conf = sorted(prob_train, reverse=True)[int(np.sum(cur_y)//np.abs(self.adv_conf_th))]
+                                    adv_conf_th.append(th_conf)
+                                    attack_stop_conf.append(np.max([th_conf, self.attack_stop_conf]))
+                                    print('adv_conf_th', adv_conf_th)
+                                    print('attack_stop_conf', attack_stop_conf)
+
+                                    y_j_bug_perc = np.mean(cur_y)*100
+                                    scores_on_all_nn[:, j] = [(stats.percentileofscore(prob_train, prob_test_i) - (100 - y_j_bug_perc)) / y_j_bug_perc for prob_test_i in prob_test]
+
+                                    print('-'*50)
+                                    print(j)
+                                    print('y_j_bug_perc', y_j_bug_perc)
+                                    print('prob_train', prob_train)
+                                    print('prob_test', prob_test)
+                                    print('scores_on_all_nn[:, j]', scores_on_all_nn[:, j])
+                                    print('-'*50)
+
+                                print(scores_on_all_nn)
+                                associated_clf_id = np.argmax(scores_on_all_nn, axis=1)
+
+                                print(associated_clf_id)
+
+                                # TBD: change the name to plural for less confusion
+                                clf = clf_list
+                            else:
+                                clf = clf_list[0]
+
+
+
+
+                        print('\n', 'adv_conf_th', adv_conf_th, '\n')
+                        if one_clf == True:
+                            scores = clf.predict_proba(X_test)[:, 1]
+                        else:
+                            scores = np.max(scores_on_all_nn, axis=1)
+
+                        # when using unique bugs give preference to unique inputs
+                        if self.use_unique_bugs:
+                            scores[:self.tmp_off_type_1_len] += 100
+                            # scores[:self.tmp_off_type_1and2_len] += 100
+                        scores *= -1
+                        inds = np.argsort(scores)[:self.pop_size]
+
+                        print('sorted(scores)', sorted(scores))
+                        print('chosen indices', inds)
+
+
+
                     # print('self.tmp_off', self.tmp_off)
                     # print('self.tmp_off[0].F', self.tmp_off[0].F)
                     if self.rank_mode == 'nn':
@@ -2269,7 +2315,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     else:
         now = datetime.now()
         p, c, th = check_unique_coeff
-        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th)])
+        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th), uncertainty, model_type])
 
 
     cur_parent_folder = make_hierarchical_dir([root_folder, algorithm_name, route_type, scenario_type, ego_car_model, time_str])
@@ -2348,7 +2394,9 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       min_bug_num_to_fit_dnn=min_bug_num_to_fit_dnn,
                       dnn_lib=dnn_lib, use_unique_bugs=use_unique_bugs, pgd_eps=pgd_eps,
                       adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf,
-                      use_single_nn=use_single_nn)
+                      use_single_nn=use_single_nn,
+                      uncertainty=uncertainty,
+                      model_type=model_type)
 
 
 
