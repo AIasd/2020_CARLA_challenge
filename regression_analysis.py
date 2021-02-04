@@ -171,9 +171,9 @@ python ga_fuzzing.py -p 2034 -s 8806 -d 8807 --n_gen 14 --pop_size 50 -r 'town07
 
 
 
-1.BADGE (distance^2+critical)
+# 1.BADGE (distance^2+critical)
 2.diverse mini-batch: clustering feature vector on top uncertain+critical cases and take centroids
-3.BatchBALD (uncertain + diversity + critical)
+# 3.BatchBALD (uncertain + diversity + critical)
 4.core-set on top uncertain+critical cases (or consider distance based on feature vector distance + uncertain + critical)
 5.disagreement among models (average uncertainty - average individual uncertainty or maybe only the former) + average critical + feature vector distance
 
@@ -302,30 +302,43 @@ python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 't
 #########################################################
 After fixing uncertainty_conf True/False
 
-python ga_fuzzing.py -p 2024 2027 -s 8806 -d 8807 --n_gen 2 --pop_size 2 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 4 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output --initial_fit_th 2 --min_bug_num_to_fit_dnn 0 --n_offsprings 20
+python ga_fuzzing.py -p 2024 2027 -s 8806 -d 8807 --n_gen 3 --pop_size 2 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 8 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output --initial_fit_th 2 --min_bug_num_to_fit_dnn 0 --n_offsprings 20 --survival_multiplier 2
 
 
 
-
+# 151
 python ga_fuzzing.py -p 2024 2027 -s 8806 -d 8807 --n_gen 14 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output
 
 
-
+# 225(-94)
 python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output
 
 
+# 98
+python ga_fuzzing.py -p 2015 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output
 
+# 403
+python ga_fuzzing.py -p 2018 -s 8796 -d 8797 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output
 
+# 360
+python ga_fuzzing.py -p 2021 -s 8798 -d 8799 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output
 
-
-
-
-
-
+# 365
+python ga_fuzzing.py -p 2024 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output --survival_multiplier 2
 
 
 ############################################################
 
+# running
+python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_conf --model_type one_output
+
+# running
+python ga_fuzzing.py -p 2021 2024 -s 8796 -d 8797 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_conf --model_type one_output --survival_multiplier 2
+
+# TBD
+python ga_fuzzing.py -p 2021 2024 -s 8796 -d 8797 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BALD --model_type one_output --survival_multiplier 2
+
+############################################################
 
 
 
@@ -361,8 +374,8 @@ python ga_fuzzing.py -p 2021 2024 -s 8797 -d 8798 --n_gen 14 --pop_size 50 -r 't
 # 210(-88)
 python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
 
-# TBD
-python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
+# 113
+python ga_fuzzing.py -p 2027 -s 8803 -d 8804 --n_gen 14 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
 
 
 

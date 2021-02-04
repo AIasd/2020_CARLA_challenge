@@ -351,8 +351,8 @@ def init_centers(X, s_conf, K, uncertainty_conf):
         Ddist = (D2 ** 2) / sum(D2 ** 2)
 
         # print('Ddist before', Ddist)
-        print("s_conf", s_conf)
-        print("uncertainty_conf", uncertainty_conf)
+        # print("s_conf", s_conf)
+        # print("uncertainty_conf", uncertainty_conf)
         if uncertainty_conf:
             Ddist = super(BADGE, BADGE).norm_weighted_sum(Ddist, s_conf)
 
@@ -361,7 +361,7 @@ def init_centers(X, s_conf, K, uncertainty_conf):
         from sklearn.preprocessing import normalize
 
         Ddist = normalize([Ddist], norm="l1").squeeze()
-        print("Ddist normalize", Ddist)
+        # print("Ddist normalize", Ddist)
         # Fix original bug in code
         while True:
             customDist = stats.rv_discrete(
@@ -382,6 +382,7 @@ def init_centers(X, s_conf, K, uncertainty_conf):
     from scipy.stats import rankdata
 
     s_conf_rank = (rankdata(s_conf) - 1).astype(int)
+    print("init_centers")
     print("s_conf", s_conf)
     print("s_conf[indsAll_np]", s_conf[indsAll_np])
     print(

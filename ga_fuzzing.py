@@ -469,6 +469,7 @@ parser.add_argument("--root_folder", type=str, default='run_results')
 parser.add_argument("--episode_max_time", type=int, default=60)
 parser.add_argument("--n_gen", type=int, default=2)
 parser.add_argument("--pop_size", type=int, default=100)
+parser.add_argument("--survival_multiplier", type=int, default=1)
 parser.add_argument("--n_offsprings", type=int, default=500)
 parser.add_argument("--has_run_num", type=int, default=1000)
 parser.add_argument("--outer_iterations", type=int, default=3)
@@ -484,7 +485,7 @@ parser.add_argument('--adv_conf_th', type=float, default=-4)
 parser.add_argument('--attack_stop_conf', type=float, default=0.75)
 parser.add_argument('--use_single_nn', type=int, default=1)
 parser.add_argument('--uncertainty', type=str, default='Random')
-parser.add_argument('--model_type', type=str, default='BNN')
+parser.add_argument('--model_type', type=str, default='one_output')
 arguments = parser.parse_args()
 
 
@@ -528,6 +529,7 @@ episode_max_time = arguments.episode_max_time
 global_n_gen = arguments.n_gen
 
 pop_size = arguments.pop_size
+survival_multiplier = arguments.survival_multiplier
 n_offsprings = arguments.n_offsprings
 # only used when algorithm_name is nsga2-dt
 outer_iterations = arguments.outer_iterations
@@ -1501,7 +1503,7 @@ class NSGA2_DT(NSGA2):
 
 
         # heuristic: we keep up about 2 times of each generation's population
-        self.survival_size = self.pop_size * 2
+        self.survival_size = self.pop_size * survival_multiplier
 
 
         self.all_pop_run_X = []
@@ -1948,9 +1950,10 @@ class NSGA2_DT(NSGA2):
             # the do survival selection
             if self.survival:
                 print('\n'*3)
+                print('len(self.pop) before', len(self.pop))
                 print('survival')
-                self.pop = self.survival.do(self.problem, self.pop, self.pop_size, algorithm=self, n_min_infeas_survive=self.min_infeas_pop_size)
-                print('len(self.pop)', len(self.pop))
+                self.pop = self.survival.do(self.problem, self.pop, self.survival_size, algorithm=self, n_min_infeas_survive=self.min_infeas_pop_size)
+                print('len(self.pop) after', len(self.pop))
                 print(self.pop_size, self.survival_size)
                 print('\n'*3)
 
@@ -2350,7 +2353,8 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf,
                       use_single_nn=use_single_nn,
                       uncertainty=uncertainty,
-                      model_type=model_type)
+                      model_type=model_type,
+                      survival_multiplier=survival_multiplier)
 
 
 
