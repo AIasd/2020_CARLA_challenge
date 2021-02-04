@@ -449,6 +449,7 @@ from distutils.dir_util import copy_tree
 from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPClassifier
 from pgd_attack import pgd_attack, train_net, train_regression_net
+from scipy.stats import rankdata
 
 
 default_objective_weights = np.array([-1, 1, 1, 1, 1, -1, 0, 0, 0, -1])
@@ -484,8 +485,16 @@ parser.add_argument('--pgd_eps', type=float, default=1.01)
 parser.add_argument('--adv_conf_th', type=float, default=-4)
 parser.add_argument('--attack_stop_conf', type=float, default=0.75)
 parser.add_argument('--use_single_nn', type=int, default=1)
-parser.add_argument('--uncertainty', type=str, default='Random')
+parser.add_argument('--uncertainty', type=str, default='')
 parser.add_argument('--model_type', type=str, default='one_output')
+
+
+parser.add_argument('--explore_iter_num', type=int, default=2)
+parser.add_argument('--exploit_iter_num', type=int, default=1)
+parser.add_argument('--high_conf_num', type=int, default=100)
+parser.add_argument('--low_conf_num', type=int, default=100)
+
+
 arguments = parser.parse_args()
 
 
@@ -519,6 +528,11 @@ model_type = arguments.model_type
 # BALD and BatchBALD only support BNN
 if uncertainty.split('_')[0] in ['BALD', 'BatchBALD']:
     model_type = 'BNN'
+
+explore_iter_num = arguments.explore_iter_num
+exploit_iter_num = arguments.exploit_iter_num
+high_conf_num = arguments.high_conf_num
+low_conf_num = arguments.low_conf_num
 
 
 os.environ['HAS_DISPLAY'] = arguments.has_display
@@ -1528,6 +1542,13 @@ class NSGA2_DT(NSGA2):
         self.model_type = model_type
         self.use_single_nn = use_single_nn
 
+        self.high_conf_configs_stack = []
+        self.high_conf_configs_ori_stack = []
+        self.explore_iter_num = explore_iter_num
+        self.exploit_iter_num = exploit_iter_num
+        self.high_conf_num = high_conf_num
+        self.low_conf_num = low_conf_num
+
     # mainly used to modify survival
     def _next(self):
         self.tmp_off = []
@@ -1596,7 +1617,7 @@ class NSGA2_DT(NSGA2):
             # print(self.rank_mode in ['nn', 'adv_nn'])
             # print(len(self.problem.objectives_list), self.initial_fit_th)
             # print(np.sum(determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)), self.min_bug_num_to_fit_dnn)
-            if (self.rank_mode in ['nn', 'adv_nn'] and len(self.problem.objectives_list) >= self.initial_fit_th and  np.sum(determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)) >= self.min_bug_num_to_fit_dnn) or (self.rank_mode in ['regression_nn'] and len(self.problem.objectives_list) >= self.pop_size):
+            if (self.rank_mode in ['nn', 'adv_nn', 'alternate_nn'] and len(self.problem.objectives_list) >= self.initial_fit_th and  np.sum(determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)) >= self.min_bug_num_to_fit_dnn) or (self.rank_mode in ['regression_nn'] and len(self.problem.objectives_list) >= self.pop_size):
                 if self.rank_mode in ['regression_nn']:
                     # only consider collision case for now
                     from customized_utils import pretrain_regression_nets
@@ -1683,7 +1704,7 @@ class NSGA2_DT(NSGA2):
                         self.off = []
                 else:
 
-                    if uncertainty:
+                    if self.uncertainty:
                         from pgd_attack import VanillaDataset
                         from acquisition import map_acquisition
                         # [None, 'BUGCONF', 'Random', 'BALD', 'BatchBALD']
@@ -1815,19 +1836,65 @@ class NSGA2_DT(NSGA2):
 
                         # when using unique bugs give preference to unique inputs
                         if self.use_unique_bugs:
-                            scores[:self.tmp_off_type_1_len] += 100
+                            scores[:self.tmp_off_type_1_len] += np.max(scores)
                             # scores[:self.tmp_off_type_1and2_len] += 100
                         scores *= -1
-                        inds = np.argsort(scores)[:self.pop_size]
 
-                        print('sorted(scores)', sorted(scores))
-                        print('chosen indices', inds)
+                        if self.rank_mode != 'alternate_nn':
+                            inds = np.argsort(scores)[:self.pop_size]
+                            print('scores', scores)
+                            print('sorted(scores)', sorted(scores))
+                            print('chosen indices', inds)
+
 
 
 
                     # print('self.tmp_off', self.tmp_off)
                     # print('self.tmp_off[0].F', self.tmp_off[0].F)
-                    if self.rank_mode == 'nn':
+                    if self.rank_mode == 'alternate_nn':
+                        cur_gen = (len(self.problem.objectives_list) - self.initial_fit_th) // self.pop_size
+                        cycle_num = self.explore_iter_num+self.exploit_iter_num
+                        print('cur_gen', cur_gen, 'cycle_num', cycle_num)
+                        if cur_gen % cycle_num < self.explore_iter_num:
+                            print('exploration')
+                            high_inds = np.argsort(scores)[:self.high_conf_num]
+                            mid_inds = np.argsort(scores)[self.high_conf_num:len(scores)-self.low_conf_num]
+
+                            inds = np.random.choice(mid_inds, self.pop_size, replace=False)
+                            self.off = self.tmp_off[inds]
+
+                            print('sorted(scores)', sorted(scores))
+                            scores_rank = rankdata(scores)
+                            print('chosen indices (rank)', scores_rank[inds])
+                            print('chosen indices', inds)
+
+                            self.high_conf_configs_stack.append(X_test[high_inds])
+                            self.high_conf_configs_ori_stack.append(X_test_ori[high_inds])
+                        else:
+                            print('exploitation')
+                            high_conf_configs_stack_np = np.concatenate(self.high_conf_configs_stack)
+                            high_conf_configs_ori_stack_np = np.concatenate(self.high_conf_configs_ori_stack)
+
+                            scores = clf.predict_proba(high_conf_configs_stack_np)[:, 1]
+                            scores *= -1
+                            inds = np.argsort(scores)[:self.pop_size]
+
+                            print('sorted(scores)', sorted(scores))
+                            scores_rank = rankdata(scores)
+                            print('chosen indices (rank)', scores_rank[inds])
+                            print('chosen indices', inds)
+
+                            X_off = high_conf_configs_ori_stack_np[inds]
+                            pop = Population(X_off.shape[0], individual=Individual())
+                            pop.set("X", X_off)
+                            pop.set("F", [None for _ in range(X_off.shape[0])])
+                            self.off = pop
+
+                            self.high_conf_configs_stack = []
+                            self.high_conf_configs_ori_stack = []
+
+
+                    elif self.rank_mode == 'nn':
                         self.off = self.tmp_off[inds]
                     elif self.rank_mode == 'adv_nn':
                         X_test_pgd = X_test[inds]
@@ -2354,7 +2421,11 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       use_single_nn=use_single_nn,
                       uncertainty=uncertainty,
                       model_type=model_type,
-                      survival_multiplier=survival_multiplier)
+                      survival_multiplier=survival_multiplier,
+                      explore_iter_num=explore_iter_num,
+                      exploit_iter_num=exploit_iter_num,
+                      high_conf_num=high_conf_num,
+                      low_conf_num=low_conf_num)
 
 
 
