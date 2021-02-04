@@ -1,4 +1,4 @@
-'''
+"""
 threats to validity:
 type of controllers
 realism of carla
@@ -264,29 +264,67 @@ python ga_fuzzing.py -p 2024 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town05
 
 
 
-# running
+# 397
 python ga_fuzzing.py -p 2012 -s 8788 -d 8789 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_conf --model_type one_output
 
-# running
+# 421
 python ga_fuzzing.py -p 2018 -s 8802 -d 8803 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output
 
-# running
+# 381
 python ga_fuzzing.py -p 2015 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_conf --model_type one_output
 
-# running
+# 431
 python ga_fuzzing.py -p 2021 -s 8804 -d 8805 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output
 
-# running
+# 168
 python ga_fuzzing.py -p 2024 -s 8806 -d 8807 --n_gen 14 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_conf --model_type one_output
 
 
-# TBD
-python ga_fuzzing.py -p 2015 -s 8800 -d 8801 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type BNN
+
+# 162(-67)
+python ga_fuzzing.py -p 2024 2027 -s 8806 -d 8807 --n_gen 14 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output
+
+# 204(-88)
+python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output
+
 
 # TBD
-python ga_fuzzing.py -p 2021 -s 8804 -d 8805 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type BNN
+python ga_fuzzing.py -p 2024 2027 -s 8806 -d 8807 --n_gen 14 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output
+
+# 169(-72)
+python ga_fuzzing.py -p 2024 2027 -s 8806 -d 8807 --n_gen 14 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type BNN
+
+# 193(-93)
+python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type BNN
 
 
+
+#########################################################
+After fixing uncertainty_conf True/False
+
+python ga_fuzzing.py -p 2024 2027 -s 8806 -d 8807 --n_gen 2 --pop_size 2 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 4 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output --initial_fit_th 2 --min_bug_num_to_fit_dnn 0 --n_offsprings 20
+
+
+
+
+python ga_fuzzing.py -p 2024 2027 -s 8806 -d 8807 --n_gen 14 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output
+
+
+
+python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BADGE_none --model_type one_output
+
+
+
+
+
+
+
+
+
+
+
+
+############################################################
 
 
 
@@ -298,6 +336,13 @@ record dnn performance at each generation
 
 
 
+# tsne on BADGE results and compare with baseline
+# check BADGE selected confidence (mean, std)
+
+# try town_05_front
+# modify the parent selection process (try larger survival size, currently it is equal to pop_size)
+new way of integrating confidence into BADGE process (different weights?)
+
 
 
 # 402
@@ -307,12 +352,17 @@ python ga_fuzzing.py -p 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town01
 python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BUGCONF_none
 
 
-# 174
+# 174(-73)
 python ga_fuzzing.py -p 2021 -s 8797 -d 8798 --n_gen 14 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
 
 # 170
 python ga_fuzzing.py -p 2021 2024 -s 8797 -d 8798 --n_gen 14 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BUGCONF_none
 
+# 210(-88)
+python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
+
+# TBD
+python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
 
 
 
@@ -620,21 +670,22 @@ another scenario?
 also draw train examples on tsne graphs
 read paper for better sampling?
 
-'''
+"""
 import sys
 import os
-sys.path.append('pymoo')
-carla_root = '../carla_0994_no_rss'
-sys.path.append(carla_root+'/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg')
-sys.path.append(carla_root+'/PythonAPI/carla')
-sys.path.append(carla_root+'/PythonAPI')
-sys.path.append('.')
-sys.path.append('leaderboard')
-sys.path.append('leaderboard/team_code')
-sys.path.append('scenario_runner')
-sys.path.append('scenario_runner')
-sys.path.append('carla_project')
-sys.path.append('carla_project/src')
+
+sys.path.append("pymoo")
+carla_root = "../carla_0994_no_rss"
+sys.path.append(carla_root + "/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg")
+sys.path.append(carla_root + "/PythonAPI/carla")
+sys.path.append(carla_root + "/PythonAPI")
+sys.path.append(".")
+sys.path.append("leaderboard")
+sys.path.append("leaderboard/team_code")
+sys.path.append("scenario_runner")
+sys.path.append("scenario_runner")
+sys.path.append("carla_project")
+sys.path.append("carla_project/src")
 
 
 import pickle
@@ -657,14 +708,20 @@ from sklearn.dummy import DummyClassifier
 from sklearn.neural_network import MLPRegressor
 from sklearn.linear_model import LinearRegression
 
-from customized_utils import encode_fields, decode_fields, remove_fields_not_changing, recover_fields_not_changing, get_labels_to_encode, customized_standardize, customized_fit, load_data, get_sorted_subfolders
+from customized_utils import (
+    encode_fields,
+    decode_fields,
+    remove_fields_not_changing,
+    recover_fields_not_changing,
+    get_labels_to_encode,
+    customized_standardize,
+    customized_fit,
+    load_data,
+    get_sorted_subfolders,
+)
 
 
 from pgd_attack import VanillaDataset
-
-
-
-
 
 
 class NN_EnsembleClassifier:
@@ -672,12 +729,14 @@ class NN_EnsembleClassifier:
         self.num_of_nets = num_of_nets
         self.nets = []
         for _ in range(self.num_of_nets):
-            net = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
+            net = MLPClassifier(solver="lbfgs", activation="tanh", max_iter=10000)
             self.nets.append(net)
+
     def fit(self, X_train, y_train):
         for i in range(self.num_of_nets):
             net = self.nets[i]
             net.fit(X_train, y_train)
+
     def score(self, X_test, y_test):
         s_list = []
         for net in self.nets:
@@ -685,6 +744,7 @@ class NN_EnsembleClassifier:
             s_list.append(s)
         s_np = np.array(s_list)
         return np.mean(s_np)
+
     def predict(self, X_test):
         s_list = []
         for net in self.nets:
@@ -695,6 +755,7 @@ class NN_EnsembleClassifier:
         prediction = stats.mode(s_np, axis=0)[0][0]
         # print(prediction)
         return prediction
+
     def predict_proba(self, X_test):
         s_list = []
         for net in self.nets:
@@ -707,7 +768,9 @@ class NN_EnsembleClassifier:
         return prediction
 
 
-def regression_analysis(X, is_bug_list, objective_list, cutoff, cutoff_end, trial_num, encoded_fields):
+def regression_analysis(
+    X, is_bug_list, objective_list, cutoff, cutoff_end, trial_num, encoded_fields
+):
 
     # from matplotlib import pyplot as plt
     # plt.hist(objective_list[:, 1])
@@ -723,54 +786,56 @@ def regression_analysis(X, is_bug_list, objective_list, cutoff, cutoff_end, tria
 
     y = objective_list[:, ind]
 
-
     X_train, X_test = X[:cutoff], X[cutoff:cutoff_end]
     y_train, y_test = y[:cutoff], y[cutoff:cutoff_end]
     standardize = StandardScaler()
 
-
-
     one_hot_fields_len = len(encoded_fields)
 
     customized_fit(X_train, standardize, one_hot_fields_len, partial=True)
-    X_train = customized_standardize(X_train, standardize, one_hot_fields_len, partial=True)
-    X_test = customized_standardize(X_test, standardize, one_hot_fields_len, partial=True)
-
-
+    X_train = customized_standardize(
+        X_train, standardize, one_hot_fields_len, partial=True
+    )
+    X_test = customized_standardize(
+        X_test, standardize, one_hot_fields_len, partial=True
+    )
 
     names = ["Neural Net", "Random"]
 
     from pgd_attack import train_regression_net
     from sklearn.metrics import mean_squared_error
 
-    classifiers = [
-        None,
-        None
-        ]
+    classifiers = [None, None]
 
-    performance = {name:[] for name in names}
+    performance = {name: [] for name in names}
 
     for i in range(trial_num):
         print(i)
         for name, clf in zip(names, classifiers):
             if name == "Neural Net":
-                clf = train_regression_net(X_train, y_train, X_test, y_test, hidden_layer_size=3)
+                clf = train_regression_net(
+                    X_train, y_train, X_test, y_test, hidden_layer_size=3
+                )
                 y_pred = clf.predict(X_test).squeeze()
                 mse = mean_squared_error(y_test, y_pred)
                 # print(y_test, y_pred)
-                print(f'{name}, mse:{mse:.3f}')
+                print(f"{name}, mse:{mse:.3f}")
             elif name == "Random":
-                y_pred = np.random.uniform(np.min(y_train), np.max(y_train), len(y_test))
+                y_pred = np.random.uniform(
+                    np.min(y_train), np.max(y_train), len(y_test)
+                )
                 mse = mean_squared_error(y_test, y_pred)
                 # print(y_test, y_pred)
-                print(f'{name}, mse:{mse:.3f}')
+                print(f"{name}, mse:{mse:.3f}")
             performance[name].append(mse)
 
     for name in names:
         print(name, np.mean(performance[name]), np.std(performance[name]))
 
 
-def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, trial_num, encoded_fields):
+def classification_analysis(
+    X, is_bug_list, objective_list, cutoff, cutoff_en, trial_num, encoded_fields
+):
 
     # from matplotlib import pyplot as plt
     # plt.hist(objective_list[:, 1])
@@ -785,43 +850,55 @@ def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, t
     y_train, y_test = y[:cutoff], y[cutoff:cutoff_end]
     standardize = StandardScaler()
 
-
-
     one_hot_fields_len = len(encoded_fields)
 
     customized_fit(X_train, standardize, one_hot_fields_len, partial=True)
-    X_train = customized_standardize(X_train, standardize, one_hot_fields_len, partial=True)
-    X_test = customized_standardize(X_test, standardize, one_hot_fields_len, partial=True)
+    X_train = customized_standardize(
+        X_train, standardize, one_hot_fields_len, partial=True
+    )
+    X_test = customized_standardize(
+        X_test, standardize, one_hot_fields_len, partial=True
+    )
 
+    print("y_test", y_test)
 
-    print('y_test', y_test)
+    ind_0 = y_test == 0
+    ind_1 = y_test == 1
 
-    ind_0 = y_test==0
-    ind_1 = y_test==1
-
-    print(np.sum(y_train<0.5), np.sum(y_train>0.5), np.sum(y_test<0.5), np.sum(y_test>0.5))
+    print(
+        np.sum(y_train < 0.5),
+        np.sum(y_train > 0.5),
+        np.sum(y_test < 0.5),
+        np.sum(y_test > 0.5),
+    )
 
     names = ["Nearest Neighbors", "Neural Net", "AdaBoost", "Random", "NN ensemble"]
 
     classifiers = [
         KNeighborsClassifier(5),
-        MLPClassifier(hidden_layer_sizes=[150], solver='lbfgs', activation='tanh', max_iter=10000),
+        MLPClassifier(
+            hidden_layer_sizes=[150], solver="lbfgs", activation="tanh", max_iter=10000
+        ),
         AdaBoostClassifier(),
-        DummyClassifier(strategy='stratified'),
+        DummyClassifier(strategy="stratified"),
         NN_EnsembleClassifier(5),
-        ]
+    ]
 
-    performance = {name:[] for name in names}
+    performance = {name: [] for name in names}
     from sklearn.metrics import roc_auc_score
+
     # ['sklearn', 'pytorch']
-    dnn_lib = 'pytorch'
+    dnn_lib = "pytorch"
 
     for i in range(trial_num):
         print(i)
         for name, clf in zip(names, classifiers):
-            if name == "Neural Net" and dnn_lib == 'pytorch':
+            if name == "Neural Net" and dnn_lib == "pytorch":
                 from pgd_attack import train_net
-                clf = train_net(X_train, y_train, [], [], batch_train=64, model_type='BNN')
+
+                clf = train_net(
+                    X_train, y_train, [], [], batch_train=64, model_type="BNN"
+                )
                 y_pred = clf.predict(X_test).squeeze()
                 prob = clf.predict_proba(X_test)[:, 1]
             else:
@@ -830,7 +907,6 @@ def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, t
                 y_pred = clf.predict(X_test)
                 prob = clf.predict_proba(X_test)[:, 1]
 
-
             t = y_test == 1
             p = y_pred == 1
             tp = t & p
@@ -838,21 +914,33 @@ def classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_en, t
             # print(t, p, tp, y_pred)
             precision = np.sum(tp) / np.sum(p)
             recall = np.sum(tp) / np.sum(t)
-            f1 = 2*precision*recall / (precision+recall)
+            f1 = 2 * precision * recall / (precision + recall)
             roc_auc = roc_auc_score(y_test, prob)
 
-            print(f'{name}, roc_auc_score:{roc_auc:.3f}; f1: {f1:.3f}; precision: {precision:.3f}; recall: {recall:.3f}')
+            print(
+                f"{name}, roc_auc_score:{roc_auc:.3f}; f1: {f1:.3f}; precision: {precision:.3f}; recall: {recall:.3f}"
+            )
             performance[name].append(roc_auc)
 
             from customized_utils import draw_auc_roc_for_scores
-            # draw_auc_roc_for_scores(-1*prob, y_test)
 
+            # draw_auc_roc_for_scores(-1*prob, y_test)
 
     for name in names:
         print(name, np.mean(performance[name]), np.std(performance[name]))
 
 
-def active_learning(X, is_bug_list, objective_list, cutoff, cutoff_mid, cutoff_end, trial_num, encoded_fields, retrain_num):
+def active_learning(
+    X,
+    is_bug_list,
+    objective_list,
+    cutoff,
+    cutoff_mid,
+    cutoff_end,
+    trial_num,
+    encoded_fields,
+    retrain_num,
+):
     import torch
     import torch.nn as nn
     import torch.nn.functional as F
@@ -883,15 +971,21 @@ def active_learning(X, is_bug_list, objective_list, cutoff, cutoff_mid, cutoff_e
                 loss.backward()
                 optimizer.step()
                 if batch_idx % 10 == 0:
-                    print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                        epoch, batch_idx * len(data), len(train_loader.dataset),
-                        100. * batch_idx / len(train_loader), loss.item()))
+                    print(
+                        "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
+                            epoch,
+                            batch_idx * len(data),
+                            len(train_loader.dataset),
+                            100.0 * batch_idx / len(train_loader),
+                            loss.item(),
+                        )
+                    )
                 if epoch == 0:
                     target_list.append(target.cpu().detach().numpy())
             if epoch == 0:
                 target_list = np.concatenate(target_list)
-                print('train bug num', np.sum(target_list>0))
-        return np.sum(target_list>0)
+                print("train bug num", np.sum(target_list > 0))
+        return np.sum(target_list > 0)
 
     def test(model, device, test_loader):
         model.eval()
@@ -904,11 +998,14 @@ def active_learning(X, is_bug_list, objective_list, cutoff, cutoff_mid, cutoff_e
             for data, target in test_loader:
                 data, target = data.to(device).float(), target.to(device).float()
                 output = model(data, return_logits=True).squeeze()
-                test_loss += F.binary_cross_entropy(output, target, reduction='sum').item()  # sum up batch loss
-
+                test_loss += F.binary_cross_entropy(
+                    output, target, reduction="sum"
+                ).item()  # sum up batch loss
 
                 output_one_hot = model.predict_proba(data)
-                pred = output_one_hot.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+                pred = output_one_hot.argmax(
+                    dim=1, keepdim=True
+                )  # get the index of the max log-probability
                 correct += pred.eq(target.view_as(pred)).sum().item()
                 target_list.append(target.cpu().detach().numpy())
                 output_one_hot_list.append(output_one_hot[:, 1].cpu().detach().numpy())
@@ -916,16 +1013,18 @@ def active_learning(X, is_bug_list, objective_list, cutoff, cutoff_mid, cutoff_e
         test_loss /= len(test_loader.dataset)
         accuracy = float(correct) / len(test_loader.dataset)
 
-        print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-            test_loss, correct, len(test_loader.dataset),
-            100. * accuracy))
+        print(
+            "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
+                test_loss, correct, len(test_loader.dataset), 100.0 * accuracy
+            )
+        )
 
         target_list = np.concatenate(target_list)
         output_one_hot_list = np.concatenate(output_one_hot_list)
 
-        ranks = np.argsort(output_one_hot_list*-1)
-        print('rank', np.mean(ranks[target_list==1]))
-        print('\n')
+        ranks = np.argsort(output_one_hot_list * -1)
+        print("rank", np.mean(ranks[target_list == 1]))
+        print("\n")
         return accuracy
 
     def active(model, acquirer, device, data, optimizer):
@@ -939,56 +1038,76 @@ def active_learning(X, is_bug_list, objective_list, cutoff, cutoff_mid, cutoff_e
             model = BNN(train_data[0][0].size()[0], 1)
             model.cuda()
             optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
-            print(f'Acquiring {acquirer.__class__.__name__} batch. Pool size: {len(pool_data)}')
+            print(
+                f"Acquiring {acquirer.__class__.__name__} batch. Pool size: {len(pool_data)}"
+            )
             # get the indices of the best batch of data
-            batch_indices = acquirer.select_batch(model, pool_data, uncertainty_conf=True)
+            batch_indices = acquirer.select_batch(
+                model, pool_data, uncertainty_conf=True
+            )
             # move that data from the pool to the training set
             move_data(batch_indices, pool_data, train_data)
             # train on it
-            train_loader = torch.utils.data.DataLoader(train_data,
-                batch_size=train_batch_size, pin_memory=True, shuffle=True)
-            train_bug_nums.append(train(model, device, train_loader, optimizer, epoch_num))
+            train_loader = torch.utils.data.DataLoader(
+                train_data, batch_size=train_batch_size, pin_memory=True, shuffle=True
+            )
+            train_bug_nums.append(
+                train(model, device, train_loader, optimizer, epoch_num)
+            )
 
             # test the accuracy
-            test_loader = torch.utils.data.DataLoader(test_data,
-                batch_size=test_batch_size, pin_memory=True, shuffle=True)
+            test_loader = torch.utils.data.DataLoader(
+                test_data, batch_size=test_batch_size, pin_memory=True, shuffle=True
+            )
             test_accuracies.append(test(model, device, test_loader))
 
         return test_accuracies, train_bug_nums
 
-
-
     y = np.array([float(obj[0] > 0.1) for obj in objective_list])
 
-    X_train, X_extra, X_test = X[:cutoff], X[cutoff:cutoff_mid], X[cutoff_mid:cutoff_end]
-    y_train, y_extra, y_test = y[:cutoff], y[cutoff:cutoff_mid], y[cutoff_mid:cutoff_end]
+    X_train, X_extra, X_test = (
+        X[:cutoff],
+        X[cutoff:cutoff_mid],
+        X[cutoff_mid:cutoff_end],
+    )
+    y_train, y_extra, y_test = (
+        y[:cutoff],
+        y[cutoff:cutoff_mid],
+        y[cutoff_mid:cutoff_end],
+    )
 
     standardize = StandardScaler()
     one_hot_fields_len = len(encoded_fields)
     customized_fit(X_train, standardize, one_hot_fields_len, partial=True)
-    X_train = customized_standardize(X_train, standardize, one_hot_fields_len, partial=True)
-    X_extra = customized_standardize(X_extra, standardize, one_hot_fields_len, partial=True)
-    X_test = customized_standardize(X_test, standardize, one_hot_fields_len, partial=True)
+    X_train = customized_standardize(
+        X_train, standardize, one_hot_fields_len, partial=True
+    )
+    X_extra = customized_standardize(
+        X_extra, standardize, one_hot_fields_len, partial=True
+    )
+    X_test = customized_standardize(
+        X_test, standardize, one_hot_fields_len, partial=True
+    )
 
-
-
-
-
-
-
-
-    model = train_net(X_train, y_train, X_test, y_test, batch_train=64, hidden_size=20, model_type='BNN')
-
-
-
-
-
+    model = train_net(
+        X_train,
+        y_train,
+        X_test,
+        y_test,
+        batch_train=64,
+        hidden_size=20,
+        model_type="BNN",
+    )
 
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
     # load the dataset and pre-process
-    dataset = VanillaDataset(np.concatenate([X_train, X_extra]), np.concatenate([y_train, y_extra]), to_tensor=True)
+    dataset = VanillaDataset(
+        np.concatenate([X_train, X_extra]),
+        np.concatenate([y_train, y_extra]),
+        to_tensor=True,
+    )
 
     # subset_indices = np.random.choice(len(dataset), size=num_train+num_pool, replace=False)
 
@@ -997,13 +1116,10 @@ def active_learning(X, is_bug_list, objective_list, cutoff, cutoff_mid, cutoff_e
     pool_indices = subset_indices[-num_pool:]
     train_data = torch.utils.data.Subset(dataset, train_indices)
 
-    test_data =  VanillaDataset(X_test, y_test, to_tensor=True)
-
-
+    test_data = VanillaDataset(X_test, y_test, to_tensor=True)
 
     fig, (ax1, ax2) = plt.subplots(1, 2)
-    fig.suptitle('test accuracies and train bug numbers')
-
+    fig.suptitle("test accuracies and train bug numbers")
 
     pre_acquisition_model_state = model.state_dict()
 
@@ -1028,9 +1144,6 @@ def active_learning(X, is_bug_list, objective_list, cutoff, cutoff_mid, cutoff_e
     plt.show()
 
 
-
-
-
 def draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_end, encoded_fields):
 
     y = np.array([obj[0] > 0.1 for obj in objective_list])
@@ -1040,17 +1153,20 @@ def draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_end, encoded_fields
     standardize = StandardScaler()
     one_hot_fields_len = len(encoded_fields)
     customized_fit(X_train, standardize, one_hot_fields_len, partial=True)
-    X_train = customized_standardize(X_train, standardize, one_hot_fields_len, partial=True)
-    X_test = customized_standardize(X_test, standardize, one_hot_fields_len, partial=True)
-
+    X_train = customized_standardize(
+        X_train, standardize, one_hot_fields_len, partial=True
+    )
+    X_test = customized_standardize(
+        X_test, standardize, one_hot_fields_len, partial=True
+    )
 
     from pgd_attack import train_net
-    clf = train_net(X_train, y_train, X_test, y_test, model_type='one_output')
+
+    clf = train_net(X_train, y_train, X_test, y_test, model_type="one_output")
     y_pred = clf.predict(X_test).squeeze()
     test_prob = clf.predict_proba(X_test)[:, 1]
     print(X_test.shape)
     embed = clf.extract_embed(X_test)
-
 
     test_ind_0 = y_test == 0
     test_ind_1 = y_test == 1
@@ -1058,31 +1174,31 @@ def draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_end, encoded_fields
     pred_ind_0 = y_pred == 0
     pred_ind_1 = y_pred == 1
 
-    print('test_ind_0', np.sum(test_ind_0))
-    print('test_ind_1', np.sum(test_ind_1))
-    print('pred_ind_0', np.sum(pred_ind_0))
-    print('pred_ind_1', np.sum(pred_ind_1))
-    print('TP', np.sum(test_ind_1 & pred_ind_1))
-    print('FP', np.sum(test_ind_0 & pred_ind_1))
-    print('TN', np.sum(test_ind_0 & pred_ind_0))
-    print('FN', np.sum(test_ind_1 & pred_ind_0))
+    print("test_ind_0", np.sum(test_ind_0))
+    print("test_ind_1", np.sum(test_ind_1))
+    print("pred_ind_0", np.sum(pred_ind_0))
+    print("pred_ind_1", np.sum(pred_ind_1))
+    print("TP", np.sum(test_ind_1 & pred_ind_1))
+    print("FP", np.sum(test_ind_0 & pred_ind_1))
+    print("TN", np.sum(test_ind_0 & pred_ind_0))
+    print("FN", np.sum(test_ind_1 & pred_ind_0))
     from scipy.stats import rankdata
+
     test_prob_rank = rankdata(test_prob)
     test_prob_FN = test_prob[test_ind_1 & pred_ind_0]
     test_prob_rank_FN = test_prob_rank[test_ind_1 & pred_ind_0]
 
-    print('test_prob_FN', test_prob_FN)
-    print('test_prob_rank_FN', test_prob_rank_FN)
+    print("test_prob_FN", test_prob_FN)
+    print("test_prob_rank_FN", test_prob_rank_FN)
 
-    print('test_prob[test_ind_1]', test_prob[test_ind_1])
-    print('test_prob_rank[test_ind_1]', test_prob_rank[test_ind_1])
-    print('np.mean(test_prob_rank[test_ind_1])', np.mean(test_prob_rank[test_ind_1]))
+    print("test_prob[test_ind_1]", test_prob[test_ind_1])
+    print("test_prob_rank[test_ind_1]", test_prob_rank[test_ind_1])
+    print("np.mean(test_prob_rank[test_ind_1])", np.mean(test_prob_rank[test_ind_1]))
 
     from sklearn.manifold import TSNE
     from matplotlib import pyplot as plt
+
     X_embed = TSNE(n_components=2, perplexity=30.0, n_iter=3000).fit_transform(embed)
-
-
 
     X_embed_0 = X_embed[test_ind_0]
     X_embed_1 = X_embed[test_ind_1]
@@ -1092,122 +1208,157 @@ def draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_end, encoded_fields
     print(X_embed_0)
     print(test_prob_0)
 
-    plt.scatter(X_embed_0[:, 0], X_embed_0[:, 1], c=test_prob_0, label='normal', alpha=0.5, s=20, marker='.', cmap='Blues')
-    plt.scatter(X_embed_1[:, 0], X_embed_1[:, 1], c=test_prob_1, label='bug', alpha=0.5, s=20, marker='^', cmap='Reds')
+    plt.scatter(
+        X_embed_0[:, 0],
+        X_embed_0[:, 1],
+        c=test_prob_0,
+        label="normal",
+        alpha=0.5,
+        s=20,
+        marker=".",
+        cmap="Blues",
+    )
+    plt.scatter(
+        X_embed_1[:, 0],
+        X_embed_1[:, 1],
+        c=test_prob_1,
+        label="bug",
+        alpha=0.5,
+        s=20,
+        marker="^",
+        cmap="Reds",
+    )
 
-    plt.legend(loc=2, prop={'size': 10}, framealpha=0.5)
-    plt.savefig('tmp_tsne/tsne_confidence.pdf')
-
-
-
-
-
+    plt.legend(loc=2, prop={"size": 10}, framealpha=0.5)
+    plt.savefig("tmp_tsne/tsne_confidence.pdf")
 
 
 def encode_and_remove_x(data_list, mask, labels):
     # town_05_right
     labels_to_encode = get_labels_to_encode(labels)
 
-    x, enc, inds_to_encode, inds_non_encode, encoded_fields = encode_fields(data_list, labels, labels_to_encode)
+    x, enc, inds_to_encode, inds_non_encode, encoded_fields = encode_fields(
+        data_list, labels, labels_to_encode
+    )
 
     one_hot_fields_len = len(encoded_fields)
-    x, x_removed, kept_fields, removed_fields = remove_fields_not_changing(x, one_hot_fields_len)
+    x, x_removed, kept_fields, removed_fields = remove_fields_not_changing(
+        x, one_hot_fields_len
+    )
 
     return x, encoded_fields
-
-
-
-
 
 
 def analyze_objective_data(X, is_bug_list, objective_list):
     from matplotlib import pyplot as plt
 
+    mode = "tsne_input"
 
-    mode = 'tsne_input'
-
-    if mode == 'hist':
+    if mode == "hist":
         ind = -2
         ind2 = 1
         print(np.sum(objective_list[:, ind]))
 
-
-
-        cond1 = (is_bug_list==1) & (objective_list[:, ind]==1)
-        cond2 = (is_bug_list==0) & (objective_list[:, ind]==0)
-
+        cond1 = (is_bug_list == 1) & (objective_list[:, ind] == 1)
+        cond2 = (is_bug_list == 0) & (objective_list[:, ind] == 0)
 
         print(np.where(cond1 == 1))
         print(objective_list[cond1, ind2])
         print(objective_list[cond2, ind2])
 
-        plt.hist(objective_list[cond1, ind2], label='bug', alpha=0.5, bins=50)
-        plt.hist(objective_list[cond2, ind2], label='normal', alpha=0.5, bins=100)
+        plt.hist(objective_list[cond1, ind2], label="bug", alpha=0.5, bins=50)
+        plt.hist(objective_list[cond2, ind2], label="normal", alpha=0.5, bins=100)
         plt.legend()
         plt.show()
-    elif mode == 'tsne_input':
+    elif mode == "tsne_input":
         from sklearn.manifold import TSNE
+
         X_embedded = TSNE(n_components=2, perplexity=5, n_iter=3000).fit_transform(X)
         y = np.array(is_bug_list)
         ind0 = y == 0
         ind1 = y == 1
-        plt.scatter(X_embedded[ind0, 0], X_embedded[ind0, 1], label='normal', alpha=0.5, s=3)
-        plt.scatter(X_embedded[ind1, 0], X_embedded[ind1, 1], label='bug', alpha=0.5, s=5)
+        plt.scatter(
+            X_embedded[ind0, 0], X_embedded[ind0, 1], label="normal", alpha=0.5, s=3
+        )
+        plt.scatter(
+            X_embedded[ind1, 0], X_embedded[ind1, 1], label="bug", alpha=0.5, s=5
+        )
         plt.legend()
         plt.show()
 
 
-if __name__ == '__main__':
-    mode = 'active'
+if __name__ == "__main__":
+    # ['analysis', 'tsne', 'discrete', 'active']
+    mode = "tsne"
     trial_num = 15
-    cutoff = 300
+    cutoff = 500
     cutoff_end = 700
 
-    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_00_34_26,50_14_none_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5'
+    parent_folder = "/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_02_23_43_22,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_BADGE_none_one_output"
 
     cutoff_mid = 500
     retrain_num = 50
 
+    # tsne town05
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_02_01_00_45_18,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_02_02_23_43_12,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_BADGE_none_one_output'
+
+    # tsne town01
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_01_23_16_09,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_02_23_43_22,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_BADGE_none_one_output'
 
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_00_34_26,50_14_none_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5'
 
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/random-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_19_14_07,50_14_none_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5'
 
-
-
-
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_front_0/change_lane_town05_fixed_npc_num/lbc/2021_01_28_00_24_00,50_14_none_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5'
-
 
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_front_0/change_lane_town05_fixed_npc_num/lbc/2021_01_28_00_24_05,50_14_adv_nn_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5'
 
-
-
-
-
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_01_27_00_30_43,50_14_none_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5'
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_00_34_26,50_14_none_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5'
-
-
-
 
     # 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_50_14_collision_0.05_0.25_adv_nn_pytorch_300_eps_0'
     # 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/50_8_collision_adv_nn_pytorch_300_eps_0_th_0'
 
     subfolders = get_sorted_subfolders(parent_folder)
-    X, is_bug_list, objective_list, mask, labels  = load_data(subfolders)
+    X, is_bug_list, objective_list, mask, labels = load_data(subfolders)
 
     X, encoded_fields = encode_and_remove_x(X, mask, labels)
 
-
-
-    if mode == 'analysis':
+    if mode == "analysis":
         analyze_objective_data(X, is_bug_list, objective_list)
-    elif mode == 'tsne':
+    elif mode == "tsne":
         draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_end, encoded_fields)
-    elif mode == 'discrete':
-        classification_analysis(X, is_bug_list, objective_list, cutoff, cutoff_end, trial_num, encoded_fields)
-    elif mode == 'active':
-        active_learning(X, is_bug_list, objective_list, cutoff, cutoff_mid, cutoff_end, trial_num, encoded_fields, retrain_num)
+    elif mode == "discrete":
+        classification_analysis(
+            X,
+            is_bug_list,
+            objective_list,
+            cutoff,
+            cutoff_end,
+            trial_num,
+            encoded_fields,
+        )
+    elif mode == "active":
+        active_learning(
+            X,
+            is_bug_list,
+            objective_list,
+            cutoff,
+            cutoff_mid,
+            cutoff_end,
+            trial_num,
+            encoded_fields,
+            retrain_num,
+        )
     else:
-        regression_analysis(X, is_bug_list, objective_list, cutoff, cutoff_end, trial_num, encoded_fields)
+        regression_analysis(
+            X,
+            is_bug_list,
+            objective_list,
+            cutoff,
+            cutoff_end,
+            trial_num,
+            encoded_fields,
+        )

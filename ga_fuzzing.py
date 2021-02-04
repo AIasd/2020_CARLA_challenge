@@ -98,54 +98,6 @@ sensitivity
 
 
 
-
-
-
-
-
-
-
-TBD:
-***** finetune NN estimator and integrate NN estimator into pipeline
-
--- scenario 1
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0
-
-
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 700 --objective_weights 0 0 0 1 1 -1 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100
-
-
-
-
-
-++ NSGA2-UN collision
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 10 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 500 --objective_weights 0 0 0 1 1 -1 0 0 0 0
-
-++ NSGA2-UN DNN collision
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 10 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 500 --objective_weights 0 0 0 1 1 -1 0 0 0 0 --n_offsprings 200 --rank_mode nn --initial_fit_th 100
-
-
-
-
-
-
-
--- scenario 5
-python ga_fuzzing.py -p 2015 2018 -s 8792 -d 8793 --n_gen 12 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2 --has_run_num 600 --objective_weights -1 1 1 0 0 0 -1 0 0 0
-
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2 --has_run_num 600 --objective_weights 0 0 0 1 1 -1 0 -1 -1 0
-
-
-
-
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 600 --objective_weights 0 0 0 1 1 -1 0 0 0 0
-
-
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 10 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2 --has_run_num 1000 --objective_weights 0 0 0 1 1 -1 0 -1 -1 0
-
-
-
-
 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num'
 
 -r 'town07_front_0' -c 'go_straight_town07'
@@ -1576,8 +1528,6 @@ class NSGA2_DT(NSGA2):
 
     # mainly used to modify survival
     def _next(self):
-
-
         self.tmp_off = []
         if self.algorithm_name == 'random':
             self.tmp_off = self.plain_initialization.do(self.problem, self.n_offsprings, algorithm=self)
@@ -1997,8 +1947,12 @@ class NSGA2_DT(NSGA2):
 
             # the do survival selection
             if self.survival:
+                print('\n'*3)
+                print('survival')
                 self.pop = self.survival.do(self.problem, self.pop, self.pop_size, algorithm=self, n_min_infeas_survive=self.min_infeas_pop_size)
-
+                print('len(self.pop)', len(self.pop))
+                print(self.pop_size, self.survival_size)
+                print('\n'*3)
 
 
 
