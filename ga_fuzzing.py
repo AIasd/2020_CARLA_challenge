@@ -393,7 +393,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, eliminate_duplicates_for_list, process_X, inverse_process_X, determine_y_upon_weights
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, eliminate_duplicates_for_list, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy
 
 
 from collections import deque
@@ -454,7 +454,7 @@ from scipy.stats import rankdata
 
 default_objective_weights = np.array([-1, 1, 1, 1, 1, -1, 0, 0, 0, -1])
 default_objectives = [0, 20, 1, 7, 7, 0, 0, 0, 0, 0]
-default_check_unique_coeff = [0, 0.05, 0.25]
+default_check_unique_coeff = [0, 0.2, 0.5]
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p','--ports', nargs='+', type=int, default=[2003, 2006], help='TCP port(s) to listen to (default: 2003 2006)')
@@ -478,13 +478,15 @@ parser.add_argument('--objective_weights', nargs='+', type=float, default=defaul
 parser.add_argument('--check_unique_coeff', nargs='+', type=float, default=default_check_unique_coeff)
 parser.add_argument('--use_single_objective', type=int, default=1)
 parser.add_argument('--rank_mode', type=str, default='none')
-parser.add_argument('--dnn_lib', type=str, default='pytorch')
-parser.add_argument('--initial_fit_th', type=int, default=300)
-parser.add_argument('--min_bug_num_to_fit_dnn', type=int, default=20)
+parser.add_argument('--ranking_model', type=str, default='nn_pytorch')
+parser.add_argument('--initial_fit_th', type=int, default=100)
+parser.add_argument('--min_bug_num_to_fit_dnn', type=int, default=10)
+
 parser.add_argument('--pgd_eps', type=float, default=1.01)
 parser.add_argument('--adv_conf_th', type=float, default=-4)
-parser.add_argument('--attack_stop_conf', type=float, default=0.75)
+parser.add_argument('--attack_stop_conf', type=float, default=0.9)
 parser.add_argument('--use_single_nn', type=int, default=1)
+
 parser.add_argument('--uncertainty', type=str, default='')
 parser.add_argument('--model_type', type=str, default='one_output')
 
@@ -494,6 +496,10 @@ parser.add_argument('--exploit_iter_num', type=int, default=1)
 parser.add_argument('--high_conf_num', type=int, default=100)
 parser.add_argument('--low_conf_num', type=int, default=100)
 
+parser.add_argument('--warm_up_path', type=str, default=None)
+parser.add_argument('--warm_up_len', type=int, default=-1)
+parser.add_argument('--use_alternate_nn', type=int, default=0)
+parser.add_argument('--diversity_mode', type=str, default='none')
 
 arguments = parser.parse_args()
 
@@ -506,7 +512,7 @@ dashboard_address = arguments.dashboard_address
 route_type = arguments.route_type
 # ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
 scenario_type = arguments.scenario_type
-# [random', 'nsga2', 'nsga2-dt', 'nsga2-emcmc', 'nsga2-un', 'nsga2-un-emcmc', 'random-un']
+# [random', 'nsga2', 'nsga2-dt', 'nsga2-emcmc', 'nsga2-un', 'nsga2-un-emcmc', 'random-un', 'nn', 'adv_nn']
 algorithm_name = arguments.algorithm_name
 # ['lbc', 'auto_pilot', 'pid_agent']
 ego_car_model = arguments.ego_car_model
@@ -514,7 +520,7 @@ ego_car_model = arguments.ego_car_model
 # ['none', 'nn', 'adv', 'inversion']
 rank_mode = arguments.rank_mode
 # ['sklearn', 'pytorch']
-dnn_lib = arguments.dnn_lib
+ranking_model = arguments.ranking_model
 initial_fit_th = arguments.initial_fit_th
 min_bug_num_to_fit_dnn = arguments.min_bug_num_to_fit_dnn
 pgd_eps = arguments.pgd_eps
@@ -534,6 +540,11 @@ exploit_iter_num = arguments.exploit_iter_num
 high_conf_num = arguments.high_conf_num
 low_conf_num = arguments.low_conf_num
 
+warm_up_path = arguments.warm_up_path
+warm_up_len = arguments.warm_up_len
+use_alternate_nn = arguments.use_alternate_nn
+# ['none', 'nn_rep']
+diversity_mode = arguments.diversity_mode
 
 os.environ['HAS_DISPLAY'] = arguments.has_display
 root_folder = arguments.root_folder
@@ -998,7 +1009,6 @@ class MyProblem(Problem):
             print('\n'*2, 'all_objectives_mean, all_objectives_std :', standardize.mean_, standardize.var_, '\n'*2)
 
 
-
             if arguments.use_single_objective:
                 current_F = np.expand_dims(np.sum(current_objectives, axis=1), axis=1)
             else:
@@ -1318,6 +1328,7 @@ class MySampling(Sampling):
         algorithm = kwargs['algorithm']
 
         tmp_off = algorithm.tmp_off
+
         # print(tmp_off)
         tmp_off_and_X = []
         if len(tmp_off) > 0:
@@ -1360,8 +1371,10 @@ class MySampling(Sampling):
                     if not self.use_unique_bugs or is_distinct(x, tmp_off_and_X, mask, xl, xu, p, c, th):
                         x = np.array(x).astype(float)
                         X.append(x)
-                        tmp_off_and_X = tmp_off + X
-
+                        if len(tmp_off) > 0:
+                            tmp_off_and_X = tmp_off + X
+                        else:
+                            tmp_off_and_X = X
                         # if self.use_unique_bugs:
                         #     if disable_unique_x_for_X:
                         #         X = eliminate_duplicates_for_list(mask, xl, xu, p, c, th, X, problem.unique_bugs)
@@ -1524,7 +1537,7 @@ class NSGA2_DT(NSGA2):
         self.initial_fit_th = initial_fit_th
         self.min_bug_num_to_fit_dnn = min_bug_num_to_fit_dnn
         self.rank_mode = rank_mode
-        self.dnn_lib = dnn_lib
+        self.ranking_model = ranking_model
         self.use_unique_bugs = use_unique_bugs
 
         # hack: defined separately w.r.t. MyMating
@@ -1549,8 +1562,12 @@ class NSGA2_DT(NSGA2):
         self.high_conf_num = high_conf_num
         self.low_conf_num = low_conf_num
 
-    # mainly used to modify survival
-    def _next(self):
+        self.warm_up_path = warm_up_path
+        self.warm_up_len = warm_up_len
+        self.use_alternate_nn = use_alternate_nn
+        self.diversity_mode = diversity_mode
+
+    def set_off(self):
         self.tmp_off = []
         if self.algorithm_name == 'random':
             self.tmp_off = self.plain_initialization.do(self.problem, self.n_offsprings, algorithm=self)
@@ -1596,6 +1613,7 @@ class NSGA2_DT(NSGA2):
         if len(self.tmp_off) == 0 or (not self.problem.call_from_dt and finish_after_has_run and self.problem.has_run >= has_run_num):
             self.termination.force_termination = True
             print("Mating cannot generate new springs, terminate earlier.")
+            print('self.tmp_off', len(self.tmp_off), self.tmp_off)
             return
 
         # if not the desired number of offspring could be created
@@ -1604,12 +1622,12 @@ class NSGA2_DT(NSGA2):
                 print("WARNING: Mating could not produce the required number of (unique) offsprings!")
 
 
-
-
-        if len(self.all_pop_run_X) == 0:
-            self.all_pop_run_X = self.pop.get("X")
-        else:
-            self.all_pop_run_X = np.concatenate([self.all_pop_run_X, self.pop.get("X")])
+        print('\n'*2, 'self.n_gen', self.n_gen, '\n'*2)
+        if not (self.warm_up_path and self.n_gen == 1):
+            if len(self.all_pop_run_X) == 0:
+                self.all_pop_run_X = self.pop.get("X")
+            else:
+                self.all_pop_run_X = np.concatenate([self.all_pop_run_X, self.pop.get("X")])
         # print('self.all_pop_run_X', self.all_pop_run_X)
 
         # additional step to rank and select self.off after gathering initial population
@@ -1630,6 +1648,7 @@ class NSGA2_DT(NSGA2):
                     standardize_prev = None
 
                 X_train_ori = self.all_pop_run_X
+                print('X_train_ori.shape[0]', X_train_ori.shape[0])
                 X_test_ori = self.tmp_off.get("X")
                 # print(np.array(X_train_ori).shape, np.array(X_test_ori).shape)
 
@@ -1640,6 +1659,7 @@ class NSGA2_DT(NSGA2):
                 # print('initial_X.shape', np.array(initial_X).shape, cutoff, cutoff_end)
                 # print('len(self.problem.labels)', len(self.problem.labels))
                 X_train, X_test, xl, xu, labels_used, standardize, one_hot_fields_len, param_for_recover_and_decode = process_X(initial_X, self.problem.labels, self.problem.xl, self.problem.xu, cutoff, cutoff_end, partial, len(self.problem.unique_bugs), standardize_prev=standardize_prev)
+                # print('X_train.shape[0]', X_train.shape[0])
                 # print('labels_used', labels_used)
                 # print('process_X X_train.shape, X_test.shape', X_train.shape, X_test.shape)
                 (X_removed, kept_fields, removed_fields, enc, inds_to_encode, inds_non_encode, encoded_fields, _, _, unique_bugs_len) = param_for_recover_and_decode
@@ -1741,25 +1761,40 @@ class NSGA2_DT(NSGA2):
                         print('self.use_single_nn', self.use_single_nn)
                         if self.use_single_nn:
                             y_train = determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)
-
-                            if self.dnn_lib == 'sklearn':
+                            print('self.ranking_model', self.ranking_model)
+                            if self.ranking_model == 'nn_sklearn':
                                 clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
                                 clf.fit(X_train, y_train)
-                            elif dnn_lib == 'pytorch':
+                            elif self.ranking_model == 'nn_pytorch':
                                 clf = train_net(X_train, y_train, [], [], batch_train=200)
+                            elif self.ranking_model == 'adaboost':
+                                from sklearn.ensemble import AdaBoostClassifier
+                                clf = AdaBoostClassifier()
+                                clf = clf.fit(X_train, y_train)
+                            elif self.ranking_model == 'regression':
+                                # only support collision for now
+                                y_train = np.array([obj[1] for obj in self.problem.objectives_list])
+                                # print('y_train', y_train)
+                                clf = train_net(X_train, y_train, [], [], batch_train=64, model_type=ranking_model)
                             else:
-                                raise
-
-                            prob_train = clf.predict_proba(X_train)[:, 1].squeeze()
+                                raise ValueError('invalid ranking model', ranking_model)
+                            print('X_train', X_train.shape)
+                            print('clf.predict_proba(X_train)', clf.predict_proba(X_train).shape)
+                            if ranking_model == 'adaboost':
+                                prob_train = clf.predict_proba(X_train)[:, 0].squeeze()
+                            else:
+                                prob_train = clf.predict_proba(X_train)[:, 1].squeeze()
                             cur_y = y_train
 
-                            if self.adv_conf_th < 0:
+                            if self.adv_conf_th < 0 and self.rank_mode in ['adv_nn']:
                                 print(sorted(prob_train, reverse=True))
                                 print('cur_y', cur_y)
                                 print('np.abs(self.adv_conf_th)', np.abs(self.adv_conf_th))
                                 print(int(np.sum(cur_y)//np.abs(self.adv_conf_th)))
                                 adv_conf_th = sorted(prob_train, reverse=True)[int(np.sum(cur_y)//np.abs(self.adv_conf_th))]
                                 attack_stop_conf = np.max([self.attack_stop_conf, adv_conf_th])
+                            if self.adv_conf_th > attack_stop_conf:
+                                self.adv_conf_th = attack_stop_conf
 
                         else:
                             from customized_utils import get_all_y
@@ -1773,10 +1808,10 @@ class NSGA2_DT(NSGA2):
                             for i, y_train in enumerate(y_list):
                                 print('np.sum(y_train)', np.sum(y_train), 'self.min_bug_num_to_fit_dnn', self.min_bug_num_to_fit_dnn)
                                 if np.sum(y_train) >= self.min_bug_num_to_fit_dnn:
-                                    if self.dnn_lib == 'sklearn':
+                                    if self.ranking_model == 'nn_sklearn':
                                         clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
                                         clf.fit(X_train, y_train)
-                                    elif dnn_lib == 'pytorch':
+                                    elif ranking_model == 'nn_pytorch':
                                         clf = train_net(X_train, y_train, [], [], batch_train=200)
                                     else:
                                         raise
@@ -1833,72 +1868,129 @@ class NSGA2_DT(NSGA2):
                             scores = clf.predict_proba(X_test)[:, 1]
                         else:
                             scores = np.max(scores_on_all_nn, axis=1)
-
+                        print('initial scores', scores)
                         # when using unique bugs give preference to unique inputs
-                        if self.use_unique_bugs:
-                            scores[:self.tmp_off_type_1_len] += np.max(scores)
-                            # scores[:self.tmp_off_type_1and2_len] += 100
-                        scores *= -1
 
-                        if self.rank_mode != 'alternate_nn':
+                        if self.rank_mode == 'adv_nn':
+                            X_test_pgd_ori = None
+                            X_test_pgd = None
+
+                        if not self.use_alternate_nn:
+                            if self.use_unique_bugs:
+                                scores[:self.tmp_off_type_1_len] += np.max(scores)
+                                # scores[:self.tmp_off_type_1and2_len] += 100
+                            scores *= -1
+
                             inds = np.argsort(scores)[:self.pop_size]
                             print('scores', scores)
                             print('sorted(scores)', sorted(scores))
                             print('chosen indices', inds)
 
-
-
-
-                    # print('self.tmp_off', self.tmp_off)
-                    # print('self.tmp_off[0].F', self.tmp_off[0].F)
-                    if self.rank_mode == 'alternate_nn':
-                        cur_gen = (len(self.problem.objectives_list) - self.initial_fit_th) // self.pop_size
-                        cycle_num = self.explore_iter_num+self.exploit_iter_num
-                        print('cur_gen', cur_gen, 'cycle_num', cycle_num)
-                        if cur_gen % cycle_num < self.explore_iter_num:
-                            print('exploration')
-                            high_inds = np.argsort(scores)[:self.high_conf_num]
-                            mid_inds = np.argsort(scores)[self.high_conf_num:len(scores)-self.low_conf_num]
-
-                            inds = np.random.choice(mid_inds, self.pop_size, replace=False)
-                            self.off = self.tmp_off[inds]
-
-                            print('sorted(scores)', sorted(scores))
-                            scores_rank = rankdata(scores)
-                            print('chosen indices (rank)', scores_rank[inds])
-                            print('chosen indices', inds)
-
-                            self.high_conf_configs_stack.append(X_test[high_inds])
-                            self.high_conf_configs_ori_stack.append(X_test_ori[high_inds])
                         else:
-                            print('exploitation')
-                            high_conf_configs_stack_np = np.concatenate(self.high_conf_configs_stack)
-                            high_conf_configs_ori_stack_np = np.concatenate(self.high_conf_configs_ori_stack)
+                            if self.warm_up_path:
+                                cur_gen = (len(self.problem.objectives_list) - self.warm_up_len) // self.pop_size
+                            else:
+                                cur_gen = (len(self.problem.objectives_list) - self.initial_fit_th) // self.pop_size
+                            cycle_num = self.explore_iter_num+self.exploit_iter_num
+                            print('cur_gen', cur_gen, 'cycle_num', cycle_num)
+                            if cur_gen % cycle_num < self.explore_iter_num:
+                                print('\n', 'exploration', '\n')
+                                scores *= -1
+                                high_inds = np.argsort(scores)[:self.high_conf_num]
+                                mid_inds = np.argsort(scores)[self.high_conf_num:len(scores)-self.low_conf_num]
 
-                            scores = clf.predict_proba(high_conf_configs_stack_np)[:, 1]
-                            scores *= -1
-                            inds = np.argsort(scores)[:self.pop_size]
+                                print(len(mid_inds), self.high_conf_num, len(scores)-self.low_conf_num)
+                                if diversity_mode == 'nn_rep':
+                                    d_list = calculate_rep_d(clf, X_train, X_test[mid_inds])
+                                    if self.use_unique_bugs:
+                                        unique_inds = []
+                                        for i, mid_conf_config in enumerate(X_test_ori[mid_inds]):
+                                            if is_distinct(mid_conf_config, self.problem.unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th):
+                                                unique_inds.append(i)
+                                        unique_inds = np.array(unique_inds)
+                                        print('len(unique_inds)', len(unique_inds))
+                                        d_list[unique_inds] += np.max(d_list)
+                                    print('X_train.shape[0]', X_train.shape[0])
+                                    mid_inds_top_inds = select_batch_max_d_greedy(d_list, X_train.shape[0], self.pop_size)
+                                    print('mid_inds_top_inds', mid_inds_top_inds)
+                                    inds = mid_inds[mid_inds_top_inds]
+                                    print('inds', inds)
+                                else:
+                                    inds = np.random.choice(mid_inds, self.pop_size, replace=False)
 
-                            print('sorted(scores)', sorted(scores))
-                            scores_rank = rankdata(scores)
-                            print('chosen indices (rank)', scores_rank[inds])
-                            print('chosen indices', inds)
+                                if self.rank_mode == 'adv_nn':
+                                    X_test_pgd_ori = X_test_ori[inds]
+                                    X_test_pgd = X_test[inds]
+                                else:
+                                    self.off = self.tmp_off[inds]
 
-                            X_off = high_conf_configs_ori_stack_np[inds]
-                            pop = Population(X_off.shape[0], individual=Individual())
-                            pop.set("X", X_off)
-                            pop.set("F", [None for _ in range(X_off.shape[0])])
-                            self.off = pop
-
-                            self.high_conf_configs_stack = []
-                            self.high_conf_configs_ori_stack = []
+                                print('sorted(scores)', sorted(scores))
+                                scores_rank = rankdata(scores)
+                                print('chosen indices (rank)', scores_rank[inds])
+                                print('chosen indices', inds)
 
 
+                                print('all min distance', np.sort(d_list, axis=1)[:, 1])
+                                print('chosen max min distance', np.sort(d_list[mid_inds_top_inds], axis=1)[:, 1])
+
+                                self.high_conf_configs_stack.append(X_test[high_inds])
+                                self.high_conf_configs_ori_stack.append(X_test_ori[high_inds])
+                            else:
+                                print('\n', 'exploitation', '\n')
+                                high_conf_configs_stack_np = np.concatenate(self.high_conf_configs_stack)
+                                high_conf_configs_ori_stack_np = np.concatenate(self.high_conf_configs_ori_stack)
+
+                                print('len(high_conf_configs_ori_stack_np) before filtering', len(high_conf_configs_ori_stack_np))
+                                # high_conf_configs_ori_stack_np, distinct_inds = get_distinct_data_points(high_conf_configs_ori_stack_np, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th)
+                                # high_conf_configs_ori_stack_np = np.array(high_conf_configs_ori_stack_np)
+                                # high_conf_configs_stack_np = high_conf_configs_stack_np[distinct_inds]
+                                # print('len(high_conf_configs_ori_stack_np) after filtering', len(high_conf_configs_ori_stack_np))
+
+                                scores = clf.predict_proba(high_conf_configs_stack_np)[:, 1]
+                                if self.use_unique_bugs:
+                                    unique_inds = []
+                                    for i, high_conf_config in enumerate(high_conf_configs_ori_stack_np):
+                                        if is_distinct(high_conf_config, self.problem.unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th):
+                                            unique_inds.append(i)
+
+                                    unique_inds = np.array(unique_inds)
+                                    print('len(unique_inds)', len(unique_inds))
+                                    if len(unique_inds) > 0:
+                                        scores[unique_inds] += np.max(scores)
+
+                                scores *= -1
+                                inds = np.argsort(scores)[:self.pop_size]
+
+                                print('sorted(scores)', sorted(scores))
+                                scores_rank = rankdata(scores)
+                                print('chosen indices (rank)', scores_rank[inds])
+                                print('chosen indices', inds)
+
+                                if self.rank_mode == 'adv_nn':
+                                    X_test_pgd_ori = high_conf_configs_ori_stack_np[inds]
+                                    X_test_pgd = high_conf_configs_stack_np[inds]
+
+                                else:
+                                    pop = Population(X_test_ori.shape[0], individual=Individual())
+                                    pop.set("X", X_test_ori)
+                                    pop.set("F", [None for _ in range(X_test_ori.shape[0])])
+                                    self.off = pop
+
+                                self.high_conf_configs_stack = []
+                                self.high_conf_configs_ori_stack = []
+
+
+
+
+                    if self.use_alternate_nn and self.rank_mode != 'adv_nn':
+                        pass
                     elif self.rank_mode == 'nn':
                         self.off = self.tmp_off[inds]
                     elif self.rank_mode == 'adv_nn':
-                        X_test_pgd = X_test[inds]
-                        X_test_ori = X_test_ori[inds]
+                        if not self.use_alternate_nn:
+                            X_test_pgd_ori = X_test_ori[inds]
+                            X_test_pgd = X_test[inds]
+
 
                         if one_clf == True:
                             associated_clf_id = []
@@ -1949,7 +2041,7 @@ class NSGA2_DT(NSGA2):
 
                         use_combined = False
                         if use_combined:
-                            X_combined = np.concatenate([X_test_ori, X_test_adv_processed], axis=0)
+                            X_combined = np.concatenate([X_test_pgd_ori, X_test_adv_processed], axis=0)
                             X_combined_processed = np.concatenate([X_test_pgd, X_test_adv], axis=0)
 
                             print('before considering constraints', X_combined.shape[0])
@@ -1994,6 +2086,11 @@ class NSGA2_DT(NSGA2):
 
         self.off.set("n_gen", self.n_gen)
 
+    # mainly used to modify survival
+    def _next(self):
+
+        # set self.off
+        self.set_off()
         # evaluate the offspring
         # print('start evaluator', 'pop', self.off)
         self.evaluator.eval(self.problem, self.off, algorithm=self)
@@ -2032,6 +2129,49 @@ class NSGA2_DT(NSGA2):
             F_list = list(self.F)
             pop = Population(len(X_list), individual=Individual())
             pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen, "CV", [0 for _ in range(len(X_list))], "feasible", [[True] for _ in range(len(X_list))])
+        elif self.warm_up_path:
+            from customized_utils import get_sorted_subfolders, load_data, get_unique_bugs
+
+            subfolders = get_sorted_subfolders(self.warm_up_path)
+            X, _, objectives_list, mask, _ = load_data(subfolders)
+
+            if self.warm_up_len > 0:
+                X = X[:self.warm_up_len]
+                objective_list = objective_list[:self.warm_up_len]
+            else:
+                self.warm_up_len = len(X)
+
+            xl = self.problem.xl
+            xu = self.problem.xu
+            p, c, th = self.problem.p, self.problem.c, self.problem.th
+            unique_coeff = (p, c, th)
+            unique_bugs, (self.problem.bugs, self.problem.bugs_type_list, self.problem.bugs_inds_list) = get_unique_bugs(
+                X, objectives_list, mask, xl, xu, unique_coeff, return_bug_info=True
+            )
+
+            print('type(X), type(objectives_list), type(unique_bugs)', type(X), type(objectives_list), type(unique_bugs))
+
+            self.all_pop_run_X = np.array(X)
+            self.problem.objectives_list = objectives_list.tolist()
+            self.problem.unique_bugs = unique_bugs
+
+
+
+            X_list = X[-self.pop_size:]
+            current_objectives = objectives_list[-self.pop_size:]
+            current_objectives = np.dot(current_objectives, np.expand_dims(np.array(objective_weights), axis=1))
+            F_list = current_objectives.tolist()
+
+            print('len(self.all_pop_run_X)', len(self.all_pop_run_X))
+
+            pop = Population(len(X_list), individual=Individual())
+            pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen, "CV", [0 for _ in range(len(X_list))], "feasible", [[True] for _ in range(len(X_list))])
+            self.pop = pop
+            print(self.pop.get('X'))
+            self.set_off()
+            pop = self.off
+
+            print('len(self.all_pop_run_X)', len(self.all_pop_run_X))
 
 
         else:
@@ -2046,11 +2186,12 @@ class NSGA2_DT(NSGA2):
                 pop = Population.merge(pop, remaining_pop)
             pop.set("n_gen", self.n_gen)
 
-
-
-
-        # then evaluate using the objective function
         self.evaluator.eval(self.problem, pop, algorithm=self)
+        print('\n'*5, 'after initialize evaluator', '\n'*5)
+        print('len(self.all_pop_run_X)', len(self.all_pop_run_X))
+        # if not self.warm_up_path:
+        #     # then evaluate using the objective function
+        #     self.evaluator.eval(self.problem, pop, algorithm=self)
 
         # that call is a dummy survival to set attributes that are necessary for the mating selection
         if self.survival:
@@ -2339,7 +2480,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     else:
         now = datetime.now()
         p, c, th = check_unique_coeff
-        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th), uncertainty, model_type])
+        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th), uncertainty, model_type, 'use_alternate_nn', str(use_alternate_nn), diversity_mode])
 
 
     cur_parent_folder = make_hierarchical_dir([root_folder, algorithm_name, route_type, scenario_type, ego_car_model, time_str])
@@ -2416,7 +2557,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       rank_mode=rank_mode,
                       initial_fit_th=initial_fit_th,
                       min_bug_num_to_fit_dnn=min_bug_num_to_fit_dnn,
-                      dnn_lib=dnn_lib, use_unique_bugs=use_unique_bugs, pgd_eps=pgd_eps,
+                      ranking_model=ranking_model, use_unique_bugs=use_unique_bugs, pgd_eps=pgd_eps,
                       adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf,
                       use_single_nn=use_single_nn,
                       uncertainty=uncertainty,
@@ -2425,7 +2566,11 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       explore_iter_num=explore_iter_num,
                       exploit_iter_num=exploit_iter_num,
                       high_conf_num=high_conf_num,
-                      low_conf_num=low_conf_num)
+                      low_conf_num=low_conf_num,
+                      warm_up_path=warm_up_path,
+                      warm_up_len=warm_up_len,
+                      use_alternate_nn=use_alternate_nn,
+                      diversity_mode=diversity_mode)
 
 
 
@@ -2501,7 +2646,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     non_dt_save_file = '_'.join([algorithm_name, route_type, scenario_type, ego_car_model, str(n_gen), str(pop_size)])
     pth = os.path.join(bug_parent_folder, non_dt_save_file)
 
-    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, has_run=has_run, has_run_list=has_run_list, labels=labels, hv=hv, mask=mask, xl=xl, xu=xu, p=p, c=c, th=th, route_type=route_type, scenario_type=scenario_type, rank_mode=rank_mode, dnn_lib=dnn_lib, initial_fit_th=initial_fit_th)
+    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, has_run=has_run, has_run_list=has_run_list, labels=labels, hv=hv, mask=mask, xl=xl, xu=xu, p=p, c=c, th=th, route_type=route_type, scenario_type=scenario_type, rank_mode=rank_mode, ranking_model=ranking_model, initial_fit_th=initial_fit_th)
     print('npz saved')
 
 

@@ -645,7 +645,7 @@ def calculate_pairwise_dist(path_list):
 
 
 
-def draw_unique_bug_num_over_simulations(path_list, filename='num_of_unique_bugs', scene_name='', legend=True, range_upper_bound=8):
+def draw_unique_bug_num_over_simulations(path_list, filename='num_of_unique_bugs', scene_name='', legend=True, range_upper_bound=6):
     fig = plt.figure()
     axes = fig.add_subplot(1,1,1)
     line_style = ['-', '-', '-', '-', '-', '-', '-', '-']
@@ -661,7 +661,7 @@ def draw_unique_bug_num_over_simulations(path_list, filename='num_of_unique_bugs
             xu = d['xu']
             mask = d['mask']
             print(len(mask))
-        objectives = np.stack(d['objectives'])
+        objectives = np.stack(d['objectives'])[700:]
         df_objectives = np.array(default_objectives)
         # print(objectives.shape, df_objectives.shape)
         # print(objectives == df_objectives)
@@ -673,6 +673,7 @@ def draw_unique_bug_num_over_simulations(path_list, filename='num_of_unique_bugs
         # print((diff>eps)[500:600])
 
         inds = diff > eps
+        print(len(inds))
 
         all_X = d['X'][inds]
         all_y = d['y'][inds]
@@ -690,7 +691,7 @@ def draw_unique_bug_num_over_simulations(path_list, filename='num_of_unique_bugs
 
             eps = 1e-8
             p = 0
-            c = 0.1
+            c = 0.2
             th = 0.5
 
             filtered_bugs, inds = get_distinct_data_points(bugs, mask, xl, xu, p, c, th, y=y)
@@ -724,100 +725,13 @@ if __name__ == '__main__':
 
 
 
-    # check_unique_bug_num('data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective', 'data_for_analysis/2020_08_15_17_21_03_12_100_leading_car_all_objective/Town05_Scenario12_right_0_leading_car_braking_12_100_all_objectives_2020_08_16_00_53_08.npz')
-
-
-
-    # check_unique_bug_num('data_for_analysis/', 'new_town05_right_50_10/2020_08_22_02_59_38_nsga2/bugs/town05_right_0_leading_car_braking_town05_lbc_15_100.npz', 'new_town05_right_50_10/2020_08_22_02_59_38_nsga2/bugs/town05_right_0_leading_car_braking_town05_lbc_15_100.npz')
-    #
-    # check_unique_bug_num('data_for_analysis/', 'new_town05_right_50_10/2020_08_22_02_59_38_nsga2/bugs/town05_right_0_leading_car_braking_town05_lbc_15_100.npz', 'new_town05_right_50_10/2020_08_22_03_00_00_nsga2_dt/town05_right_0_leading_car_braking_town05_lbc_5_100_3_2020_08_22_03_00_00.npz')
-
-
-    # check_unique_bug_num('data_for_analysis/', 'new_town07_front_50_10/2020_08_23_03_24_33_nsga2-un/bugs/nsga2-un_town07_front_0_low_traffic_lbc_15_100.npz', 'new_town07_front_50_10/2020_08_23_03_24_33_nsga2-un/bugs/nsga2-un_town07_front_0_low_traffic_lbc_15_100.npz')
-
-
-    # check_unique_bug_num('data_for_analysis/', 'new_nsga2-un_town07_front_50_10/2020_08_23_03_24_29_random/bugs/random_town07_front_0_low_traffic_lbc_15_100.npz', 'new_nsga2-un_town07_front_50_10/2020_08_23_03_24_29_random/bugs/random_town07_front_0_low_traffic_lbc_15_100.npz')
-
-
-
-
-
-
-    # town07
-    town07_path_list = [('Random', 'data_for_analysis/new_nsga2-un_town07_front_50_15/2020_08_23_03_24_29_random_50_10/bugs/random_town07_front_0_low_traffic_lbc_15_100.npz'), ('NSGA2', 'data_for_analysis/new_nsga2-un_town07_front_50_15/2020_08_23_11_58_10_nsga2_50_15/bugs/nsga2_town07_front_0_low_traffic_lbc_15_100.npz'), ('NSGA2-UN', 'data_for_analysis/new_nsga2-un_town07_front_50_15/2020_08_23_11_58_24_nsga2-un_50_15/bugs/nsga2-un_town07_front_0_low_traffic_lbc_15_100.npz'), ('NSGA2-DT', 'data_for_analysis/new_nsga2-un_town07_front_50_15/2020_08_26_21_31_37_nsga2-dt_50_15_full/nsga2-dt_town07_front_0_low_traffic_lbc_5_100_15_2020_08_26_21_31_37.npz')]
-
-
-    town01_path_list = [('Random', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_23_20_59_53_random/bugs/random_town01_left_0_default_lbc_15_100.npz'), ('NSGA2', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_24_11_37_12_nsga2/bugs/nsga2_town01_left_0_default_lbc_15_100.npz'), ('NSGA2-UN', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_23_20_59_46_nsga2-un/bugs/nsga2-un_town01_left_0_default_lbc_15_100.npz'), ('NSGA2-DT', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_26_17_56_47_nsga2-dt_full/nsga2-dt_town01_left_0_default_lbc_5_100_15_2020_08_26_17_56_47.npz')]
-
-
-
-    town05_front_path_list = [('Random', 'data_for_analysis/new_nsga2-un_town05_front_50_15/2020_08_24_01_35_09_random/bugs/random_town05_front_0_change_lane_town05_lbc_15_100.npz'), ('NSGA2', 'data_for_analysis/new_nsga2-un_town05_front_50_15/2020_08_24_11_37_14_nsga2/bugs/nsga2_town05_front_0_change_lane_town05_lbc_15_100.npz'), ('NSGA2-UN', 'data_for_analysis/new_nsga2-un_town05_front_50_15/2020_08_23_21_42_33_nsga2-un/bugs/nsga2-un_town05_front_0_change_lane_town05_lbc_15_100.npz'), ('NSGA2-DT', 'data_for_analysis/new_nsga2-un_town05_front_50_15/2020_08_26_23_41_18_nsga2-dt_full/nsga2-dt_town05_front_0_change_lane_town05_lbc_5_100_15_2020_08_26_23_41_18.npz')]
-
-
-    pids_path_list = [('pid-1', 'data_for_analysis/other_controllers/2020_08_26_11_39_16_autopilot_pid1/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_auto_pilot_30_100.npz'), ('pid-2', 'data_for_analysis/other_controllers/2020_08_26_11_39_22_pid_pid2/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_pid_agent_30_100.npz'), ('lbc', 'data_for_analysis/new_nsga2-un_town05_right_50_15/2020_08_26_18_43_03_nsga2-un/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_lbc_30_100.npz')]
-
-    # objectives_path_list1 = [('all objectives', 'data_for_analysis/new_nsga2-un_town05_right_50_15/2020_08_26_18_43_03_nsga2-un/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_lbc_30_100.npz'), ('collision-only objectives', 'data_for_analysis/objectives_analysis/town_05_right/2020_08_26_11_08_05_partial_collision/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_lbc_15_100.npz'), ('out-of-road-only objectives', 'data_for_analysis/objectives_analysis/town_05_right/2020_08_26_18_02_09_partial_out_of_road/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_lbc_15_100.npz')]
-    #
-    # objectives_path_list2 = [('all objectives', 'data_for_analysis/new_nsga2-un_town05_front_50_15/2020_08_23_21_42_33_nsga2-un/bugs/nsga2-un_town05_front_0_change_lane_town05_lbc_15_100.npz'), ('collision-only objectives', 'data_for_analysis/objectives_analysis/town_05_front/2020_08_27_12_34_59_collision/bugs/nsga2-un_town05_front_0_change_lane_town05_lbc_30_100.npz'), ('out-of-road-only objectives', 'data_for_analysis/objectives_analysis/town_05_front/2020_08_27_12_34_50_out_of_road/bugs/nsga2-un_town05_front_0_change_lane_town05_lbc_30_100.npz')]
-
-
-
-    objectives_path_list1 = [('collision-only\nobjectives', 'data_for_analysis/objectives_analysis/town_05_right/2020_08_26_11_08_05_partial_collision/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_lbc_15_100.npz'), ('out-of-road-only\nobjectives', 'data_for_analysis/objectives_analysis/town_05_right/2020_08_26_18_02_09_partial_out_of_road/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_lbc_15_100.npz')]
-
-    objectives_path_list2 = [('collision-only\nobjectives', 'data_for_analysis/objectives_analysis/town_05_front/2020_08_27_12_34_59_collision/bugs/nsga2-un_town05_front_0_change_lane_town05_lbc_30_100.npz'), ('out-of-road-only\nobjectives', 'data_for_analysis/objectives_analysis/town_05_front/2020_08_27_12_34_50_out_of_road/bugs/nsga2-un_town05_front_0_change_lane_town05_lbc_30_100.npz')]
-
-
-    sensitivity_path_list = [('Random', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_23_20_59_53_random/bugs/random_town01_left_0_default_lbc_15_100.npz'), ('NSGA2', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_24_11_37_12_nsga2/bugs/nsga2_town01_left_0_default_lbc_15_100.npz'), ('NSGA2-UN-0.15-0.5', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_23_20_59_46_nsga2-un/bugs/nsga2-un_town01_left_0_default_lbc_15_100.npz'), ('NSGA2-UN-0.075-0.5', 'data_for_analysis/sensitivity/2020_08_27_16_37_53_0.075_0.5/bugs/nsga2-un_town01_left_0_default_lbc_6_100.npz'), ('NSGA2-UN-0.075-0.25', 'data_for_analysis/sensitivity/2020_08_27_18_23_35_0.075_0.25/bugs/nsga2-un_town01_left_0_default_lbc_6_100.npz'), ('NSGA2-DT', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_26_17_56_47_nsga2-dt_full/nsga2-dt_town01_left_0_default_lbc_5_100_15_2020_08_26_17_56_47.npz')]
-
-
-    sensitivity_path_list2 = [('Random', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_23_20_59_53_random/bugs/random_town01_left_0_default_lbc_15_100.npz'), ('NSGA2', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_24_11_37_12_nsga2/bugs/nsga2_town01_left_0_default_lbc_15_100.npz'), ('NSGA2-UN-0.15-0.5', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_23_20_59_46_nsga2-un/bugs/nsga2-un_town01_left_0_default_lbc_15_100.npz'), ('NSGA2-DT', 'data_for_analysis/new_nsga2-un_town01_left_50_15/2020_08_26_17_56_47_nsga2-dt_full/nsga2-dt_town01_left_0_default_lbc_5_100_15_2020_08_26_17_56_47.npz')]
-
-
-
-    # high_dim_path_list = [('random', 'data_for_analysis/high_dim_scene/2020_08_28_00_11_20_random/bugs/random_town04_front_0_pedestrians_cross_street_town04_lbc_30_100.npz'), ('NSGA2', 'data_for_analysis/high_dim_scene/2020_08_28_00_10_58_nsag2/bugs/nsga2_town04_front_0_pedestrians_cross_street_town04_lbc_30_100.npz'), ('NSGA2-UN', 'data_for_analysis/high_dim_scene/2020_08_27_11_47_58_nsga2-un/bugs/nsga2-un_town04_front_0_pedestrians_cross_street_town04_lbc_30_100.npz'), ('NSGA2-DT', 'data_for_analysis/high_dim_scene/2020_08_28_01_00_30_nsga2-dt/nsga2-dt_town04_front_0_pedestrians_cross_street_town04_lbc_5_100_15_2020_08_28_01_00_30.npz')]
-
-    # high_dim_path_list = [('NSGA2-UN', 'data_for_analysis/high_dim_scene/2020_08_27_11_47_58_nsga2-un/bugs/nsga2-un_town04_front_0_pedestrians_cross_street_town04_lbc_30_100.npz')]
-
-    # thresholds_list = [(0, 0), (0.075, 0.25), (0.075, 0.5), (0.075, 0.75), (0.15, 0.25), (0.15, 0.5), (0.15, 0.75), (0.225, 0.25), (0.225, 0.5), (0.225, 0.75)]
-
-    # ablate_thresholds(sensitivity_path_list, thresholds_list, 300)
-    # ablate_thresholds(town05_front_path_list, thresholds_list, 300)
-    # draw other controllers
-    # draw_unique_bug_num_over_simulations(pids_path_list, filename='num_of_unique_bugs_other_controllers')
-    #
-    #
-    # draw_unique_bug_num_over_simulations(high_dim_path_list, filename='num_of_unique_bugs_town04_front', scene_name='', legend=False, range_upper_bound=16)
-    #
-    # draw_unique_bug_num_over_simulations(town01_path_list, filename='num_of_unique_bugs_town01_left', scene_name='turning left non-signalized', legend=True)
-    #
-    # draw_unique_bug_num_over_simulations(town05_front_path_list, filename='num_of_unique_bugs_town05_front', scene_name='crossing non-signalized', legend=False)
-    #
-    # draw_unique_bug_num_over_simulations(town07_path_list, filename='num_of_unique_bugs_town07_front', scene_name='changing lane', legend=False)
-
-
-    town05_right_path_list = [('ga-adv-nn', 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_adv_nn_pytorch_300_adv_top/bugs/nsga2_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('ga-nn', 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_nn_pytorch_300/bugs/nsga2_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('ga-none', 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_none_pytorch_300/bugs/nsga2_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('random-adv-nn', 'run_results/random/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_adv_nn_pytorch_300/bugs/random_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('random-nn', 'run_results/random/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_nn_pytorch_300/bugs/random_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('random-none', 'run_results/random/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_none_pytorch_300/bugs/random_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('nsga2-un', 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_none_pytorch_300/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('nsga2-un-nn', 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_collision_nn_pytorch_300/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz')]
-
-    town05_right_out_of_road_path_list = [('adv-nn', 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_out_of_road_adv_nn_pytorch_300_adv_top/bugs/nsga2_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('nn', 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_out_of_road_nn_pytorch_300/bugs/nsga2_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'), ('none', 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_out_of_road_none_pytorch_300/bugs/nsga2_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz')]
-
-
-
-    new_town05_right_path_list = [
-    ('nsga2-un', '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_00_34_26,50_14_none_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'),
-
-    ('nsga2-un-nn', '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_09_00_46,50_14_adv_nn_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'),
-
-    ('nsga2-un-adv-nn', '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_18_55_45,50_14_adv_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5/bugs/nsga2-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'),
-
-    ('random-un', '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/random-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_19_14_07,50_14_none_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5/bugs/random-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'),
-
-    ('random-un-adv-nn', '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/random-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_19_00_19,50_14_adv_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5/bugs/random-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'),
-
-    ('regression-nn', '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/regression-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_27_00_30_36,50_14_none_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5/bugs/regression-un_town05_right_0_leading_car_braking_town05_fixed_npc_num_lbc_14_50.npz'),
+    new_town07_path_list = [
+    ('alternate_adv_nn_div', '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_07_00_12_27,50_12_adv_nn_600_300_1.01_-4_0.9_coeff_0_0.1_0.5__one_output_use_alternate_nn_1/bugs/nsga2-un_town07_front_0_go_straight_town07_lbc_12_50.npz')
     ]
 
 
 
-    draw_unique_bug_num_over_simulations(new_town05_right_path_list, filename='num_of_unique_bugs_town05_right', scene_name='collision', legend=True)
+    draw_unique_bug_num_over_simulations(new_town07_path_list, filename='num_of_unique_bugs_town07_right', scene_name='collision', legend=True)
     # draw_unique_bug_num_over_simulations(town05_right_out_of_road_path_list, filename='num_of_unique_bugs_out_of_road_town05_right', scene_name='out_of_road', legend=True)
     # analyze different objectives
     # analyze_objectives(objectives_path_list1, filename='objectives_bug_num_over_simulations_town05_right', scene_name='leading car slows down / stops')

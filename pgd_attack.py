@@ -230,6 +230,21 @@ class SimpleRegressionNet(nn.Module):
         out = self.forward(x)
         return out.cpu().detach().numpy()
 
+    def predict_proba(self, x):
+        if isinstance(x, np.ndarray):
+            is_numpy = True
+        else:
+            is_numpy = False
+        if is_numpy:
+            x = torch.from_numpy(x).to(self.device).float()
+        out = self.forward(x)
+
+        out = torch.stack([out, 20-out], dim=1).squeeze()
+        # print(out.cpu().detach().numpy().shape)
+        if is_numpy:
+            return out.cpu().detach().numpy()
+        else:
+            return out
 
 def extract_embed(model, X):
     X_torch = torch.from_numpy(X).cuda().float()
@@ -650,12 +665,12 @@ def train_net(
     hidden_size=150,
     model_type="one_output",
     device=None,
+    num_epochs=30
 ):
     if not device:
         device = torch.device("cuda")
     input_size = X_train.shape[1]
 
-    num_epochs = 30
 
     if model_type == "one_output":
         num_classes = 1
@@ -672,6 +687,11 @@ def train_net(
         model = SimpleNetMulti(input_size, hidden_size, num_classes)
         criterion = nn.CrossEntropyLoss()
         one_hot = True
+    elif model_type == "regression":
+        num_classes = 1
+        model = SimpleRegressionNet(input_size, hidden_size, num_classes)
+        criterion = nn.MSELoss()
+        one_hot = False
     else:
         raise "unknown model_type " + model_type
 

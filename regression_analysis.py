@@ -96,6 +96,11 @@ tune pgd eps thresholds for town01 and town03
 
 
 
+BADGE+high conf alternative?
+
+
+
+
 
 
 try DNN for each type of bug? and maybe do ranking and adv using the one with higher confidence?
@@ -256,7 +261,7 @@ python ga_fuzzing.py -p 2012 2015 -s 8791 -d 8792 --n_gen 14 --pop_size 50 -r 't
 # TBD
 python ga_fuzzing.py -p 2018 2021 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BALD_conf
 
-# 417
+# 417 418(-157)
 python ga_fuzzing.py -p 2021 -s 8797 -d 8798 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
 
 # 428
@@ -340,30 +345,51 @@ python ga_fuzzing.py -p 2021 2024 -s 8796 -d 8797 --n_gen 14 --pop_size 50 -r 't
 
 ############################################################
 
-
+# 200(-88)
 python ga_fuzzing.py -p 2015 2018 -s 8806 -d 8807 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode alternate_nn --check_unique_coeff 0 0.1 0.5 --model_type one_output
 
+
+
+# 393(-154)
 python ga_fuzzing.py -p 2024 2027 -s 8808 -d 8809 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode alternate_nn --check_unique_coeff 0 0.1 0.5 --model_type one_output
 
 
+# server running
+python ga_fuzzing.py -p 2015 -s 8806 -d 8807 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode alternate_nn --check_unique_coeff 0 0.1 0.5 --model_type one_output --explore_iter_num 3 --high_conf_num 50 --low_conf_num 50
+
+
+# server running
+python ga_fuzzing.py -p 2024 -s 8808 -d 8809 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode alternate_nn --check_unique_coeff 0 0.1 0.5 --model_type one_output --explore_iter_num 3 --high_conf_num 50 --low_conf_num 50
+
+
+
+
+# 189
+python ga_fuzzing.py -p 2015 -s 8806 -d 8807 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode alternate_nn --check_unique_coeff 0 0.1 0.5 --model_type one_output --explore_iter_num 3 --high_conf_num 25 --low_conf_num 25 --survival_multiplier 2
+
+
+# 390
+python ga_fuzzing.py -p 2018 -s 8808 -d 8809 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode alternate_nn --check_unique_coeff 0 0.1 0.5 --model_type one_output --explore_iter_num 3 --high_conf_num 25 --low_conf_num 25 --survival_multiplier 2
+
+
+# 219(-105)/221(-99)
+python ga_fuzzing.py -p 2021 -s 8810 -d 8811 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode alternate_nn --check_unique_coeff 0 0.1 0.5 --model_type one_output --explore_iter_num 3 --high_conf_num 200 --low_conf_num 200 --survival_multiplier 2
+
+
+# 368
+python ga_fuzzing.py -p 2021 2024 -s 8812 -d 8813 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode alternate_nn --check_unique_coeff 0 0.1 0.5 --model_type one_output --explore_iter_num 3 --high_conf_num 200 --low_conf_num 200 --survival_multiplier 2
+
+# 421
+python ga_fuzzing.py -p 2015 2018 -s 8810 -d 8811 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode alternate_nn --check_unique_coeff 0 0.1 0.5 --model_type one_output --explore_iter_num 3 --high_conf_num 200 --low_conf_num 200 --survival_multiplier 2
+
+
 #############################################################
-try to add sample for the regression_analysis
-more samples (also add random samples)
-print out tp fp tn fn results
-record dnn performance at each generation
 
 
 
-# tsne on BADGE results and compare with baseline
-# check BADGE selected confidence (mean, std)
-
-# try town_05_front
-# modify the parent selection process (try larger survival size, currently it is equal to pop_size)
-new way of integrating confidence into BADGE process (different weights?)
 
 
-
-# 402
+# 402(-161)
 python ga_fuzzing.py -p 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
 
 # 356
@@ -376,11 +402,138 @@ python ga_fuzzing.py -p 2021 -s 8797 -d 8798 --n_gen 14 --pop_size 50 -r 'town03
 # 170
 python ga_fuzzing.py -p 2021 2024 -s 8797 -d 8798 --n_gen 14 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty BUGCONF_none
 
-# 210(-88)
+# 210(-88) 224(-95)
 python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
 
 # 113
 python ga_fuzzing.py -p 2027 -s 8803 -d 8804 --n_gen 14 --pop_size 50 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
+
+############################################################
+
+# regression with classification label 180, reg label 183
+python ga_fuzzing.py -p 2018 2021 -s 8801 -d 8802 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --ranking_model regression
+
+# 212(-94) using 0 prob rather than 1 prob
+python ga_fuzzing.py -p 2024 2027 -s 8803 -d 8804 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --ranking_model adaboost
+#############################################################
+
+
+
+# 399(-210)
+python ga_fuzzing.py -p 2015 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --warm_up_path 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_03_10_27_28,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none_BNN'
+
+# 419(-210)
+python ga_fuzzing.py -p 2018 -s 8796 -d 8797 --n_gen 12 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode alternate_nn --warm_up_path 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_03_10_27_28,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none_BNN'
+
+# 773(-400)
+python ga_fuzzing.py -p 2021 -s 8798 -d 8799 --n_gen 12 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --warm_up_path 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_01_23_16_09,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+# 841(-400)
+python ga_fuzzing.py -p 2024 -s 8800 -d 8801 --n_gen 12 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode alternate_nn --warm_up_path 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_01_23_16_09,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+# 299(-174)
+python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --warm_up_path 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_01_23_16_14,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+# 358(-174)
+python ga_fuzzing.py -p 2021 2024 -s 8796 -d 8797 --n_gen 12 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode alternate_nn --warm_up_path 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_01_23_16_14,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+python ga_fuzzing.py -p 2027 -s 8802 -d 8803 --n_gen 30 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 1500 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none
+
+#############################################################
+
+
+
+
+
+
+
+# 848(-400)
+python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode alternate_nn --warm_up_path 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_01_23_16_09,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+# 423(-210)
+python ga_fuzzing.py -p 2021 2024 -s 8798 -d 8799 --n_gen 12 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode alternate_nn --warm_up_path 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_03_10_27_28,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none_BNN'
+
+
+#############################################################
+# running
+python ga_fuzzing.py -p 2015 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --warm_up_path 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_03_10_27_28,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none_BNN'
+
+# running
+python ga_fuzzing.py -p 2024 -s 8800 -d 8801 --n_gen 12 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_03_10_27_28,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none_BNN'
+
+# running
+python ga_fuzzing.py -p 2021 -s 8798 -d 8799 --n_gen 12 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --warm_up_path 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_01_23_16_09,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+# running
+python ga_fuzzing.py -p 2027 -s 8802 -d 8803 --n_gen 12 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_01_23_16_09,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+
+
+#############################################################
+
+python ga_fuzzing.py -p 2021 2024 -s 8796 -d 8797 --n_gen 2 --pop_size 2 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 6 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --warm_up_path 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_03_10_27_28,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none_BNN' --n_offsprings 20 --high_conf_num 5 --low_conf_num 5
+
+#
+python ga_fuzzing.py -p 2015 -s 8788 -d 8789 --n_gen 12 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_03_10_27_28,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none_BNN' --use_alternate_nn 1
+
+#
+python ga_fuzzing.py -p 2018 -s 8790 -d 8791 --n_gen 12 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_01_23_16_09,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none' --use_alternate_nn 1
+
+#
+python ga_fuzzing.py -p 2021 -s 8792 -d 8793 --n_gen 12 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --warm_up_path 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_01_23_16_14,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+#
+python ga_fuzzing.py -p 2024 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --warm_up_path 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_01_23_16_14,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+#
+python ga_fuzzing.py -p 2027 -s 8796 -d 8797 --n_gen 12 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_01_23_16_14,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+
+# TBD
+python ga_fuzzing.py -p 2027 -s 8796 -d 8797 --n_gen 12 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_01_23_16_14,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none' --use_alternate_nn 1
+# TBD
+python ga_fuzzing.py -p 2024 -s 8794 -d 8795 --n_gen 12 --pop_size 50 -r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --warm_up_path 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_01_23_16_14,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none' --use_alternate_nn 1
+
+
+
+# TBD
+python ga_fuzzing.py -p 2015 -s 8788 -d 8789 --n_gen 12 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --warm_up_path 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_02_01_00_45_18,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+# TBD
+python ga_fuzzing.py -p 2018 -s 8790 -d 8791 --n_gen 12 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --warm_up_path 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_02_01_00_45_18,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+# TBD
+python ga_fuzzing.py -p 2021 -s 8792 -d 8793 --n_gen 12 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 600 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_02_01_00_45_18,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+#############################################################
+
+
+python ga_fuzzing.py -p 2021 2024 -s 8796 -d 8797 --n_gen 3 --pop_size 2 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 6 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --warm_up_path 'run_results/random-un/town07_front_0/go_straight_town07/lbc/2021_02_07_14_59_37,100_1_none_100_300_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none' --n_offsprings 20 --high_conf_num 5 --low_conf_num 5 --use_alternate_nn 1 --diversity_mode nn_rep
+
+
+# initial seeds 27
+python ga_fuzzing.py -p 2015 2018 -s 8788 -d 8789 --n_gen 1 --pop_size 100 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name random-un --has_run_num 100
+
+
+
+
+# running adv_nn
+python ga_fuzzing.py -p 2018 -s 8782 -d 8783 --n_gen 60 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 3000 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/random-un/town07_front_0/go_straight_town07/lbc/2021_02_07_14_59_37,100_1_none_100_300_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none'
+
+# running nn
+python ga_fuzzing.py -p 2021 -s 8784 -d 8785 --n_gen 60 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 3000 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --warm_up_path 'run_results/random-un/town07_front_0/go_straight_town07/lbc/2021_02_07_14_59_37,100_1_none_100_300_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none'
+
+# running nsga2
+python ga_fuzzing.py -p 2024 -s 8786 -d 8787 --n_gen 60 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 3000 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --warm_up_path 'run_results/random-un/town07_front_0/go_straight_town07/lbc/2021_02_07_14_59_37,100_1_none_100_300_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none'
+
+# running alternate_div
+python ga_fuzzing.py -p 2027 -s 8788 -d 8789 --n_gen 60 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 3000 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --warm_up_path 'run_results/random-un/town07_front_0/go_straight_town07/lbc/2021_02_07_14_59_37,100_1_none_100_300_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none' --use_alternate_nn 1 --diversity_mode nn_rep
+
+# running alternate_adv_nn_div
+python ga_fuzzing.py -p 2015 -s 8780 -d 8781 --n_gen 60 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 3000 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/random-un/town07_front_0/go_straight_town07/lbc/2021_02_07_14_59_37,100_1_none_100_300_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none' --use_alternate_nn 1 --diversity_mode nn_rep
+
+#############################################################
+
 
 
 
@@ -743,6 +896,9 @@ from customized_utils import (
     customized_fit,
     load_data,
     get_sorted_subfolders,
+    get_picklename,
+    get_distinct_data_points,
+    calculate_rep_d
 )
 
 
@@ -859,7 +1015,7 @@ def regression_analysis(
 
 
 def classification_analysis(
-    X, is_bug_list, objective_list, cutoff, cutoff_en, trial_num, encoded_fields
+    X, is_bug_list, objective_list, cutoff, cutoff_end, trial_num, encoded_fields
 ):
 
     # from matplotlib import pyplot as plt
@@ -922,7 +1078,7 @@ def classification_analysis(
                 from pgd_attack import train_net
 
                 clf = train_net(
-                    X_train, y_train, [], [], batch_train=64, model_type="BNN"
+                    X_train, y_train, [], [], batch_train=64, model_type="one_output", num_epochs=30
                 )
                 y_pred = clf.predict(X_test).squeeze()
                 prob = clf.predict_proba(X_test)[:, 1]
@@ -942,10 +1098,13 @@ def classification_analysis(
             f1 = 2 * precision * recall / (precision + recall)
             roc_auc = roc_auc_score(y_test, prob)
 
+            top_50_inds = np.argsort(prob*-1)[:50]
+            top_50_bugs_num = np.mean(y_test[top_50_inds]==1)*50
+
             print(
-                f"{name}, roc_auc_score:{roc_auc:.3f}; f1: {f1:.3f}; precision: {precision:.3f}; recall: {recall:.3f}"
+                f"{name}, top_50_bugs_num:{top_50_bugs_num:.3f}, roc_auc_score:{roc_auc:.3f}; f1: {f1:.3f}; precision: {precision:.3f}; recall: {recall:.3f}"
             )
-            performance[name].append(roc_auc)
+            performance[name].append(top_50_bugs_num)
 
             from customized_utils import draw_auc_roc_for_scores
 
@@ -1168,13 +1327,44 @@ def active_learning(
     plt.legend()
     plt.show()
 
+# def train_clf(X, objective_list, cutoff, cutoff_end, encoded_fields, clf_save_path=None):
+#     y = np.array([obj[0] > 0.1 for obj in objective_list])
+#
+#     X_train = X[cutoff:cutoff_end]
+#     y_train = y[cutoff:cutoff_end]
+#
+#     X_combined = np.concatenate([X_train, X_test])
+#     y_combined = np.concatenate([y_train, y_test])
+#
+#     standardize = StandardScaler()
+#     one_hot_fields_len = len(encoded_fields)
+#     customized_fit(X_train, standardize, one_hot_fields_len, partial=True)
+#     X_train = customized_standardize(
+#         X_train, standardize, one_hot_fields_len, partial=True
+#     )
+#     X_test = customized_standardize(
+#         X_test, standardize, one_hot_fields_len, partial=True
+#     )
+#
+#     from pgd_attack import train_net
+#     import torch
+#     clf = train_net(X_train, y_train, X_test, y_test, model_type="one_output")
+#     torch.save(clf.state_dict(), clf_save_path)
 
-def draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_end, encoded_fields):
+
+
+def compute_diversity(X, objective_list, cutoff, cutoff_end, encoded_fields,  pretrained_clf=False, clf_save_path=None):
+    # measure diversity (avg min dist) of alternate_nn_div, alternate_nn, nsga2
 
     y = np.array([obj[0] > 0.1 for obj in objective_list])
 
-    X_train, X_test = X[:cutoff], X[cutoff:cutoff_end]
-    y_train, y_test = y[:cutoff], y[cutoff:cutoff_end]
+    X_train = X[:cutoff]
+    y_train = y[:cutoff]
+    X_test = X[cutoff:cutoff_end]
+    y_test = y[cutoff:cutoff_end]
+    X_combined = np.concatenate([X_train, X_test])
+    y_combined = np.concatenate([y_train, y_test])
+
     standardize = StandardScaler()
     one_hot_fields_len = len(encoded_fields)
     customized_fit(X_train, standardize, one_hot_fields_len, partial=True)
@@ -1185,19 +1375,77 @@ def draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_end, encoded_fields
         X_test, standardize, one_hot_fields_len, partial=True
     )
 
-    from pgd_attack import train_net
+    from pgd_attack import train_net, SimpleNet
+    import torch
+    if pretrained_clf:
+        input_size, hidden_size, num_classes = X_train.shape[1], 150, 1
+        clf = SimpleNet(input_size, hidden_size, num_classes)
+        clf.load_state_dict(torch.load(clf_save_path))
+        clf.eval()
+        clf.cuda()
+    else:
+        clf = train_net(X_train, y_train, X_test, y_test, model_type="one_output")
+        torch.save(clf.state_dict(), clf_save_path)
 
-    clf = train_net(X_train, y_train, X_test, y_test, model_type="one_output")
-    y_pred = clf.predict(X_test).squeeze()
-    test_prob = clf.predict_proba(X_test)[:, 1]
-    print(X_test.shape)
-    embed = clf.extract_embed(X_test)
+    d_list = calculate_rep_d(clf, X_train, X_test)
+    print('d_list', d_list.shape, np.sort(d_list, axis=1))
+    print('d_list min', np.sort(d_list, axis=1)[:, 1])
+    print('d_list avg min', np.mean(np.sort(d_list, axis=1)[:, 1]))
 
+
+
+def draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_ends_start, cutoff_ends_end, encoded_fields, pretrained_clf=False, clf_save_path=None):
+
+    y = np.array([obj[0] > 0.1 for obj in objective_list])
+
+    X_train = X[:cutoff]
+    y_train = y[:cutoff]
+    X_test = X[cutoff:cutoff_ends_end[-1]]
+    y_test = y[cutoff:cutoff_ends_end[-1]]
+    X_combined = np.concatenate([X_train, X_test])
+    y_combined = np.concatenate([y_train, y_test])
+
+    standardize = StandardScaler()
+    one_hot_fields_len = len(encoded_fields)
+    customized_fit(X_train, standardize, one_hot_fields_len, partial=True)
+    X_train = customized_standardize(
+        X_train, standardize, one_hot_fields_len, partial=True
+    )
+    X_test = customized_standardize(
+        X_test, standardize, one_hot_fields_len, partial=True
+    )
+
+    from pgd_attack import train_net, SimpleNet
+    import torch
+    if pretrained_clf:
+        input_size, hidden_size, num_classes = X_train.shape[1], 150, 1
+        clf = SimpleNet(input_size, hidden_size, num_classes)
+        clf.load_state_dict(torch.load(clf_save_path))
+        clf.eval()
+        clf.cuda()
+    else:
+        clf = train_net(X_train, y_train, X_test, y_test, model_type="one_output")
+        torch.save(clf.state_dict(), clf_save_path)
+
+
+    y_pred = clf.predict(X_combined).squeeze()
+    prob_pred = clf.predict_proba(X_combined)[:, 1]
+    print('prob_pred', prob_pred)
+    embed = clf.extract_embed(X_combined)
+
+    train_inds = np.arange(0, cutoff)
+    test_inds1 = np.arange(cutoff_ends_start[0], cutoff_ends_end[0])
+    test_inds2 = np.arange(cutoff_ends_start[1], cutoff_ends_end[1])
+    test_inds3 = np.arange(cutoff_ends_start[2], cutoff_ends_end[2])
+
+
+    y_test_pred = clf.predict(X_test).squeeze()
+    test_prob_pred = clf.predict_proba(X_test)[:, 1]
     test_ind_0 = y_test == 0
     test_ind_1 = y_test == 1
 
-    pred_ind_0 = y_pred == 0
-    pred_ind_1 = y_pred == 1
+    pred_ind_0 = y_test_pred == 0
+    pred_ind_1 = y_test_pred == 1
 
     print("test_ind_0", np.sum(test_ind_0))
     print("test_ind_1", np.sum(test_ind_1))
@@ -1209,14 +1457,14 @@ def draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_end, encoded_fields
     print("FN", np.sum(test_ind_1 & pred_ind_0))
     from scipy.stats import rankdata
 
-    test_prob_rank = rankdata(test_prob)
-    test_prob_FN = test_prob[test_ind_1 & pred_ind_0]
+    test_prob_rank = rankdata(test_prob_pred)
+    test_prob_FN = test_prob_pred[test_ind_1 & pred_ind_0]
     test_prob_rank_FN = test_prob_rank[test_ind_1 & pred_ind_0]
 
     print("test_prob_FN", test_prob_FN)
     print("test_prob_rank_FN", test_prob_rank_FN)
 
-    print("test_prob[test_ind_1]", test_prob[test_ind_1])
+    print("test_prob[test_ind_1]", test_prob_pred[test_ind_1])
     print("test_prob_rank[test_ind_1]", test_prob_rank[test_ind_1])
     print("np.mean(test_prob_rank[test_ind_1])", np.mean(test_prob_rank[test_ind_1]))
 
@@ -1225,34 +1473,60 @@ def draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_end, encoded_fields
 
     X_embed = TSNE(n_components=2, perplexity=30.0, n_iter=3000).fit_transform(embed)
 
-    X_embed_0 = X_embed[test_ind_0]
-    X_embed_1 = X_embed[test_ind_1]
-    test_prob_0 = test_prob[test_ind_0]
-    test_prob_1 = test_prob[test_ind_1]
 
-    print(X_embed_0)
-    print(test_prob_0)
+    inds = [train_inds, test_inds1, test_inds2, test_inds3]
+    colors = ['Greys','Purples', 'Blues', 'Greens']
+    colors = ['grey','purple', 'blue', 'green']
 
-    plt.scatter(
-        X_embed_0[:, 0],
-        X_embed_0[:, 1],
-        c=test_prob_0,
-        label="normal",
-        alpha=0.5,
-        s=20,
-        marker=".",
-        cmap="Blues",
-    )
-    plt.scatter(
-        X_embed_1[:, 0],
-        X_embed_1[:, 1],
-        c=test_prob_1,
-        label="bug",
-        alpha=0.5,
-        s=20,
-        marker="^",
-        cmap="Reds",
-    )
+    for j, (ids, cs) in enumerate(zip(inds, colors)):
+        X_embed_ids, y_ids, prob_pred_ids = X_embed[ids], y[ids], prob_pred[ids]
+        # print('ids', ids)
+        print('y_ids.shape', y_ids.shape)
+        ids_0 = y_ids == 0
+        ids_1 = y_ids == 1
+        X_embed_ids_0, prob_pred_ids_0 = X_embed_ids[ids_0], prob_pred_ids[ids_0]
+        X_embed_ids_1, prob_pred_ids_1 = X_embed_ids[ids_1], prob_pred_ids[ids_1]
+        print(j, 'prob_pred_ids_0', prob_pred_ids_0)
+        print(j, 'prob_pred_ids_1', prob_pred_ids_1)
+        plt.scatter(
+            X_embed_ids_0[:, 0],
+            X_embed_ids_0[:, 1],
+            c=cs,
+            label="normal",
+            alpha=0.5,
+            s=20,
+            marker="."
+        )
+        plt.scatter(
+            X_embed_ids_1[:, 0],
+            X_embed_ids_1[:, 1],
+            c=cs,
+            label="bug",
+            alpha=0.5,
+            s=20,
+            marker="^"
+        )
+
+        # plt.scatter(
+        #     X_embed_ids_0[:, 0],
+        #     X_embed_ids_0[:, 1],
+        #     c=prob_pred_ids_0,
+        #     label="normal",
+        #     alpha=0.5,
+        #     s=20,
+        #     marker=".",
+        #     cmap=cs,
+        # )
+        # plt.scatter(
+        #     X_embed_ids_1[:, 0],
+        #     X_embed_ids_1[:, 1],
+        #     c=prob_pred_ids_1,
+        #     label="bug",
+        #     alpha=0.5,
+        #     s=20,
+        #     marker="^",
+        #     cmap=cs,
+        # )
 
     plt.legend(loc=2, prop={"size": 10}, framealpha=0.5)
     plt.savefig("tmp_tsne/tsne_confidence.pdf")
@@ -1312,49 +1586,155 @@ def analyze_objective_data(X, is_bug_list, objective_list):
         plt.show()
 
 
-if __name__ == "__main__":
-    # ['analysis', 'tsne', 'discrete', 'active']
-    mode = "tsne"
-    trial_num = 15
-    cutoff = 500
-    cutoff_end = 700
+def union_analysis(parent_folder, parent_folder2):
+    subfolders = get_sorted_subfolders(parent_folder)
+    X, is_bug_list, objective_list, mask, labels = load_data(subfolders)
 
-    parent_folder = "/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_02_23_43_22,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_BADGE_none_one_output"
+    pickle_filename = get_picklename(parent_folder)
+    with open(pickle_filename, 'rb') as f_in:
+        d = pickle.load(f_in)
+    xl = d['xl']
+    xu = d['xu']
+    mask = d['mask']
+    p = 0
+    c = 0.1
+    th = 0.5
+
+    subfolders2 = get_sorted_subfolders(parent_folder2)
+    X2, is_bug_list2, objective_list2, mask2, labels2 = load_data(subfolders2)
+
+    X = np.array(X)[300:450]
+    X2 = np.array(X2)[300:450]
+    objective_list = objective_list[300:450]
+    objective_list2 = objective_list2[300:450]
+
+    X_bug = X[objective_list[:, 0]>0.1]
+    X2_bug = X2[objective_list2[:, 0]>0.1]
+
+
+    unique_specific_bugs, specific_distinct_inds = get_distinct_data_points(
+        np.concatenate([X_bug, X2_bug]), mask, xl, xu, p, c, th
+    )
+
+    print(len(X_bug), len(X2_bug), len(unique_specific_bugs))
+
+
+
+if __name__ == "__main__":
+    # ['analysis', 'tsne', 'discrete', 'active', 'intersection']
+    mode = 'compute_diversity'
+    trial_num = 15
+    cutoff = 700
+    cutoff_end = 1300
+    cutoff_ends_start = [700, 750, 800]
+    cutoff_ends_end = [750, 800, 850]
+
+    parent_folder = 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_07_00_12_47,50_12_adv_nn_600_300_1.01_-4_0.9_coeff_0_0.1_0.5__one_output_use_alternate_nn_0'
+
+    parent_folder2 = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_03_10_27_28,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none_BNN'
+
+    warm_up_path = 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_01_23_16_14,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
 
     cutoff_mid = 500
     retrain_num = 50
 
-    # tsne town05
+    pretrained_clf = True
+    clf_save_path = 'tmp_tsne/tmp_model_town03'
+
+
+    # warm up town07
+    # d_list avg min 2.7438152 213 2.712
+    # 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_06_15_58_00,50_12_alternate_nn_600_300_1.01_-4_0.75_coeff_0_0.1_0.5__one_output'
+    # d_list avg min 2.7282553 209 2.677
+    # 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_06_00_22_40,50_12_none_600_300_1.01_-4_0.75_coeff_0_0.1_0.5__one_output'
+    # d_list avg min 2.721047 189 2.667
+    # 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_06_00_22_46,50_12_alternate_nn_600_300_1.01_-4_0.75_coeff_0_0.1_0.5__one_output'
+    # 244 2.468
+    # 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_06_19_07_56,50_12_nn_600_300_1.01_-4_0.8_coeff_0_0.1_0.5__one_output'
+    # 263 2.347
+    # 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_06_19_08_05,50_12_adv_nn_600_300_1.01_-4_0.8_coeff_0_0.1_0.5__one_output'
+    # 2.552 250
+    # 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_07_00_12_27,50_12_adv_nn_600_300_1.01_-4_0.9_coeff_0_0.1_0.5__one_output_use_alternate_nn_1'
+    #
+    # warm_up_path = 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_03_10_27_28,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none_BNN'
+    #
+    #
+    # warm up town01
+    # d_list avg min 2.6244676 448
+    # 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_06_15_57_43,50_12_alternate_nn_600_300_1.01_-4_0.75_coeff_0_0.1_0.5__one_output'
+    # d_list avg min 2.5094328 441
+    # 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_06_00_22_50,50_12_none_600_300_1.01_-4_0.75_coeff_0_0.1_0.5__one_output'
+    # d_list avg min 2.4661999 371
+    # 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_06_00_22_56,50_12_alternate_nn_600_300_1.01_-4_0.75_coeff_0_0.1_0.5__one_output'
+    # d_list avg min 2.318 572
+    # 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_06_19_08_11,50_12_nn_600_300_1.01_-4_0.8_coeff_0_0.1_0.5__one_output'
+    # d_list avg min 2.304 529
+    # 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_06_19_08_18,50_12_adv_nn_600_300_1.01_-4_0.8_coeff_0_0.1_0.5__one_output'
+    # 2.652 463
+    # 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_07_00_12_33,50_12_adv_nn_600_300_1.01_-4_0.9_coeff_0_0.1_0.5__one_output_use_alternate_nn_1'
+    #
+    # warm_up_path = 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_01_23_16_09,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+    #
+    #
+    # warm up town03
+    #
+    # 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_07_00_12_38,50_12_none_600_300_1.01_-4_0.9_coeff_0_0.1_0.5__one_output_use_alternate_nn_0'
+    #
+    # 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_07_00_12_43,50_12_nn_600_300_1.01_-4_0.9_coeff_0_0.1_0.5__one_output_use_alternate_nn_0'
+    #
+    # 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_07_00_12_47,50_12_adv_nn_600_300_1.01_-4_0.9_coeff_0_0.1_0.5__one_output_use_alternate_nn_0'
+    #
+    # warm_up_path = 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_01_23_16_14,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+
+
+
+
+
+
+
+
+
+    # tsne town07 alternate_nn
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_04_18_18_39,50_14_alternate_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5__one_output'
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_03_10_27_28,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none_BNN'
+
+    # tsne town01 alternate_nn
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_04_18_18_52,50_14_alternate_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5__one_output'
+    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_01_23_16_09,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+
+
+
+    # tsne town05 BADGE
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_02_01_00_45_18,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_02_02_23_43_12,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_BADGE_none_one_output'
 
-    # tsne town01
+    # tsne town01 BADGE
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_01_23_16_09,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
     # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_02_02_23_43_22,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_BADGE_none_one_output'
 
-    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_00_34_26,50_14_none_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5'
 
-    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/random-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_19_14_07,50_14_none_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5'
+    # tsne town01 random
 
-    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_front_0/change_lane_town05_fixed_npc_num/lbc/2021_01_28_00_24_00,50_14_none_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5'
 
-    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_front_0/change_lane_town05_fixed_npc_num/lbc/2021_01_28_00_24_05,50_14_adv_nn_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5'
-
-    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_01_27_00_30_43,50_14_none_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5'
-    # '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/2021_01_26_00_34_26,50_14_none_700_300_0.0_0.0_0.0_coeff_0.0_0.1_0.5'
-
-    # 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_50_14_collision_0.05_0.25_adv_nn_pytorch_300_eps_0'
-    # 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/50_8_collision_adv_nn_pytorch_300_eps_0_th_0'
 
     subfolders = get_sorted_subfolders(parent_folder)
     X, is_bug_list, objective_list, mask, labels = load_data(subfolders)
 
+    if warm_up_path:
+        subfolders = get_sorted_subfolders(warm_up_path)
+        X_pre, _, objective_list_pre, _, _ = load_data(subfolders)
+        X = np.concatenate([X_pre, X])
+        objective_list = np.concatenate([objective_list_pre, objective_list])
+
     X, encoded_fields = encode_and_remove_x(X, mask, labels)
+
+
 
     if mode == "analysis":
         analyze_objective_data(X, is_bug_list, objective_list)
     elif mode == "tsne":
-        draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_end, encoded_fields)
+        draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_ends_start, cutoff_ends_end, encoded_fields, pretrained_clf=pretrained_clf, clf_save_path=clf_save_path)
     elif mode == "discrete":
         classification_analysis(
             X,
@@ -1377,7 +1757,7 @@ if __name__ == "__main__":
             encoded_fields,
             retrain_num,
         )
-    else:
+    elif mode == "regression":
         regression_analysis(
             X,
             is_bug_list,
@@ -1387,3 +1767,7 @@ if __name__ == "__main__":
             trial_num,
             encoded_fields,
         )
+    elif mode == "intersection":
+        union_analysis(parent_folder, parent_folder2)
+    elif mode == "compute_diversity":
+        compute_diversity(X, objective_list, cutoff, cutoff_end, encoded_fields,  pretrained_clf=pretrained_clf, clf_save_path=clf_save_path)

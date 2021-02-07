@@ -2600,7 +2600,7 @@ def process_specific_bug(
 
 
 def get_unique_bugs(
-    X, objectives_list, mask, xl, xu, unique_coeff, return_indices=False
+    X, objectives_list, mask, xl, xu, unique_coeff, return_indices=False, return_bug_info=False
 ):
     p, c, th = unique_coeff
     bugs_type_list = []
@@ -2673,8 +2673,9 @@ def get_unique_bugs(
         unique_wronglane_num,
         unique_redlight_num,
     )
-
-    if return_indices:
+    if return_bug_info:
+        return unique_bugs, (bugs, bugs_type_list, bugs_inds_list)
+    elif return_indices:
         return unique_bugs, unique_bugs_inds_list
     else:
         return unique_bugs
@@ -2797,9 +2798,10 @@ def get_sorted_subfolders(parent_folder):
         if os.path.isdir(sub_folder):
             ind = int(re.search(".*bugs/([0-9]*)", sub_folder).group(1))
             ind_sub_folder_list.append((ind, sub_folder))
-
+            # print(sub_folder)
     ind_sub_folder_list_sorted = sorted(ind_sub_folder_list)
     subfolders = [filename for i, filename in ind_sub_folder_list_sorted]
+    # print('len(subfolders)', len(subfolders))
     return subfolders
 
 
@@ -2991,3 +2993,42 @@ def get_all_y(objective_list, objective_weights):
             y_list[3, i] = obj[-1] == 1
 
     return y_list
+
+# TBD: greedily add point
+def calculate_rep_d(clf, X_train, X_test):
+    X_train_embed = clf.extract_embed(X_train)
+    X_test_embed = clf.extract_embed(X_test)
+    X_combined_embed = np.concatenate([X_train_embed, X_test_embed])
+
+    d_list = []
+    for x_test_embed in X_test_embed:
+        d = np.linalg.norm(X_combined_embed - x_test_embed, axis=1)
+        # sorted_d = np.sort(d)
+        # d_list.append(sorted_d[1])
+        d_list.append(d)
+    return np.array(d_list)
+
+def select_batch_max_d_greedy(d_list, train_test_cutoff, batch_size):
+    consider_inds = np.arange(train_test_cutoff)
+    remaining_inds = np.arange(len(d_list))
+    chosen_inds = []
+
+    print('d_list.shape', d_list.shape)
+    print('remaining_inds', remaining_inds.shape)
+    print('consider_inds', consider_inds.shape)
+    for i in range(batch_size):
+        print(i)
+        print('d_list[np.ix_(remaining_inds, consider_inds)].shape', d_list[np.ix_(remaining_inds, consider_inds)].shape)
+        min_d_list = np.min(d_list[np.ix_(remaining_inds, consider_inds)], axis=1)
+        print('min_d_list', min_d_list.shape, min_d_list)
+        remaining_inds_top_ind = np.argmax(min_d_list)
+        chosen_ind = remaining_inds[remaining_inds_top_ind]
+
+        print('chosen_ind', chosen_ind)
+        consider_inds = np.append(consider_inds, chosen_ind)
+        print('remaining_inds before', remaining_inds)
+        print('remaining_inds_top_ind', remaining_inds_top_ind)
+        remaining_inds = np.delete(remaining_inds, remaining_inds_top_ind)
+        print('remaining_inds after', remaining_inds)
+        chosen_inds.append(chosen_ind)
+    return chosen_inds
