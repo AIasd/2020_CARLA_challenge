@@ -1969,11 +1969,11 @@ class NSGA2_DT(NSGA2):
                                 if self.rank_mode == 'adv_nn':
                                     X_test_pgd_ori = high_conf_configs_ori_stack_np[inds]
                                     X_test_pgd = high_conf_configs_stack_np[inds]
-
                                 else:
-                                    pop = Population(X_test_ori.shape[0], individual=Individual())
-                                    pop.set("X", X_test_ori)
-                                    pop.set("F", [None for _ in range(X_test_ori.shape[0])])
+                                    X_test_pgd_ori = high_conf_configs_ori_stack_np[inds]
+                                    pop = Population(X_test_pgd_ori.shape[0], individual=Individual())
+                                    pop.set("X", X_test_pgd_ori)
+                                    pop.set("F", [None for _ in range(X_test_pgd_ori.shape[0])])
                                     self.off = pop
 
                                 self.high_conf_configs_stack = []

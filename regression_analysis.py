@@ -515,8 +515,6 @@ python ga_fuzzing.py -p 2021 2024 -s 8796 -d 8797 --n_gen 3 --pop_size 2 -r 'tow
 python ga_fuzzing.py -p 2015 2018 -s 8788 -d 8789 --n_gen 1 --pop_size 100 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name random-un --has_run_num 100
 
 
-
-
 # running adv_nn
 python ga_fuzzing.py -p 2018 -s 8782 -d 8783 --n_gen 60 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 3000 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/random-un/town07_front_0/go_straight_town07/lbc/2021_02_07_14_59_37,100_1_none_100_300_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none'
 
@@ -531,6 +529,8 @@ python ga_fuzzing.py -p 2027 -s 8788 -d 8789 --n_gen 60 --pop_size 50 -r 'town07
 
 # running alternate_adv_nn_div
 python ga_fuzzing.py -p 2015 -s 8780 -d 8781 --n_gen 60 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 3000 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/random-un/town07_front_0/go_straight_town07/lbc/2021_02_07_14_59_37,100_1_none_100_300_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none' --use_alternate_nn 1 --diversity_mode nn_rep
+
+
 
 #############################################################
 
