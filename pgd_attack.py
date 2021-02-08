@@ -311,6 +311,7 @@ def pgd_attack(
     iters=255,
     max_projections_steps=3,
     associated_clf_id=[],
+    X_test_pgd_ori=[]
 ):
     if len(associated_clf_id) > 0:
         print(len(model))
@@ -362,6 +363,8 @@ def pgd_attack(
         ori_images = torch.unsqueeze(ori_images_all[j], 0)
         ori_images_encode = ori_images[:, :encoded_fields_len]
         ori_images_non_encode = ori_images[:, encoded_fields_len:]
+
+
 
         prev_outputs = torch.zeros(1).to(device).float()
         prev_images = None
@@ -435,10 +438,18 @@ def pgd_attack(
                 distinct = is_distinct(
                     current_x, prev_X, mask, xl_ori, xu_ori, p, c, th
                 )
+
+                if len(X_test_pgd_ori) > 0 and j < n:
+                    later_X_test_pgd_ori = X_test_pgd_ori[j+1:]
+                else:
+                    later_X_test_pgd_ori = []
+
                 # print('distinct 1', distinct)
                 if check_prev_x_all and len(prev_x_all) > 0:
                     distinct = distinct and is_distinct(
                         current_x, np.array(prev_x_all), mask, xl_ori, xu_ori, p, c, th
+                    ) and is_distinct(
+                        current_x, later_X_test_pgd_ori, mask, xl_ori, xu_ori, p, c, th
                     )
                     # print('distinct 2', distinct)
 

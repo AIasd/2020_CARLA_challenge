@@ -1368,7 +1368,7 @@ class MySampling(Sampling):
 
 
                 if not if_violate_constraints(x, problem.customized_constraints, problem.labels)[0]:
-                    if not self.use_unique_bugs or is_distinct(x, tmp_off_and_X, mask, xl, xu, p, c, th):
+                    if not self.use_unique_bugs or (is_distinct(x, tmp_off_and_X, mask, xl, xu, p, c, th) and is_distinct(x, problem.unique_bugs, mask, xl, xu, p, c, th)):
                         x = np.array(x).astype(float)
                         X.append(x)
                         if len(tmp_off) > 0:
@@ -1576,6 +1576,7 @@ class NSGA2_DT(NSGA2):
                 self.tmp_off, parents = [], []
 
             else:
+                print('len(self.pop)', len(self.pop))
                 # do the mating using the current population
                 self.tmp_off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
 
@@ -1877,6 +1878,7 @@ class NSGA2_DT(NSGA2):
 
                         if not self.use_alternate_nn:
                             if self.use_unique_bugs:
+                                print('self.tmp_off_type_1_len', self.tmp_off_type_1_len)
                                 scores[:self.tmp_off_type_1_len] += np.max(scores)
                                 # scores[:self.tmp_off_type_1and2_len] += 100
                             scores *= -1
@@ -2010,17 +2012,17 @@ class NSGA2_DT(NSGA2):
 
                             if len(X_test_pgd) <= self.tmp_off_type_1_len:
                                 y_zeros = np.zeros(X_test_pgd.shape[0])
-                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id)
+                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id, X_test_pgd_ori=X_test_pgd_ori)
 
                             else:
                                 y_zeros_3 = np.zeros(X_test_pgd.shape[0]-self.tmp_off_type_1_len)
 
-                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd[self.tmp_off_type_1_len:], y_zeros_3, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=[], eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id)
+                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd[self.tmp_off_type_1_len:], y_zeros_3, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=[], eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id, X_test_pgd_ori=X_test_pgd_ori)
 
                                 if self.tmp_off_type_1_len > 0:
                                     y_zeros_1 = np.zeros(self.tmp_off_type_1_len)
 
-                                    X_test_adv_1, new_bug_pred_prob_list_1, initial_bug_pred_prob_list_1 = pgd_attack(clf, X_test_pgd[:self.tmp_off_type_1_len], y_zeros_1, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id)
+                                    X_test_adv_1, new_bug_pred_prob_list_1, initial_bug_pred_prob_list_1 = pgd_attack(clf, X_test_pgd[:self.tmp_off_type_1_len], y_zeros_1, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id, X_test_pgd_ori=X_test_pgd_ori)
 
                                     X_test_adv = np.concatenate([X_test_adv, X_test_adv_1])
                                     new_bug_pred_prob_list = np.concatenate([new_bug_pred_prob_list, new_bug_pred_prob_list_1])
@@ -2028,7 +2030,7 @@ class NSGA2_DT(NSGA2):
 
                         else:
                             y_zeros = np.zeros(X_test_pgd.shape[0])
-                            X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id)
+                            X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id, X_test_pgd_ori=X_test_pgd_ori)
 
 
                         X_test_adv_processed = inverse_process_X(X_test_adv, standardize, one_hot_fields_len, partial, X_removed, kept_fields, removed_fields, enc, inds_to_encode, inds_non_encode, encoded_fields)
@@ -2106,7 +2108,6 @@ class NSGA2_DT(NSGA2):
 
             if self.survival:
                 self.pop = self.survival.do(self.problem, self.pop, self.survival_size, algorithm=self, n_min_infeas_survive=self.min_infeas_pop_size)
-
         else:
             # merge the offsprings with the current population
             self.pop = Population.merge(self.pop, self.off)
@@ -2161,7 +2162,7 @@ class NSGA2_DT(NSGA2):
             current_objectives = objectives_list[-self.pop_size:]
             current_objectives = np.dot(current_objectives, np.expand_dims(np.array(objective_weights), axis=1))
             F_list = current_objectives.tolist()
-
+            print('F_list', sorted(F_list))
             print('len(self.all_pop_run_X)', len(self.all_pop_run_X))
 
             pop = Population(len(X_list), individual=Individual())
