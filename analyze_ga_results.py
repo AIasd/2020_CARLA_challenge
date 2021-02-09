@@ -661,7 +661,7 @@ def draw_unique_bug_num_over_simulations(path_list, filename='num_of_unique_bugs
             xu = d['xu']
             mask = d['mask']
             print(len(mask))
-        objectives = np.stack(d['objectives'])[700:]
+        objectives = np.stack(d['objectives'])[100:]
         df_objectives = np.array(default_objectives)
         # print(objectives.shape, df_objectives.shape)
         # print(objectives == df_objectives)
@@ -726,12 +726,15 @@ if __name__ == '__main__':
 
 
     new_town07_path_list = [
-    ('alternate_adv_nn_div', '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_07_00_12_27,50_12_adv_nn_600_300_1.01_-4_0.9_coeff_0_0.1_0.5__one_output_use_alternate_nn_1/bugs/nsga2-un_town07_front_0_go_straight_town07_lbc_12_50.npz')
+    ('nsga2', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2500_0_0.2_0.5/2021_02_07_21_23_16,50_60_none_3000_100_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none/bugs/nsga2-un_town07_front_0_go_straight_town07_lbc_60_50.npz'),
+    ('nn', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2500_0_0.2_0.5/2021_02_07_22_39_05,50_60_nn_3000_100_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none/bugs/nsga2-un_town07_front_0_go_straight_town07_lbc_60_50.npz'),
+    ('adv_nn', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2500_0_0.2_0.5/2021_02_07_22_43_07,50_60_adv_nn_3000_100_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none/bugs/nsga2-un_town07_front_0_go_straight_town07_lbc_60_50.npz'),
+    ('alternate_adv_nn_div', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2500_0_0.2_0.5/2021_02_07_22_48_24,50_60_adv_nn_3000_100_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_1_nn_rep/bugs/nsga2-un_town07_front_0_go_straight_town07_lbc_60_50.npz')
     ]
 
 
 
-    draw_unique_bug_num_over_simulations(new_town07_path_list, filename='num_of_unique_bugs_town07_right', scene_name='collision', legend=True)
+    draw_unique_bug_num_over_simulations(new_town07_path_list, filename='num_of_unique_bugs_town07_right', scene_name='collision', legend=True, range_upper_bound=26)
     # draw_unique_bug_num_over_simulations(town05_right_out_of_road_path_list, filename='num_of_unique_bugs_out_of_road_town05_right', scene_name='out_of_road', legend=True)
     # analyze different objectives
     # analyze_objectives(objectives_path_list1, filename='objectives_bug_num_over_simulations_town05_right', scene_name='leading car slows down / stops')

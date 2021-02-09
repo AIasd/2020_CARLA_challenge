@@ -524,14 +524,19 @@ python ga_fuzzing.py -p 2021 -s 8784 -d 8785 --n_gen 60 --pop_size 50 -r 'town07
 # running nsga2
 python ga_fuzzing.py -p 2024 -s 8786 -d 8787 --n_gen 60 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 3000 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode none --warm_up_path 'run_results/random-un/town07_front_0/go_straight_town07/lbc/2021_02_07_14_59_37,100_1_none_100_300_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none'
 
-# running alternate_div
+# TBD alternate_nn_div
 python ga_fuzzing.py -p 2027 -s 8788 -d 8789 --n_gen 60 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 3000 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --warm_up_path 'run_results/random-un/town07_front_0/go_straight_town07/lbc/2021_02_07_14_59_37,100_1_none_100_300_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none' --use_alternate_nn 1 --diversity_mode nn_rep
+
+# TBD alternate_adv_nn
+python ga_fuzzing.py -p 2030 -s 8790 -d 8791 --n_gen 60 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 3000 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/random-un/town07_front_0/go_straight_town07/lbc/2021_02_07_14_59_37,100_1_none_100_300_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none' --use_alternate_nn 1
 
 # running alternate_adv_nn_div
 python ga_fuzzing.py -p 2015 -s 8780 -d 8781 --n_gen 60 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 3000 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/random-un/town07_front_0/go_straight_town07/lbc/2021_02_07_14_59_37,100_1_none_100_300_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none' --use_alternate_nn 1 --diversity_mode nn_rep
 
+#############################################################
+python ga_fuzzing.py -p 2015 -s 8780 -d 8781 --outer_iterations 10 --n_gen 5 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-dt --has_run_num 2500 --objective_weights -1 1 1 0 0 0 0 0 0 0
 
-
+python ga_fuzzing.py -p 2015 -s 8780 -d 8781 --n_gen 50 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 2500 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode regression_nn --regression_nn_data_path 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_all_adv_nn_pytorch_700_300_1.0_0.75_0.75_coeff_0.0_0.1_0.5'
 #############################################################
 
 
@@ -548,11 +553,6 @@ python ga_fuzzing.py -p 2015 -s 8780 -d 8781 --n_gen 60 --pop_size 50 -r 'town07
 -r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num'
 
 
-
-
-python ga_fuzzing.py -p 2015 2018 -s 8794 -d 8795 --n_gen 14 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
-
-python ga_fuzzing.py -p 2021 2024 -s 8796 -d 8797 --n_gen 14 --pop_size 50 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --check_unique_coeff 0 0.1 0.5 --uncertainty Random_none
 
 
 
@@ -1400,8 +1400,18 @@ def draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_ends_start, cutoff_
 
     X_train = X[:cutoff]
     y_train = y[:cutoff]
+
+    # X_test = []
+    # y_test = []
+    # for start, end in zip(cutoff_ends_start, cutoff_ends_end):
+    #     X_test.append(X[start:end])
+    #     y_test.append(y[start:end])
+    # X_test = np.concatenate(X_test)
+    # y_test = np.concatenate(y_test)
+
     X_test = X[cutoff:cutoff_ends_end[-1]]
     y_test = y[cutoff:cutoff_ends_end[-1]]
+
     X_combined = np.concatenate([X_train, X_test])
     y_combined = np.concatenate([y_train, y_test])
 
@@ -1434,9 +1444,10 @@ def draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_ends_start, cutoff_
     embed = clf.extract_embed(X_combined)
 
     train_inds = np.arange(0, cutoff)
-    test_inds1 = np.arange(cutoff_ends_start[0], cutoff_ends_end[0])
-    test_inds2 = np.arange(cutoff_ends_start[1], cutoff_ends_end[1])
-    test_inds3 = np.arange(cutoff_ends_start[2], cutoff_ends_end[2])
+    test_inds = []
+    for start, end in zip(cutoff_ends_start, cutoff_ends_end):
+        test_inds.append(np.arange(start, end))
+
 
 
     y_test_pred = clf.predict(X_test).squeeze()
@@ -1474,11 +1485,12 @@ def draw_tsne(X, is_bug_list, objective_list, cutoff, cutoff_ends_start, cutoff_
     X_embed = TSNE(n_components=2, perplexity=30.0, n_iter=3000).fit_transform(embed)
 
 
-    inds = [train_inds, test_inds1, test_inds2, test_inds3]
-    colors = ['Greys','Purples', 'Blues', 'Greens']
-    colors = ['grey','purple', 'blue', 'green']
+    inds = [train_inds] + test_inds
+    colors = ['grey', 'green', 'cyan', 'blue', 'purple', 'orange', 'red']
 
-    for j, (ids, cs) in enumerate(zip(inds, colors)):
+    for j in range(len(inds)):
+        ids = inds[j]
+        cs = colors[j]
         X_embed_ids, y_ids, prob_pred_ids = X_embed[ids], y[ids], prob_pred[ids]
         # print('ids', ids)
         print('y_ids.shape', y_ids.shape)
@@ -1586,7 +1598,8 @@ def analyze_objective_data(X, is_bug_list, objective_list):
         plt.show()
 
 
-def union_analysis(parent_folder, parent_folder2):
+def union_analysis(parent_folders):
+    parent_folder = parent_folders[0]
     subfolders = get_sorted_subfolders(parent_folder)
     X, is_bug_list, objective_list, mask, labels = load_data(subfolders)
 
@@ -1597,49 +1610,75 @@ def union_analysis(parent_folder, parent_folder2):
     xu = d['xu']
     mask = d['mask']
     p = 0
-    c = 0.1
+    c = 0.2
     th = 0.5
 
-    subfolders2 = get_sorted_subfolders(parent_folder2)
-    X2, is_bug_list2, objective_list2, mask2, labels2 = load_data(subfolders2)
+    cutoff = 100
+    cutoff_end = 2600
 
-    X = np.array(X)[300:450]
-    X2 = np.array(X2)[300:450]
-    objective_list = objective_list[300:450]
-    objective_list2 = objective_list2[300:450]
-
+    X = np.array(X)[cutoff:cutoff_end]
+    objective_list = objective_list[cutoff:cutoff_end]
     X_bug = X[objective_list[:, 0]>0.1]
-    X2_bug = X2[objective_list2[:, 0]>0.1]
+    unique_specific_bugs = X_bug
 
+    print(0, 'len(unique_specific_bugs)', len(unique_specific_bugs))
 
-    unique_specific_bugs, specific_distinct_inds = get_distinct_data_points(
-        np.concatenate([X_bug, X2_bug]), mask, xl, xu, p, c, th
-    )
+    for i in range(1, len(parent_folders)):
+        parent_folder2 = parent_folders[i]
 
-    print(len(X_bug), len(X2_bug), len(unique_specific_bugs))
+        subfolders2 = get_sorted_subfolders(parent_folder2)
+        X2, is_bug_list2, objective_list2, mask2, labels2 = load_data(subfolders2)
+
+        X2 = np.array(X2)[cutoff:cutoff_end]
+        objective_list2 = objective_list2[cutoff:cutoff_end]
+        X2_bug = X2[objective_list2[:, 0]>0.1]
+
+        unique_specific_bugs, specific_distinct_inds = get_distinct_data_points(
+            np.concatenate([unique_specific_bugs, X2_bug]), mask, xl, xu, p, c, th
+        )
+
+        print(i, 'len(unique_specific_bugs)', len(unique_specific_bugs), len(X2_bug))
 
 
 
 if __name__ == "__main__":
     # ['analysis', 'tsne', 'discrete', 'active', 'intersection']
-    mode = 'compute_diversity'
+    mode = 'tsne'
     trial_num = 15
-    cutoff = 700
-    cutoff_end = 1300
-    cutoff_ends_start = [700, 750, 800]
-    cutoff_ends_end = [750, 800, 850]
+    cutoff = 100
+    cutoff_end = 2600
+    cutoff_ends_start = [100, 1350, 2550]
+    cutoff_ends_end = [150, 1400, 2600]
 
-    parent_folder = 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_07_00_12_47,50_12_adv_nn_600_300_1.01_-4_0.9_coeff_0_0.1_0.5__one_output_use_alternate_nn_0'
+    parent_folder = 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2500_0_0.2_0.5/2021_02_07_22_48_24,50_60_adv_nn_3000_100_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_1_nn_rep'
 
     parent_folder2 = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_02_03_10_27_28,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none_BNN'
 
-    warm_up_path = 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/2021_02_01_23_16_14,50_14_nn_700_300_1.01_-4_0.75_coeff_0.0_0.1_0.5_Random_none'
+    parent_folders = ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2500_0_0.2_0.5/2021_02_07_21_23_16,50_60_none_3000_100_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2500_0_0.2_0.5/2021_02_07_22_39_05,50_60_nn_3000_100_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2500_0_0.2_0.5/2021_02_07_22_43_07,50_60_adv_nn_3000_100_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2500_0_0.2_0.5/2021_02_07_22_48_24,50_60_adv_nn_3000_100_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_1_nn_rep']
+
+
+    warm_up_path = 'run_results/random-un/town07_front_0/go_straight_town07/lbc/2021_02_07_14_59_37,100_1_none_100_300_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none'
 
     cutoff_mid = 500
     retrain_num = 50
 
     pretrained_clf = True
-    clf_save_path = 'tmp_tsne/tmp_model_town03'
+    clf_save_path = 'tmp_tsne/tmp_model_town07'
+
+
+    # town07 24hrs
+    # nsga2 2.51
+    # 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2500_0_0.2_0.5/2021_02_07_21_23_16,50_60_none_3000_100_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none'
+    # nn 2.39
+    # 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2500_0_0.2_0.5/2021_02_07_22_39_05,50_60_nn_3000_100_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none'
+    # adv_nn 2.24
+    # 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2500_0_0.2_0.5/2021_02_07_22_43_07,50_60_adv_nn_3000_100_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none'
+    # alternate_adv_nn_div 2.40
+    # 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2500_0_0.2_0.5/2021_02_07_22_48_24,50_60_adv_nn_3000_100_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_1_nn_rep'
+    # warm_up_path = 'run_results/random-un/town07_front_0/go_straight_town07/lbc/2021_02_07_14_59_37,100_1_none_100_300_1.01_-4_0.9_coeff_0_0.2_0.5__one_output_use_alternate_nn_0_none'
+
+
+
 
 
     # warm up town07
@@ -1768,6 +1807,6 @@ if __name__ == "__main__":
             encoded_fields,
         )
     elif mode == "intersection":
-        union_analysis(parent_folder, parent_folder2)
+        union_analysis(parent_folders)
     elif mode == "compute_diversity":
         compute_diversity(X, objective_list, cutoff, cutoff_end, encoded_fields,  pretrained_clf=pretrained_clf, clf_save_path=clf_save_path)

@@ -501,6 +501,8 @@ parser.add_argument('--warm_up_len', type=int, default=-1)
 parser.add_argument('--use_alternate_nn', type=int, default=0)
 parser.add_argument('--diversity_mode', type=str, default='none')
 
+parser.add_argument('--regression_nn_data_path', type=str, default=None)
+
 arguments = parser.parse_args()
 
 
@@ -539,6 +541,8 @@ explore_iter_num = arguments.explore_iter_num
 exploit_iter_num = arguments.exploit_iter_num
 high_conf_num = arguments.high_conf_num
 low_conf_num = arguments.low_conf_num
+
+regression_nn_data_path = arguments.regression_nn_data_path
 
 warm_up_path = arguments.warm_up_path
 warm_up_len = arguments.warm_up_len
@@ -1567,6 +1571,8 @@ class NSGA2_DT(NSGA2):
         self.use_alternate_nn = use_alternate_nn
         self.diversity_mode = diversity_mode
 
+        self.regression_nn_data_path = regression_nn_data_path
+
     def set_off(self):
         self.tmp_off = []
         if self.algorithm_name == 'random':
@@ -1641,10 +1647,9 @@ class NSGA2_DT(NSGA2):
                     # only consider collision case for now
                     from customized_utils import pretrain_regression_nets
 
-                    parent_folder = 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_all_adv_nn_pytorch_700_300_1.0_0.75_0.75_coeff_0.0_0.1_0.5'
                     pretrain_cutoff = 600
                     pretrain_cutoff_end = 700
-                    clf_0, clf_1, clf_2, conf_0, conf_1, conf_2, standardize_prev = pretrain_regression_nets(parent_folder, pretrain_cutoff, pretrain_cutoff_end)
+                    clf_0, clf_1, clf_2, conf_0, conf_1, conf_2, standardize_prev = pretrain_regression_nets(self.regression_nn_data_path, pretrain_cutoff, pretrain_cutoff_end)
                 else:
                     standardize_prev = None
 
@@ -2571,7 +2576,8 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       warm_up_path=warm_up_path,
                       warm_up_len=warm_up_len,
                       use_alternate_nn=use_alternate_nn,
-                      diversity_mode=diversity_mode)
+                      diversity_mode=diversity_mode,
+                      regression_nn_data_path=regression_nn_data_path)
 
 
 
