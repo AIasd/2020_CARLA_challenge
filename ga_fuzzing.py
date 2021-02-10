@@ -452,8 +452,8 @@ from pgd_attack import pgd_attack, train_net, train_regression_net
 from scipy.stats import rankdata
 
 
-default_objective_weights = np.array([-1, 1, 1, 1, 1, -1, 0, 0, 0, -1])
-default_objectives = [0, 20, 1, 7, 7, 0, 0, 0, 0, 0]
+default_objective_weights = np.array([-1., 1., 1., 1., 1., -1., 0., 0., 0., -1.])
+default_objectives = np.array([0., 20., 1., 7., 7., 0., 0., 0., 0., 0.])
 default_check_unique_coeff = [0, 0.2, 0.5]
 
 parser = argparse.ArgumentParser()
@@ -502,6 +502,9 @@ parser.add_argument('--use_alternate_nn', type=int, default=0)
 parser.add_argument('--diversity_mode', type=str, default='none')
 
 parser.add_argument('--regression_nn_data_path', type=str, default=None)
+parser.add_argument('--regression_nn_data_len', type=int, default=0)
+
+parser.add_argument('--adv_exploitation_only', type=int, default=0)
 
 arguments = parser.parse_args()
 
@@ -543,6 +546,9 @@ high_conf_num = arguments.high_conf_num
 low_conf_num = arguments.low_conf_num
 
 regression_nn_data_path = arguments.regression_nn_data_path
+regression_nn_data_len = arguments.regression_nn_data_len
+
+adv_exploitation_only = arguments.adv_exploitation_only
 
 warm_up_path = arguments.warm_up_path
 warm_up_len = arguments.warm_up_len
@@ -695,7 +701,7 @@ class MyProblem(Problem):
         self.scenario_file = scenario_file
         self.ego_car_model = ego_car_model
 
-
+        self.cumulative_info = cumulative_info
 
         if cumulative_info:
             self.counter = cumulative_info['counter']
@@ -1007,7 +1013,7 @@ class MyProblem(Problem):
             standardize.fit(all_objectives)
             standardize.transform(current_objectives)
 
-
+            print('current_objectives', current_objectives, 'objective_weights', objective_weights)
             current_objectives *= objective_weights
 
             print('\n'*2, 'all_objectives_mean, all_objectives_std :', standardize.mean_, standardize.var_, '\n'*2)
@@ -1572,6 +1578,9 @@ class NSGA2_DT(NSGA2):
         self.diversity_mode = diversity_mode
 
         self.regression_nn_data_path = regression_nn_data_path
+        self.regression_nn_data_len = regression_nn_data_len
+
+        self.adv_exploitation_only = adv_exploitation_only
 
     def set_off(self):
         self.tmp_off = []
@@ -1647,8 +1656,10 @@ class NSGA2_DT(NSGA2):
                     # only consider collision case for now
                     from customized_utils import pretrain_regression_nets
 
-                    pretrain_cutoff = 600
-                    pretrain_cutoff_end = 700
+                    pretrain_cutoff = regression_nn_data_len
+                    pretrain_cutoff_end = regression_nn_data_len + 100
+
+
                     clf_0, clf_1, clf_2, conf_0, conf_1, conf_2, standardize_prev = pretrain_regression_nets(self.regression_nn_data_path, pretrain_cutoff, pretrain_cutoff_end)
                 else:
                     standardize_prev = None
@@ -1680,13 +1691,13 @@ class NSGA2_DT(NSGA2):
                     obj_pred_2 = clf_2.predict(X_test)
 
                     tmp_objectives = np.concatenate([obj_pred_0, obj_pred_1, obj_pred_2], axis=1)
-                    print('tmp_objectives', tmp_objectives)
+                    # print('tmp_objectives', tmp_objectives)
                     # when using unique bugs give preference to unique inputs
                     if self.use_unique_bugs:
                         tmp_objectives[:self.tmp_off_type_1_len, 0] += 100
                         tmp_objectives[:self.tmp_off_type_1_len, 1:] -= 100
-                    print(len(tmp_objectives), self.tmp_off_type_1_len)
-                    print('tmp_objectives after use_unique_bugs', tmp_objectives)
+                    # print(len(tmp_objectives), self.tmp_off_type_1_len)
+                    # print('tmp_objectives after use_unique_bugs', tmp_objectives)
                     confs = np.array([-conf_0, conf_1, conf_2])
                     tmp_objectives_minus = tmp_objectives - confs
                     tmp_objectives_plus = tmp_objectives + confs
@@ -1901,6 +1912,7 @@ class NSGA2_DT(NSGA2):
                             cycle_num = self.explore_iter_num+self.exploit_iter_num
                             print('cur_gen', cur_gen, 'cycle_num', cycle_num)
                             if cur_gen % cycle_num < self.explore_iter_num:
+                                current_stage = 'exploration'
                                 print('\n', 'exploration', '\n')
                                 scores *= -1
                                 high_inds = np.argsort(scores)[:self.high_conf_num]
@@ -1925,7 +1937,7 @@ class NSGA2_DT(NSGA2):
                                 else:
                                     inds = np.random.choice(mid_inds, self.pop_size, replace=False)
 
-                                if self.rank_mode == 'adv_nn':
+                                if self.rank_mode == 'adv_nn' and not self.adv_exploitation_only:
                                     X_test_pgd_ori = X_test_ori[inds]
                                     X_test_pgd = X_test[inds]
                                 else:
@@ -1936,13 +1948,14 @@ class NSGA2_DT(NSGA2):
                                 print('chosen indices (rank)', scores_rank[inds])
                                 print('chosen indices', inds)
 
-
-                                print('all min distance', np.sort(d_list, axis=1)[:, 1])
-                                print('chosen max min distance', np.sort(d_list[mid_inds_top_inds], axis=1)[:, 1])
+                                if diversity_mode == 'nn_rep':
+                                    print('all min distance', np.sort(d_list, axis=1)[:, 1])
+                                    print('chosen max min distance', np.sort(d_list[mid_inds_top_inds], axis=1)[:, 1])
 
                                 self.high_conf_configs_stack.append(X_test[high_inds])
                                 self.high_conf_configs_ori_stack.append(X_test_ori[high_inds])
                             else:
+                                current_stage = 'exploitation'
                                 print('\n', 'exploitation', '\n')
                                 high_conf_configs_stack_np = np.concatenate(self.high_conf_configs_stack)
                                 high_conf_configs_ori_stack_np = np.concatenate(self.high_conf_configs_ori_stack)
@@ -1989,7 +2002,7 @@ class NSGA2_DT(NSGA2):
 
 
 
-                    if self.use_alternate_nn and self.rank_mode != 'adv_nn':
+                    if self.use_alternate_nn and self.rank_mode != 'adv_nn' or (self.use_alternate_nn and self.rank_mode == 'adv_nn' and self.adv_exploitation_only and current_stage == 'exploration'):
                         pass
                     elif self.rank_mode == 'nn':
                         self.off = self.tmp_off[inds]
@@ -2130,12 +2143,8 @@ class NSGA2_DT(NSGA2):
 
 
     def _initialize(self):
-        if self.dt:
-            X_list = list(self.X)
-            F_list = list(self.F)
-            pop = Population(len(X_list), individual=Individual())
-            pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen, "CV", [0 for _ in range(len(X_list))], "feasible", [[True] for _ in range(len(X_list))])
-        elif self.warm_up_path:
+
+        if self.warm_up_path and ((not self.dt) or (self.dt and not self.problem.cumulative_info)):
             from customized_utils import get_sorted_subfolders, load_data, get_unique_bugs
 
             subfolders = get_sorted_subfolders(self.warm_up_path)
@@ -2172,13 +2181,18 @@ class NSGA2_DT(NSGA2):
 
             pop = Population(len(X_list), individual=Individual())
             pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen, "CV", [0 for _ in range(len(X_list))], "feasible", [[True] for _ in range(len(X_list))])
+
             self.pop = pop
             print(self.pop.get('X'))
             self.set_off()
             pop = self.off
 
             print('len(self.all_pop_run_X)', len(self.all_pop_run_X))
-
+        elif self.dt:
+            X_list = list(self.X)
+            F_list = list(self.F)
+            pop = Population(len(X_list), individual=Individual())
+            pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen, "CV", [0 for _ in range(len(X_list))], "feasible", [[True] for _ in range(len(X_list))])
 
         else:
             # create the initial population
@@ -2414,6 +2428,7 @@ def run_nsga2_dt():
 
 
         estimator, inds, critical_unique_leaves = filter_critical_regions(X, y)
+        # print(X, F, inds)
         X_filtered = X[inds]
         F_filtered = F[inds]
 
@@ -2457,13 +2472,6 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         termination_condition = global_termination_condition
 
 
-
-
-
-
-
-
-
     # scenario_type = 'leading_car_braking'
     customized_d = customized_bounds_and_distributions[scenario_type]
     route_info = customized_routes[route_type]
@@ -2486,7 +2494,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     else:
         now = datetime.now()
         p, c, th = check_unique_coeff
-        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th), uncertainty, model_type, 'use_alternate_nn', str(use_alternate_nn), diversity_mode])
+        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th), uncertainty, model_type, 'use_alternate_nn', str(use_alternate_nn), 'diversity_mode', diversity_mode])
 
 
     cur_parent_folder = make_hierarchical_dir([root_folder, algorithm_name, route_type, scenario_type, ego_car_model, time_str])
@@ -2577,10 +2585,9 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       warm_up_len=warm_up_len,
                       use_alternate_nn=use_alternate_nn,
                       diversity_mode=diversity_mode,
-                      regression_nn_data_path=regression_nn_data_path)
-
-
-
+                      regression_nn_data_path=regression_nn_data_path,
+                      regression_nn_data_len=regression_nn_data_len,
+                      adv_exploitation_only=adv_exploitation_only)
 
 
     if termination_condition == 'generations':
@@ -2623,15 +2630,16 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     hv = np.array([metric.calc(f) for f in obj_and_feasible_each_gen])
 
 
-
+    # print('problem.x_list, problem.F_list', problem.x_list, problem.F_list)
     if len(problem.x_list) > 0:
         X = np.stack(problem.x_list)
-        F = np.stack(problem.F_list)
+        F = np.concatenate(problem.F_list)
         objectives = np.stack(problem.objectives_list)
     else:
         X = []
         F = []
         objectives = []
+    # print('X, F, objectives', X, F, objectives)
     y = np.array(problem.y_list)
     time_list = np.array(problem.time_list)
     bugs_num_list = np.array(problem.bugs_num_list)

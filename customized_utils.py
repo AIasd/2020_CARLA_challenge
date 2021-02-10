@@ -475,7 +475,8 @@ def filter_critical_regions(X, y):
         min_impurity_decrease=0.0001,
         random_state=0,
     )
-    print(X.shape, y.shape, X, y)
+    print(X.shape, y.shape)
+    # print(X, y)
     estimator = estimator.fit(X, y)
 
     leave_ids = estimator.apply(X)
@@ -2874,7 +2875,9 @@ def pretrain_regression_nets(parent_folder, cutoff, cutoff_end):
 
     subfolders = get_sorted_subfolders(parent_folder)
     initial_X, y, initial_objectives_list, mask, labels = load_data(subfolders)
-
+    if cutoff <= 0 or cutoff > (len(initial_X) - 100):
+        cutoff = len(initial_X) - 100
+        cutoff_end = cutoff + 100
     # we are not using it so set it to 0 for placeholding
     unique_bugs_len = 0
     partial = True
@@ -2933,7 +2936,7 @@ def pretrain_regression_nets(parent_folder, cutoff, cutoff_end):
 
 def get_picklename(parent_folder):
     pickle_filename = parent_folder + "/bugs/"
-    assert os.path.isdir(pickle_filename)
+    assert os.path.isdir(pickle_filename), pickle_filename
     i = 1
     while True:
         if os.path.isdir(pickle_filename + str(i)):
