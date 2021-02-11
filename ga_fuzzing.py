@@ -422,7 +422,7 @@ parser.add_argument('--regression_nn_data_len', type=int, default=0)
 parser.add_argument('--adv_exploitation_only', type=int, default=0)
 
 parser.add_argument('--sample_multiplier', type=int, default=20)
-parser.add_argument('--mating_max_iterations', type=int, default=100)
+parser.add_argument('--mating_max_iterations', type=int, default=20)
 
 parser.add_argument('--uncertainty_exploration', type=str, default='confidence')
 
