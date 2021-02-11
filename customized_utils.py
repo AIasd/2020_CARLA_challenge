@@ -1911,7 +1911,6 @@ def is_similar(
     p,
     c,
     th,
-    diff_th=0.1,
     y_i=-1,
     y_j=-1,
     verbose=False,
@@ -1964,7 +1963,7 @@ def is_similar(
     return equal
 
 
-def is_distinct(x, X, mask, xl, xu, p, c, th, diff_th=0.1, verbose=True):
+def is_distinct(x, X, mask, xl, xu, p, c, th, verbose=True):
     verbose = False
     if len(X) == 0:
         return True
@@ -1986,7 +1985,6 @@ def is_distinct(x, X, mask, xl, xu, p, c, th, diff_th=0.1, verbose=True):
                 p,
                 c,
                 th,
-                diff_th=diff_th,
                 verbose=verbose,
             )
             if similar:
@@ -1995,8 +1993,99 @@ def is_distinct(x, X, mask, xl, xu, p, c, th, diff_th=0.1, verbose=True):
                 return False
         return True
 
+# def is_distinct_vectorized(x, X, mask, xl, xu, p, c, th, verbose=True):
+#     verbose = False
+#     if len(X) == 0:
+#         return True
+#     else:
+#         mask_np = np.array(mask)
+#         xl_np = np.array(xl)
+#         xu_np = np.array(xu)
+#         x = np.array(x)
+#         X = np.stack(X)
+#
+#         for i, x_i in enumerate(X):
+#             # if verbose:
+#             #     print(i, '- th prev x checking similarity')
+#             similar = is_similar(
+#                 x,
+#                 x_i,
+#                 mask_np,
+#                 xl_np,
+#                 xu_np,
+#                 p,
+#                 c,
+#                 th,
+#                 verbose=verbose,
+#             )
+#             if similar:
+#                 if verbose:
+#                     print("similar with", i)
+#                 return False
+#         return True
+#
+# def is_similar_vectorized(
+#     x_1,
+#     x_2,
+#     mask,
+#     xl,
+#     xu,
+#     p,
+#     c,
+#     th,
+#     y_i=-1,
+#     y_j=-1,
+#     verbose=False,
+#     labels=[],
+# ):
+#
+#     if y_i == y_j:
+#         eps = 1e-8
+#
+#         # only consider those fields that can change when considering diversity
+#         variant_fields = (xu - xl) > eps
+#         mask = mask[variant_fields]
+#         xl = xl[variant_fields]
+#         xu = xu[variant_fields]
+#         x_1 = x_1[variant_fields]
+#         x_2 = x_2[variant_fields]
+#         variant_fields_num = np.sum(variant_fields)
+#         if verbose:
+#             print(
+#                 variant_fields_num,
+#                 "/",
+#                 len(variant_fields),
+#                 "fields are used for checking similarity",
+#             )
+#
+#         int_inds = mask == "int"
+#         real_inds = mask == "real"
+#         # print(int_inds, real_inds)
+#         int_diff_raw = np.abs(x_1[int_inds] - x_2[int_inds])
+#         int_diff = np.ones(int_diff_raw.shape) * (int_diff_raw > eps)
+#
+#         real_diff_raw = (
+#             np.abs(x_1[real_inds] - x_2[real_inds]) / (np.abs(xu - xl) + eps)[real_inds]
+#         )
+#         # print(int_diff_raw, real_diff_raw)
+#         real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > c)
+#
+#         diff = np.concatenate([int_diff, real_diff])
+#         # print(diff, p)
+#         diff_norm = np.linalg.norm(diff, p)
+#
+#         th_num = np.max([np.round(th * variant_fields_num), 1])
+#         equal = diff_norm < th_num
+#
+#         if verbose:
+#             print("diff_norm, th_num", diff_norm, th_num)
+#
+#     else:
+#         equal = False
+#     return equal
 
-def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1, y=[]):
+
+def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, y=[]):
 
     # ['forward', 'backward']
     order = "forward"
@@ -2030,7 +2119,6 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1, y
                         p,
                         c,
                         th,
-                        diff_th=diff_th,
                         y_i=y_i,
                         y_j=y_j,
                     )
@@ -2059,7 +2147,6 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, diff_th=0.1, y
                         p,
                         c,
                         th,
-                        diff_th=diff_th,
                         y_i=y_i,
                         y_j=y_j,
                     )
@@ -2739,7 +2826,8 @@ def process_X(
         standardize = StandardScaler()
         customized_fit(X_train, standardize, one_hot_fields_len, partial)
     X_train = customized_standardize(X_train, standardize, one_hot_fields_len, partial)
-    X_test = customized_standardize(X_test, standardize, one_hot_fields_len, partial)
+    if len(X_test) > 0:
+        X_test = customized_standardize(X_test, standardize, one_hot_fields_len, partial)
     xl = customized_standardize(
         np.array([xl]), standardize, one_hot_fields_len, partial
     )[0]
@@ -2875,9 +2963,11 @@ def pretrain_regression_nets(parent_folder, cutoff, cutoff_end):
 
     subfolders = get_sorted_subfolders(parent_folder)
     initial_X, y, initial_objectives_list, mask, labels = load_data(subfolders)
-    if cutoff <= 0 or cutoff > (len(initial_X) - 100):
-        cutoff = len(initial_X) - 100
-        cutoff_end = cutoff + 100
+
+    if cutoff == 0:
+        cutoff = len(initial_X)
+    if cutoff_end > len(initial_X):
+        cutoff_end = len(initial_X)
     # we are not using it so set it to 0 for placeholding
     unique_bugs_len = 0
     partial = True
@@ -2916,7 +3006,7 @@ def pretrain_regression_nets(parent_folder, cutoff, cutoff_end):
 
     y_train_0, y_test_0 = y_0[:cutoff], y_0[cutoff:cutoff_end]
     y_train_1, y_test_1 = y_1[:cutoff], y_1[cutoff:cutoff_end]
-    y_train_2, y_test_2 = y_2[:cutoff], y_0[cutoff:cutoff_end]
+    y_train_2, y_test_2 = y_2[:cutoff], y_2[cutoff:cutoff_end]
     # print('pretrain labels_used', labels_used)
     # print('X_train.shape', X_train.shape)
     from pgd_attack import train_regression_net

@@ -1,3 +1,4 @@
+'''
 # hack: increase the maximum number of files to open to avoid too many files open error due to leakage.
 # import resource
 #
@@ -5,92 +6,6 @@
 # resource.setrlimit(resource.RLIMIT_NOFILE, (131072, 131072))
 # print("getrlimit:", resource.getrlimit(resource.RLIMIT_NOFILE))
 
-'''
-python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 24 --pop_size 100 -r 'town01_left_0'
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 24 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05'
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 24 --pop_size 100 -r 'town04_front_0' -c 'two_pedestrians_cross_street_town04'
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 24 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05'
-python ga_fuzzing.py -p 2027 2030 -s 8797 -d 8798 --n_gen 24 --pop_size 100 -r 'town07_front_0'
-python ga_fuzzing.py -p 2033 2036 -s 8800 -d 8801 --n_gen 24 --pop_size 100 -r 'town03_front_0'
-default number of fields: 50%, margin: 15%
-experiment 1
-
-scene 1
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2
-
-scene 2
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name random
-experiment 2: try number of fields: 50%, margin: 10%
-
-scene 3
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-un --check_unique_coeff 0 0.1 0.5
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name random --check_unique_coeff 0 0.1 0.5
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-un
-python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town07_front_0' -c 'low_traffic' --algorithm_name nsga2-dt --has_run_num 1500
-
-scene 1
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2
-
-new-scene 1:
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name random --has_run_num 1500
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2 --has_run_num 1500
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-dt --has_run_num 1500
-
-scene 4:
-python ga_fuzzing.py -p 2003 2006 -s 8785 -d 8786 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-un
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name random
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-dt --has_run_num 1500
-
-scene 2:
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name random
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-dt --has_run_num 1500
-
-scene 5:
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name nsga2-un --has_run_num 1500
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name nsga2 --has_run_num 1500
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name random --has_run_num 1500
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --outer_iterations 15 --n_gen 5 --pop_size 100 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name nsga2-dt --has_run_num 1500
-
-
-# two partial objectives for leading car braking:
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --has_run_num 1500 --objective_weights -1 1 1 1 -1 0 0 -1
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights -1 1 0 0 0 0 0 0 --has_run_num 700
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 15 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --objective_weights 0 0 1 1 -1 0 0 0 --has_run_num 700
-
-# two partial objectives for changing lane:
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 1500 --objective_weights -1 1 1 1 -1 0 0 -1
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 0 0 0 0 0 0
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 30 --pop_size 100 -r 'town05_front_0' -c 'change_lane_town05' --algorithm_name nsga2-un --has_run_num 700 --objective_weights 0 0 1 1 -1 0 0 0
-
-
-# compare single_objective VS multi-objectives
-python ga_fuzzing.py -p 2009 2012 -s 8788 -d 8789 --n_gen 32 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --has_run_num 1500 --objective_weights -1 1 1 1 -1 0 0 -0.3 --use_single_objective 1
-
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 32 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --algorithm_name nsga2-un --has_run_num 1500 --objective_weights -1 1 1 1 -1 0 0 -0.3 --use_single_objective 0
-
-
-
-
-
-
-
-the other two controllers:
-python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model auto_pilot --has_run_num 1500
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 30 --pop_size 100 -r 'town05_right_0' -c 'leading_car_braking_town05' --ego_car_model pid_agent --has_run_num 1500
-sensitivity
-+local python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 6 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-un --check_unique_coeff 0 0.225 0.25 --has_run_num 300
-+ python ga_fuzzing.py -p 2015 2018 -s 8791 -d 8792 --n_gen 6 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-un --check_unique_coeff 0 0.075 0.25 --has_run_num 300
-+ python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 6 --pop_size 100 -r 'town01_left_0' --algorithm_name nsga2-un --check_unique_coeff 0 0.075 0.50 --has_run_num 300
 
 
 
@@ -454,7 +369,7 @@ from scipy.stats import rankdata
 
 default_objective_weights = np.array([-1., 1., 1., 1., 1., -1., 0., 0., 0., -1.])
 default_objectives = np.array([0., 20., 1., 7., 7., 0., 0., 0., 0., 0.])
-default_check_unique_coeff = [0, 0.2, 0.5]
+default_check_unique_coeff = [0, 0.1, 0.5]
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p','--ports', nargs='+', type=int, default=[2003, 2006], help='TCP port(s) to listen to (default: 2003 2006)')
@@ -506,6 +421,11 @@ parser.add_argument('--regression_nn_data_len', type=int, default=0)
 
 parser.add_argument('--adv_exploitation_only', type=int, default=0)
 
+parser.add_argument('--sample_multiplier', type=int, default=20)
+parser.add_argument('--mating_max_iterations', type=int, default=100)
+
+parser.add_argument('--uncertainty_exploration', type=str, default='confidence')
+
 arguments = parser.parse_args()
 
 
@@ -555,6 +475,11 @@ warm_up_len = arguments.warm_up_len
 use_alternate_nn = arguments.use_alternate_nn
 # ['none', 'nn_rep']
 diversity_mode = arguments.diversity_mode
+
+sample_multiplier = arguments.sample_multiplier
+mating_max_iterations = arguments.mating_max_iterations
+
+uncertainty_exploration = arguments.uncertainty_exploration
 
 os.environ['HAS_DISPLAY'] = arguments.has_display
 root_folder = arguments.root_folder
@@ -1320,10 +1245,10 @@ class MySampling(Sampling):
 
 
     '''
-    def __init__(self, use_unique_bugs, check_unique_coeff):
+    def __init__(self, use_unique_bugs, check_unique_coeff, sample_multiplier=500):
         self.use_unique_bugs = use_unique_bugs
         self.check_unique_coeff = check_unique_coeff
-
+        self.sample_multiplier = sample_multiplier
         assert len(self.check_unique_coeff) == 3
 
     def _do(self, problem, n_samples, **kwargs):
@@ -1333,7 +1258,7 @@ class MySampling(Sampling):
         mask = np.array(problem.mask)
         labels = problem.labels
         parameters_distributions = problem.parameters_distributions
-        max_sample_times = n_samples*500
+        max_sample_times = n_samples * self.sample_multiplier
 
         algorithm = kwargs['algorithm']
 
@@ -1443,6 +1368,7 @@ class MyMating(Mating):
 
         super().__init__(selection, crossover, mutation, **kwargs)
         self.use_unique_bugs = use_unique_bugs
+        self.mating_max_iterations = mating_max_iterations
         self.emcmc = emcmc
 
     def do(self, problem, pop, n_offsprings, **kwargs):
@@ -1493,11 +1419,11 @@ class MyMating(Mating):
             n_infills += 1
 
             # if no new offsprings can be generated within a pre-specified number of generations
-            if n_infills > self.n_max_iterations:
+            if n_infills > self.mating_max_iterations:
                 break
 
         # assert len(parents)==len(off)
-        print('Mating finds', len(off), 'offsprings after doing', n_infills, '/', self.n_max_iterations, 'mating iterations')
+        print('Mating finds', len(off), 'offsprings after doing', n_infills-1, '/', self.mating_max_iterations, 'mating iterations')
         return off, parents
 
 
@@ -1551,7 +1477,7 @@ class NSGA2_DT(NSGA2):
         self.use_unique_bugs = use_unique_bugs
 
         # hack: defined separately w.r.t. MyMating
-        self.n_max_iterations = 1
+        self.mating_max_iterations = 1
 
         self.tmp_off = []
         self.tmp_off_type_1_len = 0
@@ -1581,6 +1507,8 @@ class NSGA2_DT(NSGA2):
         self.regression_nn_data_len = regression_nn_data_len
 
         self.adv_exploitation_only = adv_exploitation_only
+
+        self.uncertainty_exploration = uncertainty_exploration
 
     def set_off(self):
         self.tmp_off = []
@@ -1915,10 +1843,17 @@ class NSGA2_DT(NSGA2):
                                 current_stage = 'exploration'
                                 print('\n', 'exploration', '\n')
                                 scores *= -1
-                                high_inds = np.argsort(scores)[:self.high_conf_num]
-                                mid_inds = np.argsort(scores)[self.high_conf_num:len(scores)-self.low_conf_num]
+
+                                if self.uncertainty_exploration == 'confidence':
+                                    inds_used = np.argsort(scores)
+                                else: # random
+                                    inds_used = np.arange(len(scores))
+
+                                high_inds = inds_used[:self.high_conf_num]
+                                mid_inds = inds_used[self.high_conf_num:len(scores)-self.low_conf_num]
 
                                 print(len(mid_inds), self.high_conf_num, len(scores)-self.low_conf_num)
+
                                 if diversity_mode == 'nn_rep':
                                     d_list = calculate_rep_d(clf, X_train, X_test[mid_inds])
                                     if self.use_unique_bugs:
@@ -2494,7 +2429,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     else:
         now = datetime.now()
         p, c, th = check_unique_coeff
-        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th), uncertainty, model_type, 'use_alternate_nn', str(use_alternate_nn), 'diversity_mode', diversity_mode])
+        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th), uncertainty, model_type, 'n_offsprings', str(n_offsprings), 'use_alternate_nn', str(use_alternate_nn), str(explore_iter_num), str(exploit_iter_num), str(high_conf_num), str(low_conf_num), 'diversity_mode', diversity_mode, 'uncertainty_exploration', uncertainty_exploration])
 
 
     cur_parent_folder = make_hierarchical_dir([root_folder, algorithm_name, route_type, scenario_type, ego_car_model, time_str])
@@ -2550,12 +2485,12 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                     emcmc,
                     repair=repair,
                     eliminate_duplicates=eliminate_duplicates,
-                    n_max_iterations=100)
+                    mating_max_iterations=mating_max_iterations)
 
 
-    sampling = MySampling(use_unique_bugs=use_unique_bugs, check_unique_coeff=problem.check_unique_coeff)
+    sampling = MySampling(use_unique_bugs=use_unique_bugs, check_unique_coeff=problem.check_unique_coeff, sample_multiplier=sample_multiplier)
 
-    plain_sampling = MySampling(use_unique_bugs=False, check_unique_coeff=problem.check_unique_coeff)
+    plain_sampling = MySampling(use_unique_bugs=False, check_unique_coeff=problem.check_unique_coeff, sample_multiplier=sample_multiplier)
 
     # TBD: customize mutation and crossover to better fit our problem. e.g.
     # might deal with int and real separately
@@ -2587,7 +2522,8 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       diversity_mode=diversity_mode,
                       regression_nn_data_path=regression_nn_data_path,
                       regression_nn_data_len=regression_nn_data_len,
-                      adv_exploitation_only=adv_exploitation_only)
+                      adv_exploitation_only=adv_exploitation_only,
+                      uncertainty_exploration=uncertainty_exploration)
 
 
     if termination_condition == 'generations':
