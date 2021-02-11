@@ -437,7 +437,7 @@ dashboard_address = arguments.dashboard_address
 route_type = arguments.route_type
 # ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
 scenario_type = arguments.scenario_type
-# [random', 'nsga2', 'nsga2-dt', 'nsga2-emcmc', 'nsga2-un', 'nsga2-un-emcmc', 'random-un', 'nn', 'adv_nn']
+# [random', 'nsga2', 'nsga2-dt', 'nsga2-un-dt', 'nsga2-emcmc', 'nsga2-un', 'nsga2-un-emcmc', 'random-un', 'nn', 'adv_nn']
 algorithm_name = arguments.algorithm_name
 # ['lbc', 'auto_pilot', 'pid_agent']
 ego_car_model = arguments.ego_car_model
@@ -2625,7 +2625,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     return X, y, F, objectives, labels, hv, cur_parent_folder, cumulative_info
 
 if __name__ == '__main__':
-    if algorithm_name == 'nsga2-dt':
+    if algorithm_name in ['nsga2-un-dt', 'nsga2-dt']:
         run_nsga2_dt()
     else:
         run_ga()

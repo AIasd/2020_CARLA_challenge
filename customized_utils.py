@@ -3107,21 +3107,21 @@ def select_batch_max_d_greedy(d_list, train_test_cutoff, batch_size):
     chosen_inds = []
 
     print('d_list.shape', d_list.shape)
-    print('remaining_inds', remaining_inds.shape)
-    print('consider_inds', consider_inds.shape)
+    print('remaining_inds.shape', remaining_inds.shape)
+    print('consider_inds.shape', consider_inds.shape)
     for i in range(batch_size):
-        print(i)
-        print('d_list[np.ix_(remaining_inds, consider_inds)].shape', d_list[np.ix_(remaining_inds, consider_inds)].shape)
+        # print(i)
+        # print('d_list[np.ix_(remaining_inds, consider_inds)].shape', d_list[np.ix_(remaining_inds, consider_inds)].shape)
         min_d_list = np.min(d_list[np.ix_(remaining_inds, consider_inds)], axis=1)
-        print('min_d_list', min_d_list.shape, min_d_list)
+        # print('min_d_list', min_d_list.shape, min_d_list)
         remaining_inds_top_ind = np.argmax(min_d_list)
         chosen_ind = remaining_inds[remaining_inds_top_ind]
 
-        print('chosen_ind', chosen_ind)
+        # print('chosen_ind', chosen_ind)
         consider_inds = np.append(consider_inds, chosen_ind)
-        print('remaining_inds before', remaining_inds)
-        print('remaining_inds_top_ind', remaining_inds_top_ind)
+        # print('remaining_inds before', remaining_inds)
+        # print('remaining_inds_top_ind', remaining_inds_top_ind)
         remaining_inds = np.delete(remaining_inds, remaining_inds_top_ind)
-        print('remaining_inds after', remaining_inds)
+        # print('remaining_inds after', remaining_inds)
         chosen_inds.append(chosen_ind)
     return chosen_inds
