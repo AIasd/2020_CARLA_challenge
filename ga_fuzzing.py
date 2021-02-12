@@ -1322,8 +1322,10 @@ class MySampling(Sampling):
         X = []
         X, sample_time_1 = subroutine(X, tmp_off_and_X)
 
-
-        X = np.stack(X)
+        if len(X) > 0:
+            X = np.stack(X)
+        else:
+            X = np.array([])
         print('\n'*3, 'We sampled', X.shape[0], '/', n_samples, 'samples', 'by sampling', sample_time_1, 'times' '\n'*3)
         # print('\n'*3, 'We sampled', X.shape[0], '/', n_samples, 'samples', 'by sampling', sample_time_1+sample_time_2, 'times' '\n'*3)
         return X
@@ -1584,11 +1586,25 @@ class NSGA2_DT(NSGA2):
                     # only consider collision case for now
                     from customized_utils import pretrain_regression_nets
 
-                    pretrain_cutoff = regression_nn_data_len
-                    pretrain_cutoff_end = regression_nn_data_len + 100
+                    if self.regression_nn_data_path:
+                        subfolders = get_sorted_subfolders(self.regression_nn_data_path)
+                        initial_X, _, initial_objectives_list, _, _ = load_data(subfolders)
 
+                        cutoff = self.regression_nn_data_len
+                        cutoff_end = self.regression_nn_data_len + 100
 
-                    clf_0, clf_1, clf_2, conf_0, conf_1, conf_2, standardize_prev = pretrain_regression_nets(self.regression_nn_data_path, pretrain_cutoff, pretrain_cutoff_end)
+                        if cutoff == 0:
+                            cutoff = len(initial_X)
+                        if cutoff_end > len(initial_X):
+                            cutoff_end = len(initial_X)
+                    else:
+                        initial_X = self.all_pop_run_X
+                        initial_objectives_list = self.problem.objectives_list
+                        cutoff = len(initial_X)
+                        cutoff_end = cutoff
+
+                    # print('self.problem.labels', self.problem.labels)
+                    clfs, confs, chosen_weights, standardize_prev = pretrain_regression_nets(initial_X, initial_objectives_list, self.problem.objective_weights, self.problem.xl, self.problem.xu, self.problem.labels, self.problem.customized_constraints, cutoff, cutoff_end)
                 else:
                     standardize_prev = None
 
@@ -1614,19 +1630,21 @@ class NSGA2_DT(NSGA2):
                     # only consider collision case for now
 
                     # print('X_test.shape', X_test.shape)
-                    obj_pred_0 = clf_0.predict(X_test)
-                    obj_pred_1 = clf_1.predict(X_test)
-                    obj_pred_2 = clf_2.predict(X_test)
 
-                    tmp_objectives = np.concatenate([obj_pred_0, obj_pred_1, obj_pred_2], axis=1)
+                    obj_preds = []
+                    for clf in clfs:
+                        obj_preds.append(clf.predict(X_test))
+
+                    tmp_objectives = np.concatenate(obj_preds, axis=1)
                     # print('tmp_objectives', tmp_objectives)
                     # when using unique bugs give preference to unique inputs
+
                     if self.use_unique_bugs:
-                        tmp_objectives[:self.tmp_off_type_1_len, 0] += 100
-                        tmp_objectives[:self.tmp_off_type_1_len, 1:] -= 100
+                        tmp_objectives[:self.tmp_off_type_1_len] -= 100*chosen_weights
+
                     # print(len(tmp_objectives), self.tmp_off_type_1_len)
                     # print('tmp_objectives after use_unique_bugs', tmp_objectives)
-                    confs = np.array([-conf_0, conf_1, conf_2])
+
                     tmp_objectives_minus = tmp_objectives - confs
                     tmp_objectives_plus = tmp_objectives + confs
 

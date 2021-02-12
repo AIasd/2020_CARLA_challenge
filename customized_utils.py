@@ -2459,6 +2459,7 @@ def encode_fields(x, labels, labels_to_encode):
         vehicle_types,
     )
 
+
     keywords_dict = {
         "num_of_weathers": len(weather_names),
         "num_of_vehicle_colors": len(vehicle_colors),
@@ -2951,23 +2952,8 @@ def reformat(cur_info):
     return x, objectives, int(is_bug), mask, labels
 
 
-def pretrain_regression_nets(parent_folder, cutoff, cutoff_end):
-    pickle_filename = get_picklename(parent_folder)
+def pretrain_regression_nets(initial_X, initial_objectives_list, objective_weights, xl_ori, xu_ori, labels, customized_constraints, cutoff, cutoff_end):
 
-    with open(pickle_filename, "rb") as f_in:
-        d = pickle.load(f_in)
-
-    xl_ori = d["xl"]
-    xu_ori = d["xu"]
-    customized_constraints = d["customized_constraints"]
-
-    subfolders = get_sorted_subfolders(parent_folder)
-    initial_X, y, initial_objectives_list, mask, labels = load_data(subfolders)
-
-    if cutoff == 0:
-        cutoff = len(initial_X)
-    if cutoff_end > len(initial_X):
-        cutoff_end = len(initial_X)
     # we are not using it so set it to 0 for placeholding
     unique_bugs_len = 0
     partial = True
@@ -3000,28 +2986,39 @@ def pretrain_regression_nets(parent_folder, cutoff, cutoff_end):
         unique_bugs_len,
     ) = param_for_recover_and_decode
 
-    y_0 = np.array([obj[0] for obj in initial_objectives_list])
-    y_1 = np.array([obj[1] for obj in initial_objectives_list])
-    y_2 = np.array([obj[2] for obj in initial_objectives_list])
 
-    y_train_0, y_test_0 = y_0[:cutoff], y_0[cutoff:cutoff_end]
-    y_train_1, y_test_1 = y_1[:cutoff], y_1[cutoff:cutoff_end]
-    y_train_2, y_test_2 = y_2[:cutoff], y_2[cutoff:cutoff_end]
-    # print('pretrain labels_used', labels_used)
-    # print('X_train.shape', X_train.shape)
+    collision_activated = np.sum(objective_weights[:3] != 0) > 0
+    offroad_activated = (np.abs(objective_weights[3]) > 0) | (
+        np.abs(objective_weights[5]) > 0
+    )
+    wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
+        np.abs(objective_weights[5]) > 0
+    )
+    red_light_activated = np.abs(objective_weights[-1]) > 0
+
+    if collision_activated:
+        weight_inds = np.arange(0,3)
+    elif offroad_activated or wronglane_activated:
+        weight_inds = np.arange(3,6)
+    else:
+        raise
+
     from pgd_attack import train_regression_net
+    chosen_weights = objective_weights[weight_inds]
+    clfs = []
+    confs = []
+    for weight_ind in weight_inds:
+        y_i = np.array([obj[weight_ind] for obj in initial_objectives_list])
+        y_train_i, y_test_i = y_i[:cutoff], y_i[cutoff:cutoff_end]
 
-    clf_0, conf_0 = train_regression_net(
-        X_train, y_train_0, X_test, y_test_0, batch_train=200, return_test_err=True
-    )
-    clf_1, conf_1 = train_regression_net(
-        X_train, y_train_1, X_test, y_test_1, batch_train=200, return_test_err=True
-    )
-    clf_2, conf_2 = train_regression_net(
-        X_train, y_train_2, X_test, y_test_2, batch_train=200, return_test_err=True
-    )
+        clf_i, conf_i = train_regression_net(
+            X_train, y_train_i, X_test, y_test_i, batch_train=200, return_test_err=True
+        )
+        clfs.append(clf_i)
+        confs.append(conf_i)
 
-    return clf_0, clf_1, clf_2, conf_0, conf_1, conf_2, standardize
+    confs = np.array(confs)*chosen_weights
+    return clfs, confs, chosen_weights, standardize
 
 
 def get_picklename(parent_folder):
