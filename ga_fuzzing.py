@@ -2663,7 +2663,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     else:
         now = datetime.now()
         p, c, th = check_unique_coeff
-        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th), uncertainty, model_type, 'n_offsprings', str(n_offsprings), 'use_alternate_nn', str(use_alternate_nn), str(explore_iter_num), str(exploit_iter_num), str(high_conf_num), str(low_conf_num), 'diversity_mode', diversity_mode, 'uncertainty_exploration', uncertainty_exploration])
+        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th), uncertainty, model_type, 'n_offsprings', str(n_offsprings), 'use_alternate_nn', str(use_alternate_nn), str(explore_iter_num), str(exploit_iter_num), str(high_conf_num), str(low_conf_num), 'diversity_mode', diversity_mode, 'uncertainty_exploration', uncertainty_exploration, str(mating_max_iterations), str(sample_multiplier)])
 
 
     cur_parent_folder = make_hierarchical_dir([root_folder, algorithm_name, route_type, scenario_type, ego_car_model, time_str])
