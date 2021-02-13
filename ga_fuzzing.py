@@ -1405,8 +1405,12 @@ class MySamplingVectorized(Sampling):
                     if len(X) > n_samples:
                         X = X[:n_samples]
                 else:
-                    prev_X = np.concatenate([tmp_off_and_X, problem.unique_bugs])
-
+                    if len(tmp_off_and_X) > 0 and len(problem.unique_bugs) > 0:
+                        prev_X = np.concatenate([tmp_off_and_X, problem.unique_bugs])
+                    elif len(tmp_off_and_X) > 0:
+                        prev_X = tmp_off_and_X
+                    else:
+                        prev_X = problem.unique_bugs
                     remaining_inds = is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th)
 
                     if len(remaining_inds) == 0:
