@@ -1663,7 +1663,48 @@ customized_routes = {
         "location_list": [(8, 256), (11, 216)],
     },
 }
+def if_violate_constraints_vectorized(X, customized_constraints, labels, verbose=False):
+    labels_to_id = {label: i for i, label in enumerate(labels)}
 
+    keywords = ["coefficients", "labels", "value"]
+    extra_keywords = ["power"]
+
+    if_violate = False
+    violated_constraints = []
+    involved_labels = set()
+
+    X = np.array(X)
+    remaining_inds = np.arange(X.shape[0])
+
+    for i, constraint in enumerate(customized_constraints):
+        for k in keywords:
+            assert k in constraint
+        assert len(constraint["coefficients"]) == len(constraint["labels"])
+
+        ids = np.array([labels_to_id[label] for label in constraint["labels"]])
+
+
+        # x_ids = [x[id] for id in ids]
+        if "powers" in constraint:
+            powers = np.array(constraint["powers"])
+        else:
+            powers = np.array([1 for _ in range(len(ids))])
+
+        coeff = np.array(constraint["coefficients"])
+        # features = np.array(x_ids)
+        # print(X.shape)
+        # print(type(remaining_inds))
+        # print(type(ids))
+        # print(X[remaining_inds, ids].shape)
+        # print(powers.shape)
+        if_violate_current = (
+            np.sum(coeff * np.power(X[remaining_inds[:, None], ids], powers), axis=1) > constraint["value"]
+        )
+        remaining_inds = remaining_inds[if_violate_current==0]
+
+    print('constraints filtering', len(X), '->', len(remaining_inds))
+
+    return remaining_inds
 
 def if_violate_constraints(x, customized_constraints, labels, verbose=False):
     labels_to_id = {label: i for i, label in enumerate(labels)}
@@ -1993,96 +2034,76 @@ def is_distinct(x, X, mask, xl, xu, p, c, th, verbose=True):
                 return False
         return True
 
-# def is_distinct_vectorized(x, X, mask, xl, xu, p, c, th, verbose=True):
-#     verbose = False
-#     if len(X) == 0:
-#         return True
-#     else:
-#         mask_np = np.array(mask)
-#         xl_np = np.array(xl)
-#         xu_np = np.array(xu)
-#         x = np.array(x)
-#         X = np.stack(X)
-#
-#         for i, x_i in enumerate(X):
-#             # if verbose:
-#             #     print(i, '- th prev x checking similarity')
-#             similar = is_similar(
-#                 x,
-#                 x_i,
-#                 mask_np,
-#                 xl_np,
-#                 xu_np,
-#                 p,
-#                 c,
-#                 th,
-#                 verbose=verbose,
-#             )
-#             if similar:
-#                 if verbose:
-#                     print("similar with", i)
-#                 return False
-#         return True
-#
-# def is_similar_vectorized(
-#     x_1,
-#     x_2,
-#     mask,
-#     xl,
-#     xu,
-#     p,
-#     c,
-#     th,
-#     y_i=-1,
-#     y_j=-1,
-#     verbose=False,
-#     labels=[],
-# ):
-#
-#     if y_i == y_j:
-#         eps = 1e-8
-#
-#         # only consider those fields that can change when considering diversity
-#         variant_fields = (xu - xl) > eps
-#         mask = mask[variant_fields]
-#         xl = xl[variant_fields]
-#         xu = xu[variant_fields]
-#         x_1 = x_1[variant_fields]
-#         x_2 = x_2[variant_fields]
-#         variant_fields_num = np.sum(variant_fields)
-#         if verbose:
-#             print(
-#                 variant_fields_num,
-#                 "/",
-#                 len(variant_fields),
-#                 "fields are used for checking similarity",
-#             )
-#
-#         int_inds = mask == "int"
-#         real_inds = mask == "real"
-#         # print(int_inds, real_inds)
-#         int_diff_raw = np.abs(x_1[int_inds] - x_2[int_inds])
-#         int_diff = np.ones(int_diff_raw.shape) * (int_diff_raw > eps)
-#
-#         real_diff_raw = (
-#             np.abs(x_1[real_inds] - x_2[real_inds]) / (np.abs(xu - xl) + eps)[real_inds]
-#         )
-#         # print(int_diff_raw, real_diff_raw)
-#         real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > c)
-#
-#         diff = np.concatenate([int_diff, real_diff])
-#         # print(diff, p)
-#         diff_norm = np.linalg.norm(diff, p)
-#
-#         th_num = np.max([np.round(th * variant_fields_num), 1])
-#         equal = diff_norm < th_num
-#
-#         if verbose:
-#             print("diff_norm, th_num", diff_norm, th_num)
-#
-#     else:
-#         equal = False
-#     return equal
+def is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=True):
+    cur_X = np.array(cur_X)
+    prev_X = np.array(prev_X)
+    eps = 1e-8
+    verbose = False
+    remaining_inds = np.arange(cur_X.shape[0])
+    if len(prev_X) == 0:
+        return remaining_inds
+    else:
+        mask = np.array(mask)
+        xl = np.array(xl)
+        xu = np.array(xu)
+
+        variant_fields = (xu - xl) > eps
+        variant_fields_num = np.sum(variant_fields)
+        th_num = np.max([np.round(th * variant_fields_num), 1])
+
+        mask = mask[variant_fields]
+        xl = xl[variant_fields]
+        xu = xu[variant_fields]
+
+        cur_X = cur_X[:, variant_fields]
+        prev_X = prev_X[:, variant_fields]
+
+        int_inds = mask == "int"
+        real_inds = mask == "real"
+
+
+        xl = np.concatenate([np.zeros(np.sum(int_inds)), xl[real_inds]])
+        xu = np.concatenate([0.99*np.ones(np.sum(int_inds)), xu[real_inds]])
+
+
+        cur_X = np.concatenate([cur_X[:, int_inds], cur_X[:, real_inds]], axis=1) / (np.abs(xu - xl) + eps)
+        prev_X = np.concatenate([prev_X[:, int_inds], prev_X[:, real_inds]], axis=1) / (np.abs(xu - xl) + eps)
+
+
+        cur_X_exp = np.expand_dims(cur_X, axis=1)
+        prev_X_exp = np.expand_dims(prev_X, axis=0)
+
+        diff_raw = np.abs(cur_X_exp - prev_X_exp)
+        diff = np.ones(diff_raw.shape) * (diff_raw > c)
+        diff_norm = np.linalg.norm(diff, p, axis=2)
+        equal = diff_norm < th_num
+        remaining_inds = np.mean(equal, axis=1) == 0
+
+        if len(remaining_inds) == 0:
+            return []
+
+        cur_X_remaining = cur_X[remaining_inds]
+        print('prev X filtering:',cur_X.shape[0], '->', cur_X_remaining.shape[0])
+
+        remaining_inds = np.arange(cur_X.shape[0])[remaining_inds]
+
+        unique_inds = []
+        for i in range(len(remaining_inds)-1):
+            diff_raw = np.abs(np.expand_dims(cur_X_remaining[i], axis=0) - cur_X_remaining[i+1:])
+            diff = np.ones(diff_raw.shape) * (diff_raw > c)
+            diff_norm = np.linalg.norm(diff, p, axis=1)
+            equal = diff_norm < th_num
+            if np.mean(equal) == 0:
+                unique_inds.append(i)
+
+        if len(unique_inds) == 0:
+            return []
+        remaining_inds = remaining_inds[np.array(unique_inds)]
+
+        print('cur X filtering:',cur_X_remaining.shape[0], '->', len(remaining_inds))
+
+        return remaining_inds
+
 
 
 def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, y=[]):

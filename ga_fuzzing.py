@@ -308,7 +308,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, eliminate_duplicates_for_list, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, eliminate_duplicates_for_list, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized
 
 
 from collections import deque
@@ -1184,8 +1184,6 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
 
 
 
-
-
 class MySampling(Sampling):
     '''
     dimension correspondence
@@ -1250,7 +1248,6 @@ class MySampling(Sampling):
         self.check_unique_coeff = check_unique_coeff
         self.sample_multiplier = sample_multiplier
         assert len(self.check_unique_coeff) == 3
-
     def _do(self, problem, n_samples, **kwargs):
         p, c, th = self.check_unique_coeff
         xl = problem.xl
@@ -1327,7 +1324,116 @@ class MySampling(Sampling):
         else:
             X = np.array([])
         print('\n'*3, 'We sampled', X.shape[0], '/', n_samples, 'samples', 'by sampling', sample_time_1, 'times' '\n'*3)
-        # print('\n'*3, 'We sampled', X.shape[0], '/', n_samples, 'samples', 'by sampling', sample_time_1+sample_time_2, 'times' '\n'*3)
+
+        return X
+
+class MySamplingVectorized(Sampling):
+
+    def __init__(self, use_unique_bugs, check_unique_coeff, sample_multiplier=500):
+        self.use_unique_bugs = use_unique_bugs
+        self.check_unique_coeff = check_unique_coeff
+        self.sample_multiplier = sample_multiplier
+        assert len(self.check_unique_coeff) == 3
+    def _do(self, problem, n_samples, **kwargs):
+        p, c, th = self.check_unique_coeff
+        xl = problem.xl
+        xu = problem.xu
+        mask = np.array(problem.mask)
+        labels = problem.labels
+        parameters_distributions = problem.parameters_distributions
+
+        if self.sample_multiplier > 50:
+            max_sample_times = self.sample_multiplier // 50
+            n_samples_sampling = n_samples * 50
+        else:
+            max_sample_times = self.sample_multiplier
+            n_samples_sampling = n_samples
+
+        algorithm = kwargs['algorithm']
+
+        tmp_off = algorithm.tmp_off
+
+        # print(tmp_off)
+        tmp_off_and_X = []
+        if len(tmp_off) > 0:
+            tmp_off = [off.X for off in tmp_off]
+            tmp_off_and_X = tmp_off
+        # print(tmp_off)
+
+
+        def subroutine(X, tmp_off_and_X):
+            def sample_one_feature(typ, lower, upper, dist, label, size=1):
+                assert lower <= upper, label+','+str(lower)+'>'+str(upper)
+                if typ == 'int':
+                    val = rng.integers(lower, upper+1, size=size)
+                elif typ == 'real':
+                    if dist[0] == 'normal':
+                        if dist[1] == None:
+                            mean = (lower+upper)/2
+                        else:
+                            mean = dist[1]
+                        val = rng.normal(mean, dist[2], size=size)
+                    else: # default is uniform
+                        val = rng.random(size=size) * (upper - lower) + lower
+                    val = np.clip(val, lower, upper)
+                return val
+
+            # TBD: temporary
+            sample_time = 0
+            while sample_time < max_sample_times and len(X) < n_samples:
+
+                sample_time += 1
+                cur_X = []
+                for i, dist in enumerate(parameters_distributions):
+                    typ = mask[i]
+                    lower = xl[i]
+                    upper = xu[i]
+                    label = labels[i]
+                    val = sample_one_feature(typ, lower, upper, dist, label, size=n_samples_sampling)
+                    cur_X.append(val)
+                cur_X = np.swapaxes(np.stack(cur_X),0,1)
+
+
+                remaining_inds = if_violate_constraints_vectorized(cur_X, problem.customized_constraints, problem.labels)
+                if len(remaining_inds) == 0:
+                    continue
+
+                cur_X = cur_X[remaining_inds]
+
+                if not self.use_unique_bugs:
+                    X.extend(cur_X)
+                    if len(X) > n_samples:
+                        X = X[:n_samples]
+                else:
+                    prev_X = np.concatenate([tmp_off_and_X, problem.unique_bugs])
+
+                    remaining_inds = is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th)
+
+                    if len(remaining_inds) == 0:
+                        continue
+                    else:
+                        cur_X = cur_X[remaining_inds]
+                        X.extend(cur_X)
+                        if len(X) > n_samples:
+                            X = X[:n_samples]
+                        if len(tmp_off) > 0:
+                            tmp_off_and_X = tmp_off + X
+                        else:
+                            tmp_off_and_X = X
+
+
+            return X, sample_time
+
+
+        X = []
+        X, sample_time_1 = subroutine(X, tmp_off_and_X)
+
+        if len(X) > 0:
+            X = np.stack(X)
+        else:
+            X = np.array([])
+        print('\n'*3, 'We sampled', X.shape[0], '/', n_samples, 'samples', 'by sampling', sample_time_1, 'times' '\n'*3)
+
         return X
 
 
@@ -1394,17 +1500,22 @@ class MyMating(Mating):
             # repair the individuals if necessary - disabled if repair is NoRepair
             _off_first = self.repair.do(problem, _off, **kwargs)
 
+            # Previous
             _off = []
             for x in _off_first:
                 if not if_violate_constraints(x.X, problem.customized_constraints, problem.labels)[0]:
                     _off.append(x.X)
+
             _off = pop.new("X", _off)
 
+            # Previous
             # eliminate the duplicates - disabled if it is NoRepair
             if self.use_unique_bugs and len(_off) > 0:
                 _off, no_duplicate, _ = self.eliminate_duplicates.do(_off, problem.unique_bugs, off, return_indices=True, to_itself=True)
                 _parents = _parents[no_duplicate]
                 assert len(_parents)==len(_off)
+
+
 
 
             # if more offsprings than necessary - truncate them randomly
@@ -1451,6 +1562,111 @@ class MyMating(Mating):
 
         return _off, parents_obj
 
+class MyMatingVectorized(Mating):
+    def __init__(self,
+                 selection,
+                 crossover,
+                 mutation,
+                 use_unique_bugs,
+                 emcmc,
+                 **kwargs):
+
+        super().__init__(selection, crossover, mutation, **kwargs)
+        self.use_unique_bugs = use_unique_bugs
+        self.mating_max_iterations = mating_max_iterations
+        self.emcmc = emcmc
+
+
+    def do(self, problem, pop, n_offsprings, **kwargs):
+
+        if self.mating_max_iterations >= 5:
+            mating_max_iterations = self.mating_max_iterations // 5
+            n_offsprings_sampling = n_offsprings * 5
+        else:
+            mating_max_iterations = mating_max_iterations
+            n_offsprings_sampling = n_offsprings
+
+        # the population object to be used
+        off = pop.new()
+        parents = pop.new()
+
+        # infill counter - counts how often the mating needs to be done to fill up n_offsprings
+        n_infills = 0
+
+        # iterate until enough offsprings are created
+        while len(off) < n_offsprings:
+            # how many offsprings are remaining to be created
+            n_remaining = n_offsprings - len(off)
+
+            # do the mating
+            _off, _parents = self._do(problem, pop, n_offsprings_sampling, **kwargs)
+
+
+            # repair the individuals if necessary - disabled if repair is NoRepair
+            _off_first = self.repair.do(problem, _off, **kwargs)
+
+
+            # Vectorized
+            _off_X = np.array([x.X for x in _off_first])
+            remaining_inds = if_violate_constraints_vectorized(_off_X, problem.customized_constraints, problem.labels, verbose=False)
+            _off_X = _off_X[remaining_inds]
+
+            _off = _off_first[remaining_inds]
+            _parents = _parents[remaining_inds]
+
+            # Vectorized
+            if self.use_unique_bugs and len(_off_X) > 0:
+                remaining_inds = is_distinct_vectorized(_off_X, problem.unique_bugs, problem.mask, problem.xl, problem.xu, problem.p, problem.c, problem.th)
+
+                _off = _off[remaining_inds]
+                _parents = _parents[remaining_inds]
+                assert len(_parents)==len(_off)
+
+
+
+            # if more offsprings than necessary - truncate them randomly
+            if len(off) + len(_off) > n_offsprings:
+                # IMPORTANT: Interestingly, this makes a difference in performance
+                n_remaining = n_offsprings - len(off)
+                _off = _off[:n_remaining]
+                _parents = _parents[:n_remaining]
+
+
+            # add to the offsprings and increase the mating counter
+            off = Population.merge(off, _off)
+            parents = Population.merge(parents, _parents)
+            n_infills += 1
+
+            # if no new offsprings can be generated within a pre-specified number of generations
+            if n_infills > mating_max_iterations:
+                break
+
+        # assert len(parents)==len(off)
+        print('Mating finds', len(off), 'offsprings after doing', n_infills-1, '/', mating_max_iterations, 'mating iterations')
+        return off, parents
+
+
+
+    # only to get parents
+    def _do(self, problem, pop, n_offsprings, parents=None, **kwargs):
+
+        # if the parents for the mating are not provided directly - usually selection will be used
+        if parents is None:
+            # how many parents need to be select for the mating - depending on number of offsprings remaining
+            n_select = math.ceil(n_offsprings / self.crossover.n_offsprings)
+            # select the parents for the mating - just an index array
+            parents = self.selection.do(pop, n_select, self.crossover.n_parents, **kwargs)
+            parents_obj = pop[parents].reshape([-1, 1]).squeeze()
+        else:
+            parents_obj = parents
+
+
+        # do the crossover using the parents index and the population - additional data provided if necessary
+        _off = self.crossover.do(problem, pop, parents, **kwargs)
+        # do the mutation on the offsprings created through crossover
+        _off = self.mutation.do(problem, _off, **kwargs)
+
+        return _off, parents_obj
 
 
 class NSGA2_DT(NSGA2):
@@ -2496,7 +2712,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     else:
         eliminate_duplicates = NoDuplicateElimination()
 
-    mating = MyMating(selection,
+    mating = MyMatingVectorized(selection,
                     crossover,
                     mutation,
                     use_unique_bugs,
@@ -2506,9 +2722,9 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                     mating_max_iterations=mating_max_iterations)
 
 
-    sampling = MySampling(use_unique_bugs=use_unique_bugs, check_unique_coeff=problem.check_unique_coeff, sample_multiplier=sample_multiplier)
+    sampling = MySamplingVectorized(use_unique_bugs=use_unique_bugs, check_unique_coeff=problem.check_unique_coeff, sample_multiplier=sample_multiplier)
 
-    plain_sampling = MySampling(use_unique_bugs=False, check_unique_coeff=problem.check_unique_coeff, sample_multiplier=sample_multiplier)
+    plain_sampling = MySamplingVectorized(use_unique_bugs=False, check_unique_coeff=problem.check_unique_coeff, sample_multiplier=sample_multiplier)
 
     # TBD: customize mutation and crossover to better fit our problem. e.g.
     # might deal with int and real separately
