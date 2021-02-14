@@ -308,7 +308,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, eliminate_duplicates_for_list, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, eliminate_duplicates_for_list, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized, eliminate_repetitive_vectorized
 
 
 from collections import deque
@@ -416,15 +416,18 @@ parser.add_argument('--warm_up_len', type=int, default=-1)
 parser.add_argument('--use_alternate_nn', type=int, default=0)
 parser.add_argument('--diversity_mode', type=str, default='none')
 
-parser.add_argument('--regression_nn_data_path', type=str, default=None)
-parser.add_argument('--regression_nn_data_len', type=int, default=0)
+parser.add_argument('--regression_nn_use_running_data', type=int, default=1)
 
 parser.add_argument('--adv_exploitation_only', type=int, default=0)
 
-parser.add_argument('--sample_multiplier', type=int, default=20)
-parser.add_argument('--mating_max_iterations', type=int, default=20)
+parser.add_argument('--sample_multiplier', type=int, default=100)
+parser.add_argument('--mating_max_iterations', type=int, default=100)
 
 parser.add_argument('--uncertainty_exploration', type=str, default='confidence')
+
+parser.add_argument('--only_run_unique_cases', type=int, default=1)
+
+parser.add_argument('--consider_interested_bugs', type=int, default=1)
 
 arguments = parser.parse_args()
 
@@ -465,8 +468,7 @@ exploit_iter_num = arguments.exploit_iter_num
 high_conf_num = arguments.high_conf_num
 low_conf_num = arguments.low_conf_num
 
-regression_nn_data_path = arguments.regression_nn_data_path
-regression_nn_data_len = arguments.regression_nn_data_len
+regression_nn_use_running_data = arguments.regression_nn_use_running_data
 
 adv_exploitation_only = arguments.adv_exploitation_only
 
@@ -513,7 +515,9 @@ check_unique_coeff = arguments.check_unique_coeff
 has_run_num = arguments.has_run_num
 finish_after_has_run = True
 
+only_run_unique_cases = arguments.only_run_unique_cases
 
+consider_interested_bugs = arguments.consider_interested_bugs
 
 os.environ['PYTHONHASHSEED'] = '0'
 os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
@@ -584,7 +588,7 @@ for customizing weather choices, static_types, pedestrian_types, vehicle_types, 
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, cumulative_info=None, objective_weights=default_objective_weights, check_unique_coeff=default_check_unique_coeff):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, cumulative_info=None, objective_weights=default_objective_weights, check_unique_coeff=default_check_unique_coeff, consider_interested_bugs=1):
 
         customized_parameters_bounds = customized_config['customized_parameters_bounds']
         customized_parameters_distributions = customized_config['customized_parameters_distributions']
@@ -606,7 +610,7 @@ class MyProblem(Problem):
         self.y_list = []
         self.F_list = []
 
-
+        self.consider_interested_bugs = consider_interested_bugs
 
         self.scheduler_port = scheduler_port
         self.dashboard_address = dashboard_address
@@ -637,6 +641,7 @@ class MyProblem(Problem):
 
             self.bugs = cumulative_info['bugs']
             self.unique_bugs = cumulative_info['unique_bugs']
+            self.interested_unique_bugs = cumulative_info['interested_unique_bugs']
 
             self.bugs_type_list = cumulative_info['bugs_type_list']
             self.bugs_inds_list = cumulative_info['bugs_inds_list']
@@ -652,6 +657,7 @@ class MyProblem(Problem):
             self.time_list = []
             self.bugs = []
             self.unique_bugs = []
+            self.interested_unique_bugs = []
 
             self.bugs_type_list = []
             self.bugs_inds_list = []
@@ -969,11 +975,35 @@ class MyProblem(Problem):
 
             # print(unique_collision_bugs, unique_offroad_bugs, unique_wronglane_bugs, type(unique_collision_bugs), type(unique_offroad_bugs), type(unique_wronglane_bugs))
             self.unique_bugs = unique_collision_bugs + unique_offroad_bugs + unique_wronglane_bugs + unique_redlight_bugs
+
+
+            if self.consider_interested_bugs:
+                collision_activated = np.sum(objective_weights[:3] != 0) > 0
+                offroad_activated = (np.abs(objective_weights[3]) > 0) | (
+                    np.abs(objective_weights[5]) > 0
+                )
+                wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
+                    np.abs(objective_weights[5]) > 0
+                )
+                red_light_activated = np.abs(objective_weights[-1]) > 0
+                self.interested_unique_bugs = []
+                if collision_activated:
+                    self.interested_unique_bugs += unique_collision_bugs
+                if offroad_activated:
+                    self.interested_unique_bugs += unique_offroad_bugs
+                if wronglane_activated:
+                    self.interested_unique_bugs += unique_wronglane_bugs
+                if red_light_activated:
+                    self.interested_unique_bugs += unique_redlight_bugs
+            else:
+                self.interested_unique_bugs = self.unique_bugs
+
             unique_bugs_inds_list = unique_collision_bugs_inds_list + unique_offroad_bugs_inds_list + unique_wronglane_bugs_inds_list + unique_redlight_bugs_inds_list
 
 
             num_of_bugs = len(self.bugs)
             num_of_unique_bugs = len(self.unique_bugs)
+            num_of_interested_unique_bugs = len(self.interested_unique_bugs)
 
             self.bugs_num_list.append(num_of_bugs)
             self.unique_bugs_num_list.append(num_of_unique_bugs)
@@ -987,6 +1017,7 @@ class MyProblem(Problem):
 
 
             print(self.counter, self.has_run, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_collisions, num_of_offroad, num_of_wronglane, num_of_redlight, mean_objectives_this_generation, unique_collision_num, unique_offroad_num, unique_wronglane_num, unique_redlight_num)
+            print(num_of_interested_unique_bugs)
             print(self.bugs_inds_list)
             print(unique_bugs_inds_list)
 
@@ -997,7 +1028,7 @@ class MyProblem(Problem):
                         print(X.shape[0], i, j, 'same')
 
             with open(mean_objectives_across_generations_path, 'a') as f_out:
-                f_out.write(','.join([str(x) for x in [self.counter, self.has_run, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_collisions, num_of_offroad, num_of_wronglane, num_of_redlight, unique_collision_num, unique_offroad_num, unique_wronglane_num, unique_redlight_num]]+[str(x) for x in mean_objectives_this_generation])+'\n')
+                f_out.write(','.join([str(x) for x in [self.counter, self.has_run, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_collisions, num_of_offroad, num_of_wronglane, num_of_redlight, unique_collision_num, unique_offroad_num, unique_wronglane_num, unique_redlight_num, num_of_interested_unique_bugs]]+[str(x) for x in mean_objectives_this_generation])+'\n')
                 f_out.write(';'.join([str(ind) for ind in unique_bugs_inds_list])+' objective_weights : '+str(self.objective_weights)+'\n')
             print('+'*100)
             print('\n'*10)
@@ -1300,7 +1331,7 @@ class MySampling(Sampling):
 
 
                 if not if_violate_constraints(x, problem.customized_constraints, problem.labels)[0]:
-                    if not self.use_unique_bugs or (is_distinct(x, tmp_off_and_X, mask, xl, xu, p, c, th) and is_distinct(x, problem.unique_bugs, mask, xl, xu, p, c, th)):
+                    if not self.use_unique_bugs or (is_distinct(x, tmp_off_and_X, mask, xl, xu, p, c, th) and is_distinct(x, problem.interested_unique_bugs, mask, xl, xu, p, c, th)):
                         x = np.array(x).astype(float)
                         X.append(x)
                         if len(tmp_off) > 0:
@@ -1406,11 +1437,11 @@ class MySamplingVectorized(Sampling):
                         X = X[:n_samples]
                 else:
                     if len(tmp_off_and_X) > 0 and len(problem.unique_bugs) > 0:
-                        prev_X = np.concatenate([tmp_off_and_X, problem.unique_bugs])
+                        prev_X = np.concatenate([tmp_off_and_X, problem.interested_unique_bugs])
                     elif len(tmp_off_and_X) > 0:
                         prev_X = tmp_off_and_X
                     else:
-                        prev_X = problem.unique_bugs
+                        prev_X = problem.interested_unique_bugs
                     remaining_inds = is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th)
 
                     if len(remaining_inds) == 0:
@@ -1620,7 +1651,7 @@ class MyMatingVectorized(Mating):
 
             # Vectorized
             if self.use_unique_bugs and len(_off_X) > 0:
-                remaining_inds = is_distinct_vectorized(_off_X, problem.unique_bugs, problem.mask, problem.xl, problem.xu, problem.p, problem.c, problem.th)
+                remaining_inds = is_distinct_vectorized(_off_X, problem.interested_unique_bugs, problem.mask, problem.xl, problem.xu, problem.p, problem.c, problem.th)
 
                 _off = _off[remaining_inds]
                 _parents = _parents[remaining_inds]
@@ -1725,12 +1756,13 @@ class NSGA2_DT(NSGA2):
         self.use_alternate_nn = use_alternate_nn
         self.diversity_mode = diversity_mode
 
-        self.regression_nn_data_path = regression_nn_data_path
-        self.regression_nn_data_len = regression_nn_data_len
+        self.regression_nn_use_running_data = regression_nn_use_running_data
 
         self.adv_exploitation_only = adv_exploitation_only
 
         self.uncertainty_exploration = uncertainty_exploration
+
+        self.only_run_unique_cases = only_run_unique_cases
 
     def set_off(self):
         self.tmp_off = []
@@ -1806,22 +1838,23 @@ class NSGA2_DT(NSGA2):
                     # only consider collision case for now
                     from customized_utils import pretrain_regression_nets
 
-                    if self.regression_nn_data_path:
-                        subfolders = get_sorted_subfolders(self.regression_nn_data_path)
+                    if self.regression_nn_use_running_data:
+                        initial_X = self.all_pop_run_X
+                        initial_objectives_list = self.problem.objectives_list
+                        cutoff = len(initial_X)
+                        cutoff_end = cutoff
+                    else:
+                        subfolders = get_sorted_subfolders(self.warm_up_data_path)
                         initial_X, _, initial_objectives_list, _, _ = load_data(subfolders)
 
-                        cutoff = self.regression_nn_data_len
-                        cutoff_end = self.regression_nn_data_len + 100
+                        cutoff = self.warm_up_data_len
+                        cutoff_end = self.warm_up_data_len + 100
 
                         if cutoff == 0:
                             cutoff = len(initial_X)
                         if cutoff_end > len(initial_X):
                             cutoff_end = len(initial_X)
-                    else:
-                        initial_X = self.all_pop_run_X
-                        initial_objectives_list = self.problem.objectives_list
-                        cutoff = len(initial_X)
-                        cutoff_end = cutoff
+
 
                     # print('self.problem.labels', self.problem.labels)
                     clfs, confs, chosen_weights, standardize_prev = pretrain_regression_nets(initial_X, initial_objectives_list, self.problem.objective_weights, self.problem.xl, self.problem.xu, self.problem.labels, self.problem.customized_constraints, cutoff, cutoff_end)
@@ -1839,7 +1872,7 @@ class NSGA2_DT(NSGA2):
                 partial = True
                 # print('initial_X.shape', np.array(initial_X).shape, cutoff, cutoff_end)
                 # print('len(self.problem.labels)', len(self.problem.labels))
-                X_train, X_test, xl, xu, labels_used, standardize, one_hot_fields_len, param_for_recover_and_decode = process_X(initial_X, self.problem.labels, self.problem.xl, self.problem.xu, cutoff, cutoff_end, partial, len(self.problem.unique_bugs), standardize_prev=standardize_prev)
+                X_train, X_test, xl, xu, labels_used, standardize, one_hot_fields_len, param_for_recover_and_decode = process_X(initial_X, self.problem.labels, self.problem.xl, self.problem.xu, cutoff, cutoff_end, partial, len(self.problem.interested_unique_bugs), standardize_prev=standardize_prev)
                 # print('X_train.shape[0]', X_train.shape[0])
                 # print('labels_used', labels_used)
                 # print('process_X X_train.shape, X_test.shape', X_train.shape, X_test.shape)
@@ -2095,11 +2128,8 @@ class NSGA2_DT(NSGA2):
                                 if diversity_mode == 'nn_rep':
                                     d_list = calculate_rep_d(clf, X_train, X_test[mid_inds])
                                     if self.use_unique_bugs:
-                                        unique_inds = []
-                                        for i, mid_conf_config in enumerate(X_test_ori[mid_inds]):
-                                            if is_distinct(mid_conf_config, self.problem.unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th):
-                                                unique_inds.append(i)
-                                        unique_inds = np.array(unique_inds)
+                                        unique_inds = is_distinct_vectorized(X_test_ori[mid_inds], self.problem.interested_unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th)
+
                                         print('len(unique_inds)', len(unique_inds))
                                         d_list[unique_inds] += np.max(d_list)
                                     print('X_train.shape[0]', X_train.shape[0])
@@ -2141,12 +2171,8 @@ class NSGA2_DT(NSGA2):
 
                                 scores = clf.predict_proba(high_conf_configs_stack_np)[:, 1]
                                 if self.use_unique_bugs:
-                                    unique_inds = []
-                                    for i, high_conf_config in enumerate(high_conf_configs_ori_stack_np):
-                                        if is_distinct(high_conf_config, self.problem.unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th):
-                                            unique_inds.append(i)
+                                    unique_inds = is_distinct_vectorized(high_conf_configs_ori_stack_np, self.problem.interested_unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th)
 
-                                    unique_inds = np.array(unique_inds)
                                     print('len(unique_inds)', len(unique_inds))
                                     if len(unique_inds) > 0:
                                         scores[unique_inds] += np.max(scores)
@@ -2203,7 +2229,7 @@ class NSGA2_DT(NSGA2):
 
                             if len(X_test_pgd) <= self.tmp_off_type_1_len:
                                 y_zeros = np.zeros(X_test_pgd.shape[0])
-                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id, X_test_pgd_ori=X_test_pgd_ori)
+                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.interested_unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id, X_test_pgd_ori=X_test_pgd_ori)
 
                             else:
                                 y_zeros_3 = np.zeros(X_test_pgd.shape[0]-self.tmp_off_type_1_len)
@@ -2213,7 +2239,7 @@ class NSGA2_DT(NSGA2):
                                 if self.tmp_off_type_1_len > 0:
                                     y_zeros_1 = np.zeros(self.tmp_off_type_1_len)
 
-                                    X_test_adv_1, new_bug_pred_prob_list_1, initial_bug_pred_prob_list_1 = pgd_attack(clf, X_test_pgd[:self.tmp_off_type_1_len], y_zeros_1, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id, X_test_pgd_ori=X_test_pgd_ori)
+                                    X_test_adv_1, new_bug_pred_prob_list_1, initial_bug_pred_prob_list_1 = pgd_attack(clf, X_test_pgd[:self.tmp_off_type_1_len], y_zeros_1, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.interested_unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id, X_test_pgd_ori=X_test_pgd_ori)
 
                                     X_test_adv = np.concatenate([X_test_adv, X_test_adv_1])
                                     new_bug_pred_prob_list = np.concatenate([new_bug_pred_prob_list, new_bug_pred_prob_list_1])
@@ -2277,6 +2303,11 @@ class NSGA2_DT(NSGA2):
         else:
             self.off = self.tmp_off[:self.pop_size]
 
+        if self.only_run_unique_cases:
+            X_off = [off_i.X for off_i in self.off]
+            remaining_inds = eliminate_repetitive_vectorized(X_off, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th)
+            self.off = self.off[remaining_inds]
+
         self.off.set("n_gen", self.n_gen)
 
     # mainly used to modify survival
@@ -2333,16 +2364,14 @@ class NSGA2_DT(NSGA2):
             xu = self.problem.xu
             p, c, th = self.problem.p, self.problem.c, self.problem.th
             unique_coeff = (p, c, th)
-            unique_bugs, (self.problem.bugs, self.problem.bugs_type_list, self.problem.bugs_inds_list) = get_unique_bugs(
-                X, objectives_list, mask, xl, xu, unique_coeff, return_bug_info=True
+            self.problem.unique_bugs, (self.problem.bugs, self.problem.bugs_type_list, self.problem.bugs_inds_list, self.problem.interested_unique_bugs) = get_unique_bugs(
+                X, objectives_list, mask, xl, xu, unique_coeff, self.problem.objective_weights, return_bug_info=True, consider_interested_bugs=self.problem.consider_interested_bugs
             )
 
-            print('type(X), type(objectives_list), type(unique_bugs)', type(X), type(objectives_list), type(unique_bugs))
+            print('type(X), type(objectives_list), type(unique_bugs)', type(X), type(objectives_list), type(self.problem.unique_bugs))
 
             self.all_pop_run_X = np.array(X)
             self.problem.objectives_list = objectives_list.tolist()
-            self.problem.unique_bugs = unique_bugs
-
 
 
             X_list = X[-self.pop_size:]
@@ -2667,7 +2696,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     else:
         now = datetime.now()
         p, c, th = check_unique_coeff
-        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th), uncertainty, model_type, 'n_offsprings', str(n_offsprings), 'use_alternate_nn', str(use_alternate_nn), str(explore_iter_num), str(exploit_iter_num), str(high_conf_num), str(low_conf_num), 'diversity_mode', diversity_mode, 'uncertainty_exploration', uncertainty_exploration, str(mating_max_iterations), str(sample_multiplier)])
+        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th), uncertainty, model_type, 'n_offsprings', str(n_offsprings), 'use_alternate_nn', str(use_alternate_nn), str(explore_iter_num), str(exploit_iter_num), str(high_conf_num), str(low_conf_num), 'diversity_mode', diversity_mode, 'uncertainty_exploration', uncertainty_exploration, str(mating_max_iterations), str(sample_multiplier), str(only_run_unique_cases)])
 
 
     cur_parent_folder = make_hierarchical_dir([root_folder, algorithm_name, route_type, scenario_type, ego_car_model, time_str])
@@ -2690,7 +2719,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     else:
         problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, non_bug_parent_folder=non_bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, scenario_file=scenario_file, ego_car_model=ego_car_model, scheduler_port=scheduler_port, dashboard_address=dashboard_address, customized_config=customized_d, ports=ports, episode_max_time=episode_max_time,
         call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, cumulative_info=cumulative_info, objective_weights=objective_weights,
-        check_unique_coeff=check_unique_coeff)
+        check_unique_coeff=check_unique_coeff, consider_interested_bugs=consider_interested_bugs)
 
 
 
@@ -2758,10 +2787,10 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                       warm_up_len=warm_up_len,
                       use_alternate_nn=use_alternate_nn,
                       diversity_mode=diversity_mode,
-                      regression_nn_data_path=regression_nn_data_path,
-                      regression_nn_data_len=regression_nn_data_len,
+                      regression_nn_use_running_data=regression_nn_use_running_data,
                       adv_exploitation_only=adv_exploitation_only,
-                      uncertainty_exploration=uncertainty_exploration)
+                      uncertainty_exploration=uncertainty_exploration,
+                      only_run_unique_cases=only_run_unique_cases)
 
 
     if termination_condition == 'generations':
@@ -2852,6 +2881,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         'time_list': problem.time_list,
         'bugs': problem.bugs,
         'unique_bugs': problem.unique_bugs,
+        'interested_unique_bugs': problem.interested_unique_bugs,
         'bugs_type_list': problem.bugs_type_list,
         'bugs_inds_list': problem.bugs_inds_list,
         'bugs_num_list': problem.bugs_num_list,

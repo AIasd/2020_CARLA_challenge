@@ -2083,12 +2083,14 @@ def is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=True):
             return []
 
         cur_X_remaining = cur_X[remaining_inds]
-        print('prev X filtering:',cur_X.shape[0], '->', cur_X_remaining.shape[0])
+        if verbose:
+            print('prev X filtering:',cur_X.shape[0], '->', cur_X_remaining.shape[0])
 
         remaining_inds = np.arange(cur_X.shape[0])[remaining_inds]
 
+
         unique_inds = []
-        for i in range(len(remaining_inds)-1):
+        for i in range(len(cur_X_remaining)-1):
             diff_raw = np.abs(np.expand_dims(cur_X_remaining[i], axis=0) - cur_X_remaining[i+1:])
             diff = np.ones(diff_raw.shape) * (diff_raw > c)
             diff_norm = np.linalg.norm(diff, p, axis=1)
@@ -2099,12 +2101,58 @@ def is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=True):
         if len(unique_inds) == 0:
             return []
         remaining_inds = remaining_inds[np.array(unique_inds)]
-
-        print('cur X filtering:',cur_X_remaining.shape[0], '->', len(remaining_inds))
+        if verbose:
+            print('cur X filtering:',cur_X_remaining.shape[0], '->', len(remaining_inds))
 
         return remaining_inds
 
+def eliminate_repetitive_vectorized(cur_X, mask, xl, xu, p, c, th, verbose=True):
+    cur_X = np.array(cur_X)
+    eps = 1e-8
+    verbose = False
+    remaining_inds = np.arange(cur_X.shape[0])
+    if len(cur_X) == 0:
+        return remaining_inds
+    else:
+        mask = np.array(mask)
+        xl = np.array(xl)
+        xu = np.array(xu)
 
+        variant_fields = (xu - xl) > eps
+        variant_fields_num = np.sum(variant_fields)
+        th_num = np.max([np.round(th * variant_fields_num), 1])
+
+        mask = mask[variant_fields]
+        xl = xl[variant_fields]
+        xu = xu[variant_fields]
+
+        cur_X = cur_X[:, variant_fields]
+
+        int_inds = mask == "int"
+        real_inds = mask == "real"
+
+        xl = np.concatenate([np.zeros(np.sum(int_inds)), xl[real_inds]])
+        xu = np.concatenate([0.99*np.ones(np.sum(int_inds)), xu[real_inds]])
+
+        cur_X = np.concatenate([cur_X[:, int_inds], cur_X[:, real_inds]], axis=1) / (np.abs(xu - xl) + eps)
+
+
+        unique_inds = []
+        for i in range(len(cur_X)-1):
+            diff_raw = np.abs(np.expand_dims(cur_X[i], axis=0) - cur_X[i+1:])
+            diff = np.ones(diff_raw.shape) * (diff_raw > c)
+            diff_norm = np.linalg.norm(diff, p, axis=1)
+            equal = diff_norm < th_num
+            if np.mean(equal) == 0:
+                unique_inds.append(i)
+
+        if len(unique_inds) == 0:
+            return []
+        remaining_inds = np.array(unique_inds)
+        if verbose:
+            print('cur X filtering:',cur_X.shape[0], '->', len(remaining_inds))
+
+        return remaining_inds
 
 def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, y=[]):
 
@@ -2710,7 +2758,7 @@ def process_specific_bug(
 
 
 def get_unique_bugs(
-    X, objectives_list, mask, xl, xu, unique_coeff, return_indices=False, return_bug_info=False
+    X, objectives_list, mask, xl, xu, unique_coeff, objective_weights, return_indices=False, return_bug_info=False, consider_interested_bugs=1
 ):
     p, c, th = unique_coeff
     bugs_type_list = []
@@ -2775,6 +2823,28 @@ def get_unique_bugs(
         + unique_redlight_bugs_inds_list
     )
 
+    if consider_interested_bugs:
+        collision_activated = np.sum(objective_weights[:3] != 0) > 0
+        offroad_activated = (np.abs(objective_weights[3]) > 0) | (
+            np.abs(objective_weights[5]) > 0
+        )
+        wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
+            np.abs(objective_weights[5]) > 0
+        )
+        red_light_activated = np.abs(objective_weights[-1]) > 0
+
+        interested_unique_bugs = []
+        if collision_activated:
+            interested_unique_bugs += unique_collision_bugs
+        if offroad_activated:
+            interested_unique_bugs += unique_offroad_bugs
+        if wronglane_activated:
+            interested_unique_bugs += unique_wronglane_bugs
+        if red_light_activated:
+            interested_unique_bugs += unique_redlight_bugs
+    else:
+        interested_unique_bugs = unique_bugs
+
     print(
         "unique bugs num:",
         unique_bugs_num,
@@ -2784,7 +2854,7 @@ def get_unique_bugs(
         unique_redlight_num,
     )
     if return_bug_info:
-        return unique_bugs, (bugs, bugs_type_list, bugs_inds_list)
+        return unique_bugs, (bugs, bugs_type_list, bugs_inds_list, interested_unique_bugs)
     elif return_indices:
         return unique_bugs, unique_bugs_inds_list
     else:
