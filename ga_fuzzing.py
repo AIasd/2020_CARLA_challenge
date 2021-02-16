@@ -386,7 +386,7 @@ parser.add_argument("--episode_max_time", type=int, default=60)
 parser.add_argument("--n_gen", type=int, default=2)
 parser.add_argument("--pop_size", type=int, default=100)
 parser.add_argument("--survival_multiplier", type=int, default=1)
-parser.add_argument("--n_offsprings", type=int, default=500)
+parser.add_argument("--n_offsprings", type=int, default=300)
 parser.add_argument("--has_run_num", type=int, default=1000)
 parser.add_argument("--outer_iterations", type=int, default=3)
 parser.add_argument('--objective_weights', nargs='+', type=float, default=default_objective_weights)
@@ -408,8 +408,8 @@ parser.add_argument('--model_type', type=str, default='one_output')
 
 parser.add_argument('--explore_iter_num', type=int, default=2)
 parser.add_argument('--exploit_iter_num', type=int, default=1)
-parser.add_argument('--high_conf_num', type=int, default=100)
-parser.add_argument('--low_conf_num', type=int, default=100)
+parser.add_argument('--high_conf_num', type=int, default=60)
+parser.add_argument('--low_conf_num', type=int, default=60)
 
 parser.add_argument('--warm_up_path', type=str, default=None)
 parser.add_argument('--warm_up_len', type=int, default=-1)
@@ -493,7 +493,7 @@ global_n_gen = arguments.n_gen
 pop_size = arguments.pop_size
 survival_multiplier = arguments.survival_multiplier
 n_offsprings = arguments.n_offsprings
-# only used when algorithm_name is nsga2-dt
+# only used when algorithm_name is nsga2-dt or nsga2-un-dt
 outer_iterations = arguments.outer_iterations
 
 if 'un' in algorithm_name:
@@ -1039,7 +1039,9 @@ class MyProblem(Problem):
             # save intermediate results
             if len(self.x_list) > 0:
                 X = np.stack(self.x_list)
-                F = np.stack(self.F_list)
+                # print(X.shape)
+                # print('self.F_list', self.F_list)
+                F = np.concatenate(self.F_list)
                 objectives = np.stack(self.objectives_list)
             else:
                 X = []
@@ -1373,7 +1375,7 @@ class MySamplingVectorized(Sampling):
         labels = problem.labels
         parameters_distributions = problem.parameters_distributions
 
-        if self.sample_multiplier > 50:
+        if self.sample_multiplier >= 50:
             max_sample_times = self.sample_multiplier // 50
             n_samples_sampling = n_samples * 50
         else:
@@ -1436,12 +1438,13 @@ class MySamplingVectorized(Sampling):
                     if len(X) > n_samples:
                         X = X[:n_samples]
                 else:
-                    if len(tmp_off_and_X) > 0 and len(problem.unique_bugs) > 0:
-                        prev_X = np.concatenate([tmp_off_and_X, problem.interested_unique_bugs])
+                    if len(tmp_off_and_X) > 0 and len(problem.interested_unique_bugs) > 0:
+                        prev_X = np.concatenate([problem.interested_unique_bugs, tmp_off_and_X])
                     elif len(tmp_off_and_X) > 0:
                         prev_X = tmp_off_and_X
                     else:
                         prev_X = problem.interested_unique_bugs
+                    # print('prev_X.shape', prev_X.shape)
                     remaining_inds = is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th)
 
                     if len(remaining_inds) == 0:
@@ -1618,7 +1621,7 @@ class MyMatingVectorized(Mating):
             mating_max_iterations = self.mating_max_iterations // 5
             n_offsprings_sampling = n_offsprings * 5
         else:
-            mating_max_iterations = mating_max_iterations
+            mating_max_iterations = self.mating_max_iterations
             n_offsprings_sampling = n_offsprings
 
         # the population object to be used
@@ -1630,6 +1633,10 @@ class MyMatingVectorized(Mating):
 
         # iterate until enough offsprings are created
         while len(off) < n_offsprings:
+            # if no new offsprings can be generated within a pre-specified number of generations
+            if n_infills >= mating_max_iterations:
+                break
+
             # how many offsprings are remaining to be created
             n_remaining = n_offsprings - len(off)
 
@@ -1650,8 +1657,19 @@ class MyMatingVectorized(Mating):
             _parents = _parents[remaining_inds]
 
             # Vectorized
-            if self.use_unique_bugs and len(_off_X) > 0:
-                remaining_inds = is_distinct_vectorized(_off_X, problem.interested_unique_bugs, problem.mask, problem.xl, problem.xu, problem.p, problem.c, problem.th)
+            if self.use_unique_bugs:
+                if len(_off_X) == 0:
+                    continue
+
+                if len(off) > 0:
+                    prev_X = np.concatenate([np.array([x.X for x in off]), problem.interested_unique_bugs])
+                else:
+                    prev_X = problem.interested_unique_bugs
+
+                remaining_inds = is_distinct_vectorized(_off_X, prev_X, problem.mask, problem.xl, problem.xu, problem.p, problem.c, problem.th)
+
+                if len(remaining_inds) == 0:
+                    continue
 
                 _off = _off[remaining_inds]
                 _parents = _parents[remaining_inds]
@@ -1672,12 +1690,10 @@ class MyMatingVectorized(Mating):
             parents = Population.merge(parents, _parents)
             n_infills += 1
 
-            # if no new offsprings can be generated within a pre-specified number of generations
-            if n_infills > mating_max_iterations:
-                break
+
 
         # assert len(parents)==len(off)
-        print('Mating finds', len(off), 'offsprings after doing', n_infills-1, '/', mating_max_iterations, 'mating iterations')
+        print('Mating finds', len(off), 'offsprings after doing', n_infills, '/', mating_max_iterations, 'mating iterations')
         return off, parents
 
 
@@ -1775,7 +1791,8 @@ class NSGA2_DT(NSGA2):
             else:
                 print('len(self.pop)', len(self.pop))
                 # do the mating using the current population
-                self.tmp_off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
+                if len(self.pop) > 0:
+                    self.tmp_off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
 
             print('\n'*3, 'after mating len 0', len(self.tmp_off), '\n'*3)
 
@@ -1820,13 +1837,7 @@ class NSGA2_DT(NSGA2):
                 print("WARNING: Mating could not produce the required number of (unique) offsprings!")
 
 
-        print('\n'*2, 'self.n_gen', self.n_gen, '\n'*2)
-        if not (self.warm_up_path and self.n_gen == 1):
-            if len(self.all_pop_run_X) == 0:
-                self.all_pop_run_X = self.pop.get("X")
-            else:
-                self.all_pop_run_X = np.concatenate([self.all_pop_run_X, self.pop.get("X")])
-        # print('self.all_pop_run_X', self.all_pop_run_X)
+
 
         # additional step to rank and select self.off after gathering initial population
         if self.rank_mode != 'none':
@@ -1907,17 +1918,17 @@ class NSGA2_DT(NSGA2):
                     # print(X_test.shape)
                     tmp_X_minus = np.concatenate([X_train, X_test])
 
-                    print(np.array(self.problem.objectives_list)[:, :3])
+                    # print(np.array(self.problem.objectives_list)[:, :3])
                     # print(tmp_objectives)
-                    print(np.array(default_objective_weights[:3]))
+                    # print(np.array(default_objective_weights[:3]))
                     tmp_objectives_minus = np.concatenate([np.array(self.problem.objectives_list)[:, :3], tmp_objectives_minus]) * np.array(default_objective_weights[:3])
 
                     tmp_pop_minus.set("X", tmp_X_minus)
                     tmp_pop_minus.set("F", tmp_objectives_minus)
-                    print('tmp_objectives_minus', tmp_objectives_minus)
+
 
                     inds_minus_top = np.array(self.survival.do(self.problem, tmp_pop_minus, self.pop_size, return_indices=True))
-                    print('inds_minus_top', inds_minus_top)
+                    # print('inds_minus_top', inds_minus_top)
                     num_of_top_already_run = np.sum(inds_minus_top<len(X_train))
                     num_to_run = self.pop_size - num_of_top_already_run
 
@@ -1982,6 +1993,7 @@ class NSGA2_DT(NSGA2):
                                 clf = MLPClassifier(solver='lbfgs', activation='tanh', max_iter=10000)
                                 clf.fit(X_train, y_train)
                             elif self.ranking_model == 'nn_pytorch':
+                                print(X_train.shape, y_train.shape)
                                 clf = train_net(X_train, y_train, [], [], batch_train=200)
                             elif self.ranking_model == 'adaboost':
                                 from sklearn.ensemble import AdaBoostClassifier
@@ -2081,7 +2093,10 @@ class NSGA2_DT(NSGA2):
 
                         print('\n', 'adv_conf_th', adv_conf_th, '\n')
                         if one_clf == True:
-                            scores = clf.predict_proba(X_test)[:, 1]
+                            pred = clf.predict_proba(X_test)
+                            if len(pred.shape) == 1:
+                                pred = np.expand_dims(pred, axis=0)
+                            scores = pred[:, 1]
                         else:
                             scores = np.max(scores_on_all_nn, axis=1)
                         print('initial scores', scores)
@@ -2104,13 +2119,14 @@ class NSGA2_DT(NSGA2):
                             print('chosen indices', inds)
 
                         else:
-                            if self.warm_up_path:
-                                cur_gen = (len(self.problem.objectives_list) - self.warm_up_len) // self.pop_size
-                            else:
-                                cur_gen = (len(self.problem.objectives_list) - self.initial_fit_th) // self.pop_size
+                            # if self.warm_up_path:
+                            #     cur_gen = (len(self.problem.objectives_list) - self.warm_up_len) // self.pop_size
+                            # else:
+                            #     cur_gen = (len(self.problem.objectives_list) - self.initial_fit_th) // self.pop_size
+                            cur_gen = self.n_gen
                             cycle_num = self.explore_iter_num+self.exploit_iter_num
                             print('cur_gen', cur_gen, 'cycle_num', cycle_num)
-                            if cur_gen % cycle_num < self.explore_iter_num:
+                            if (cur_gen-1) % cycle_num < self.explore_iter_num:
                                 current_stage = 'exploration'
                                 print('\n', 'exploration', '\n')
                                 scores *= -1
@@ -2160,29 +2176,36 @@ class NSGA2_DT(NSGA2):
                             else:
                                 current_stage = 'exploitation'
                                 print('\n', 'exploitation', '\n')
-                                high_conf_configs_stack_np = np.concatenate(self.high_conf_configs_stack)
-                                high_conf_configs_ori_stack_np = np.concatenate(self.high_conf_configs_ori_stack)
+                                if len(self.high_conf_configs_stack) > 0:
+                                    high_conf_configs_stack_np = np.concatenate(self.high_conf_configs_stack)
+                                    high_conf_configs_ori_stack_np = np.concatenate(self.high_conf_configs_ori_stack)
 
-                                print('len(high_conf_configs_ori_stack_np) before filtering', len(high_conf_configs_ori_stack_np))
-                                # high_conf_configs_ori_stack_np, distinct_inds = get_distinct_data_points(high_conf_configs_ori_stack_np, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th)
-                                # high_conf_configs_ori_stack_np = np.array(high_conf_configs_ori_stack_np)
-                                # high_conf_configs_stack_np = high_conf_configs_stack_np[distinct_inds]
-                                # print('len(high_conf_configs_ori_stack_np) after filtering', len(high_conf_configs_ori_stack_np))
+                                    print('len(high_conf_configs_ori_stack_np) before filtering', len(high_conf_configs_ori_stack_np))
+                                    # high_conf_configs_ori_stack_np, distinct_inds = get_distinct_data_points(high_conf_configs_ori_stack_np, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th)
+                                    # high_conf_configs_ori_stack_np = np.array(high_conf_configs_ori_stack_np)
+                                    # high_conf_configs_stack_np = high_conf_configs_stack_np[distinct_inds]
+                                    # print('len(high_conf_configs_ori_stack_np) after filtering', len(high_conf_configs_ori_stack_np))
 
-                                scores = clf.predict_proba(high_conf_configs_stack_np)[:, 1]
-                                if self.use_unique_bugs:
-                                    unique_inds = is_distinct_vectorized(high_conf_configs_ori_stack_np, self.problem.interested_unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th)
+                                    scores = clf.predict_proba(high_conf_configs_stack_np)[:, 1]
+                                    if self.use_unique_bugs:
+                                        unique_inds = is_distinct_vectorized(high_conf_configs_ori_stack_np, self.problem.interested_unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th)
 
-                                    print('len(unique_inds)', len(unique_inds))
-                                    if len(unique_inds) > 0:
-                                        scores[unique_inds] += np.max(scores)
+                                        print('len(unique_inds)', len(unique_inds))
+                                        if len(unique_inds) > 0:
+                                            scores[unique_inds] += np.max(scores)
 
-                                scores *= -1
-                                inds = np.argsort(scores)[:self.pop_size]
+                                    scores *= -1
+                                    inds = np.argsort(scores)[:self.pop_size]
 
-                                print('sorted(scores)', sorted(scores))
-                                scores_rank = rankdata(scores)
-                                print('chosen indices (rank)', scores_rank[inds])
+                                    print('sorted(scores)', sorted(scores))
+                                    scores_rank = rankdata(scores)
+                                    print('chosen indices (rank)', scores_rank[inds])
+
+                                else:
+                                    print('\n'*2, 'len(self.high_conf_configs_stack)', len(self.high_conf_configs_stack), '\n'*2)
+                                    inds = []
+
+
                                 print('chosen indices', inds)
 
                                 if self.rank_mode == 'adv_nn':
@@ -2210,40 +2233,20 @@ class NSGA2_DT(NSGA2):
                             X_test_pgd_ori = X_test_ori[inds]
                             X_test_pgd = X_test[inds]
 
-
                         if one_clf == True:
                             associated_clf_id = []
                         else:
                             associated_clf_id = associated_clf_id[inds]
 
 
-
                         # conduct pgd with constraints differently for different types of inputs
                         if self.use_unique_bugs:
-
                             unique_coeff = (self.problem.p, self.problem.c, self.problem.th)
                             mask = self.problem.mask
 
+                            y_zeros = np.zeros(X_test_pgd.shape[0])
+                            X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.interested_unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id, X_test_pgd_ori=X_test_pgd_ori, consider_uniqueness=True)
 
-                            print('self.tmp_off_type_1_len, len(X_test_pgd)', self.tmp_off_type_1_len, len(X_test_pgd))
-
-                            if len(X_test_pgd) <= self.tmp_off_type_1_len:
-                                y_zeros = np.zeros(X_test_pgd.shape[0])
-                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd, y_zeros, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.interested_unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id, X_test_pgd_ori=X_test_pgd_ori)
-
-                            else:
-                                y_zeros_3 = np.zeros(X_test_pgd.shape[0]-self.tmp_off_type_1_len)
-
-                                X_test_adv, new_bug_pred_prob_list, initial_bug_pred_prob_list = pgd_attack(clf, X_test_pgd[self.tmp_off_type_1_len:], y_zeros_3, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=[], eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id, X_test_pgd_ori=X_test_pgd_ori)
-
-                                if self.tmp_off_type_1_len > 0:
-                                    y_zeros_1 = np.zeros(self.tmp_off_type_1_len)
-
-                                    X_test_adv_1, new_bug_pred_prob_list_1, initial_bug_pred_prob_list_1 = pgd_attack(clf, X_test_pgd[:self.tmp_off_type_1_len], y_zeros_1, xl, xu, encoded_fields, labels_used, self.problem.customized_constraints, standardize, prev_X=self.problem.interested_unique_bugs, base_ind=0, unique_coeff=unique_coeff, mask=mask, param_for_recover_and_decode=param_for_recover_and_decode, check_prev_x_all=True, eps=self.pgd_eps, adv_conf_th=adv_conf_th, attack_stop_conf=attack_stop_conf, associated_clf_id=associated_clf_id, X_test_pgd_ori=X_test_pgd_ori)
-
-                                    X_test_adv = np.concatenate([X_test_adv, X_test_adv_1])
-                                    new_bug_pred_prob_list = np.concatenate([new_bug_pred_prob_list, new_bug_pred_prob_list_1])
-                                    initial_bug_pred_prob_list = np.concatenate([initial_bug_pred_prob_list, initial_bug_pred_prob_list_1])
 
                         else:
                             y_zeros = np.zeros(X_test_pgd.shape[0])
@@ -2305,10 +2308,18 @@ class NSGA2_DT(NSGA2):
 
         if self.only_run_unique_cases:
             X_off = [off_i.X for off_i in self.off]
-            remaining_inds = eliminate_repetitive_vectorized(X_off, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th)
+            remaining_inds = is_distinct_vectorized(X_off, self.problem.interested_unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th)
             self.off = self.off[remaining_inds]
 
         self.off.set("n_gen", self.n_gen)
+
+        print('\n'*2, 'self.n_gen', self.n_gen, '\n'*2)
+
+        if len(self.all_pop_run_X) == 0:
+            self.all_pop_run_X = self.off.get("X")
+        else:
+            if len(self.off.get("X")) > 0:
+                self.all_pop_run_X = np.concatenate([self.all_pop_run_X, self.off.get("X")])
 
     # mainly used to modify survival
     def _next(self):
@@ -2317,7 +2328,8 @@ class NSGA2_DT(NSGA2):
         self.set_off()
         # evaluate the offspring
         # print('start evaluator', 'pop', self.off)
-        self.evaluator.eval(self.problem, self.off, algorithm=self)
+        if len(self.off) > 0:
+            self.evaluator.eval(self.problem, self.off, algorithm=self)
         # print('end evaluator')
 
 
@@ -2356,7 +2368,7 @@ class NSGA2_DT(NSGA2):
 
             if self.warm_up_len > 0:
                 X = X[:self.warm_up_len]
-                objective_list = objective_list[:self.warm_up_len]
+                objectives_list = objectives_list[:self.warm_up_len]
             else:
                 self.warm_up_len = len(X)
 
@@ -2389,6 +2401,7 @@ class NSGA2_DT(NSGA2):
             self.set_off()
             pop = self.off
 
+
             print('len(self.all_pop_run_X)', len(self.all_pop_run_X))
         elif self.dt:
             X_list = list(self.X)
@@ -2398,17 +2411,21 @@ class NSGA2_DT(NSGA2):
 
         else:
             # create the initial population
-            pop = Population(0, individual=self.individual)
-            pop = self.sampling.do(self.problem, pop_size, pop=pop, algorithm=self)
-            pop = self.repair.do(self.problem, pop, algorithm=self)
+            # pop = Population(0, individual=self.individual)
+            # pop = self.sampling.do(self.problem, pop_size, pop=pop, algorithm=self)
+            # pop = self.repair.do(self.problem, pop, algorithm=self)
+            #
+            # if len(pop) < self.pop_size:
+            #     remaining_num = self.pop_size - len(pop)
+            #     remaining_pop = self.plain_initialization.do(self.problem, remaining_num, algorithm=self)
+            #     pop = Population.merge(pop, remaining_pop)
 
-            if len(pop) < self.pop_size:
-                remaining_num = self.pop_size - len(pop)
-                remaining_pop = self.plain_initialization.do(self.problem, remaining_num, algorithm=self)
-                pop = Population.merge(pop, remaining_pop)
+            pop = self.plain_initialization.do(self.problem, pop_size, algorithm=self)
             pop.set("n_gen", self.n_gen)
 
-        self.evaluator.eval(self.problem, pop, algorithm=self)
+
+        if len(pop) > 0:
+            self.evaluator.eval(self.problem, pop, algorithm=self)
         print('\n'*5, 'after initialize evaluator', '\n'*5)
         print('len(self.all_pop_run_X)', len(self.all_pop_run_X))
         # if not self.warm_up_path:
@@ -2696,7 +2713,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     else:
         now = datetime.now()
         p, c, th = check_unique_coeff
-        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th), uncertainty, model_type, 'n_offsprings', str(n_offsprings), 'use_alternate_nn', str(use_alternate_nn), str(explore_iter_num), str(exploit_iter_num), str(high_conf_num), str(low_conf_num), 'diversity_mode', diversity_mode, 'uncertainty_exploration', uncertainty_exploration, str(mating_max_iterations), str(sample_multiplier), str(only_run_unique_cases)])
+        time_str = now.strftime("%Y_%m_%d_%H_%M_%S")+','+'_'.join([str(pop_size), str(global_n_gen), rank_mode, str(has_run_num), str(initial_fit_th), str(pgd_eps), str(adv_conf_th), str(attack_stop_conf), 'coeff', str(p), str(c), str(th), uncertainty, model_type, 'n_offsprings', str(n_offsprings), str(mating_max_iterations), str(sample_multiplier), 'only_unique', str(only_run_unique_cases), 'eps', str(pgd_eps)])
 
 
     cur_parent_folder = make_hierarchical_dir([root_folder, algorithm_name, route_type, scenario_type, ego_car_model, time_str])

@@ -12,7 +12,7 @@ from customized_utils import (
     customized_inverse_standardize,
     recover_fields_not_changing,
     decode_fields,
-    is_distinct,
+    is_distinct_vectorized
 )
 
 
@@ -302,7 +302,6 @@ def pgd_attack(
     unique_coeff=None,
     mask=None,
     param_for_recover_and_decode=None,
-    check_prev_x_all=False,
     device=None,
     eps=1.01,
     adv_conf_th=0,
@@ -311,7 +310,8 @@ def pgd_attack(
     iters=255,
     max_projections_steps=3,
     associated_clf_id=[],
-    X_test_pgd_ori=[]
+    X_test_pgd_ori=[],
+    consider_uniqueness=False
 ):
     if len(associated_clf_id) > 0:
         print(len(model))
@@ -339,7 +339,7 @@ def pgd_attack(
     prev_x_all = []
     initial_outputs_all = []
 
-    if len(prev_X) > 0:
+    if consider_uniqueness:
         (
             X_removed,
             kept_fields,
@@ -367,9 +367,9 @@ def pgd_attack(
 
 
         prev_outputs = torch.zeros(1).to(device).float()
-        prev_images = None
-        current_x = None
-        prev_x = None
+        prev_images = []
+        current_x = []
+        prev_x = []
 
         max_violate_times = 10
         violate_times = 0
@@ -414,7 +414,7 @@ def pgd_attack(
             # check uniqueness of new x
 
             distinct = True
-            if len(prev_X) > 0:
+            if consider_uniqueness:
                 ind = base_ind + j
                 current_x = images.squeeze().cpu().detach().numpy()
                 current_x = customized_inverse_standardize(
@@ -435,23 +435,22 @@ def pgd_attack(
                     adv=True,
                 )[0]
 
-                distinct = is_distinct(
-                    current_x, prev_X, mask, xl_ori, xu_ori, p, c, th
-                )
-
-                if len(X_test_pgd_ori) > 0 and j < n:
-                    later_X_test_pgd_ori = X_test_pgd_ori[j+1:]
+                if len(prev_x_all) > 0:
+                    prev_X_and_prev_x_all = np.concatenate([prev_X, prev_x_all])
                 else:
-                    later_X_test_pgd_ori = []
+                    prev_X_and_prev_x_all = prev_X
 
-                # print('distinct 1', distinct)
-                if check_prev_x_all and len(prev_x_all) > 0:
-                    distinct = distinct and is_distinct(
-                        current_x, np.array(prev_x_all), mask, xl_ori, xu_ori, p, c, th
-                    ) and is_distinct(
-                        current_x, later_X_test_pgd_ori, mask, xl_ori, xu_ori, p, c, th
-                    )
-                    # print('distinct 2', distinct)
+                if len(X_test_pgd_ori) > 1 and j < n-1:
+                    prev_X_and_prev_x_all = np.concatenate([prev_X_and_prev_x_all, X_test_pgd_ori[j+1:]])
+
+                remaining_inds = is_distinct_vectorized(
+                    [current_x], prev_X_and_prev_x_all, mask, xl_ori, xu_ori, p, c, th, verbose=False
+                )
+                if len(remaining_inds) == 1:
+                    distinct = True
+                else:
+                    distinct = False
+
 
             # if new x is close to previous X or forward prob not improving, break
             cond1 = not distinct and i > 0
@@ -462,11 +461,11 @@ def pgd_attack(
             # print('prev_outputs.cpu().detach().numpy()', prev_outputs.cpu().detach().numpy())
             if cond1 or cond2 or cond4:
                 if cond1:
-                    print("cond1")
+                    print("cond1 with step", i)
                 elif cond2:
-                    print("cond2")
+                    print("cond2 with step", i)
                 elif cond4:
-                    print("cond4")
+                    print("cond4 with step", i)
                 break
             else:
                 # print('update x with the current one')
@@ -474,7 +473,7 @@ def pgd_attack(
                 prev_outputs = torch.clone(outputs)
                 prev_x = current_x
                 if i == 0 and prev_outputs.cpu().detach().numpy() > cur_adv_conf_th:
-                    print("cond3")
+                    print("cond3 with step", i)
                     if_low_conf_examples[j] = 1
                     print(
                         "num_of_high_conf_examples",
@@ -648,10 +647,10 @@ def pgd_attack(
         print(
             "\n", "final outputs", prev_outputs.squeeze().cpu().detach().numpy(), "\n"
         )
-
-        new_images_all.append(prev_images.squeeze().cpu().detach().numpy())
-        new_outputs_all.append(prev_outputs.squeeze().cpu().detach().numpy())
-        prev_x_all.append(prev_x)
+        if len(prev_images) > 0:
+            new_images_all.append(prev_images.squeeze().cpu().detach().numpy())
+            new_outputs_all.append(prev_outputs.squeeze().cpu().detach().numpy())
+            prev_x_all.append(prev_x)
 
     print("\n" * 2)
     print("num_of_high_conf_examples", np.sum(if_low_conf_examples), "/", n)
@@ -735,7 +734,7 @@ def train_net(
                 y_batch = y_batch.long()
 
             optimizer.zero_grad()
-            y_pred_batch = model(x_batch).squeeze()
+            y_pred_batch = model(x_batch).squeeze(dim=1)
 
             loss = criterion(y_pred_batch, y_batch)
             loss.backward()

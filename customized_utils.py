@@ -2037,9 +2037,9 @@ def is_distinct(x, X, mask, xl, xu, p, c, th, verbose=True):
 def is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=True):
     cur_X = np.array(cur_X)
     prev_X = np.array(prev_X)
-    eps = 1e-8
-    verbose = False
+    eps = 1e-10
     remaining_inds = np.arange(cur_X.shape[0])
+
     if len(prev_X) == 0:
         return remaining_inds
     else:
@@ -2078,15 +2078,17 @@ def is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=True):
         diff_norm = np.linalg.norm(diff, p, axis=2)
         equal = diff_norm < th_num
         remaining_inds = np.mean(equal, axis=1) == 0
+        remaining_inds = np.arange(cur_X.shape[0])[remaining_inds]
+
+        # print('remaining_inds', remaining_inds, np.arange(cur_X.shape[0])[remaining_inds], cur_X[np.arange(cur_X.shape[0])[remaining_inds]])
+        if verbose:
+            print('prev X filtering:',cur_X.shape[0], '->', len(remaining_inds))
 
         if len(remaining_inds) == 0:
             return []
 
         cur_X_remaining = cur_X[remaining_inds]
-        if verbose:
-            print('prev X filtering:',cur_X.shape[0], '->', cur_X_remaining.shape[0])
 
-        remaining_inds = np.arange(cur_X.shape[0])[remaining_inds]
 
 
         unique_inds = []
@@ -2098,11 +2100,15 @@ def is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=True):
             if np.mean(equal) == 0:
                 unique_inds.append(i)
 
+        unique_inds.append(len(cur_X_remaining)-1)
+
+        if verbose:
+            print('cur X filtering:',cur_X_remaining.shape[0], '->', len(unique_inds))
+
         if len(unique_inds) == 0:
             return []
         remaining_inds = remaining_inds[np.array(unique_inds)]
-        if verbose:
-            print('cur X filtering:',cur_X_remaining.shape[0], '->', len(remaining_inds))
+
 
         return remaining_inds
 
