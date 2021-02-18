@@ -93,23 +93,6 @@ python ga_fuzzing.py -p 2021 -s 8794 -d 8795 --n_gen 1 --pop_size 1 -r 'town05_r
 
 
 
-* fix (run augment agent and try fixing it using finetuning)
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir 'rerun/bugs/train/partial_collision_finetune/town05_right_0_Scenario12_auto_pilot_00/rerun_non_bugs' --max_epochs 1 --lr 1e-5
-
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir 'run_results/random/town05_right_0/leading_car_braking_town05_fixed_npc_num/auto_pilot/100/non_bugs_finetune' --teacher_path 'models/stage1_default_50_epoch=16.ckpt' --save_dir 'checkpoints/stage2_pretrained' --max_epochs 1 --lr 1e-4 --command_coefficient 0.01
-
-
-
-
-auto_pilot rerun on bugs train,  45 / 118 bugs
-
-lbc rerun on bugs test, 86 / 117 bugs
-
-auto_pilot on bugs test, 44 / 118
-
-lbc after finetuning (autopilot successful rerun on bugs) on bugs test, 54 / 118 bugs
-
-lbc after finetuning (autopilot successful rerun on random) on bugs test, 53 / 118 bugs
 
 
 
@@ -226,27 +209,9 @@ overlapping bug found and cross search algorithm bug fix
 * evolutionary MCMC
 * check diversity of generated scenes
 * mutation cannot be picklized
-* Traceback (most recent call last):
-  File "ga_fuzzing.py", line 1017, in <module>
-    main()
-  File "ga_fuzzing.py", line 1005, in main
-    np.savez(problem.bug_folder+'/'+'res'+'_'+ind, res=res, algorithm_name=algorithm_name, time_bug_num_list=problem.time_bug_num_list)
-  File "<__array_function__ internals>", line 6, in savez
-  File "/home/zhongzzy9/anaconda3/envs/carla99/lib/python3.7/site-packages/numpy/lib/npyio.py", line 645, in savez
-    _savez(file, args, kwds, False)
-  File "/home/zhongzzy9/anaconda3/envs/carla99/lib/python3.7/site-packages/numpy/lib/npyio.py", line 754, in _savez
-    pickle_kwargs=pickle_kwargs)
-  File "/home/zhongzzy9/anaconda3/envs/carla99/lib/python3.7/site-packages/numpy/lib/format.py", line 676, in write_array
-    pickle.dump(array, fp, protocol=3, **pickle_kwargs)
-_pickle.PicklingError: Can't pickle <class '__main__.MySampling'>: it's not the same object as __main__.MySampling
-
-* fix OSError: [Errno 24] Too many open files: '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/collected_data_customized/Town03/Scenario12/right/route_01_16/events.txt'
-RuntimeError: Resource temporarily unavailable
-* change to a more reliable controller
 
 * focus on important parameter perturbation (e.g. waypoints perturbation are not very important but take too much dimensions.) If we reduce dimensions to e.g. less than 20, we might consider to apply out-of-box bayes optimization method on github.
 * save and resume_run a training after each generation
-* narrow down the range of other actors and limit the time length of each run
 * free-view window of the map
 
 
@@ -259,11 +224,7 @@ su zhongzzy9
 Run genertic algorithm for fuzzing:
 python ga_fuzzing.py
 
-Retrain model from scratch (stage 1):
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir '/home/zhongzzy9/Documents/self-driving-car/LBC_data/CARLA_challenge_autopilot' --max_epochs 20 --command_coefficient 0.01
 
-Retrain model from scratch (stage 2):
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir '../LBC_data/CARLA_challenge_autopilot' --teacher_path '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/models/stage1_0.01_augmented_epoch=13.ckpt' --max_epochs 20 --command_coefficient 0.01
 
 '''
 
@@ -308,7 +269,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, eliminate_duplicates_for_list, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized, eliminate_repetitive_vectorized
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, eliminate_duplicates_for_list, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized, eliminate_repetitive_vectorized, get_sorted_subfolders, load_data
 
 
 from collections import deque
@@ -420,14 +381,16 @@ parser.add_argument('--regression_nn_use_running_data', type=int, default=1)
 
 parser.add_argument('--adv_exploitation_only', type=int, default=0)
 
-parser.add_argument('--sample_multiplier', type=int, default=100)
-parser.add_argument('--mating_max_iterations', type=int, default=100)
+parser.add_argument('--sample_multiplier', type=int, default=200)
+parser.add_argument('--mating_max_iterations', type=int, default=200)
 
 parser.add_argument('--uncertainty_exploration', type=str, default='confidence')
 
 parser.add_argument('--only_run_unique_cases', type=int, default=1)
 
 parser.add_argument('--consider_interested_bugs', type=int, default=1)
+
+parser.add_argument('--record_every_n_step', type=int, default=2000)
 
 arguments = parser.parse_args()
 
@@ -518,6 +481,7 @@ finish_after_has_run = True
 only_run_unique_cases = arguments.only_run_unique_cases
 
 consider_interested_bugs = arguments.consider_interested_bugs
+record_every_n_step = arguments.record_every_n_step
 
 os.environ['PYTHONHASHSEED'] = '0'
 os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
@@ -588,7 +552,7 @@ for customizing weather choices, static_types, pedestrian_types, vehicle_types, 
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, cumulative_info=None, objective_weights=default_objective_weights, check_unique_coeff=default_check_unique_coeff, consider_interested_bugs=1):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, cumulative_info=None, objective_weights=default_objective_weights, check_unique_coeff=default_check_unique_coeff, consider_interested_bugs=1, record_every_n_step=2000):
 
         customized_parameters_bounds = customized_config['customized_parameters_bounds']
         customized_parameters_distributions = customized_config['customized_parameters_distributions']
@@ -611,6 +575,7 @@ class MyProblem(Problem):
         self.F_list = []
 
         self.consider_interested_bugs = consider_interested_bugs
+        self.record_every_n_step = record_every_n_step
 
         self.scheduler_port = scheduler_port
         self.dashboard_address = dashboard_address
@@ -747,6 +712,7 @@ class MyProblem(Problem):
         route_str = self.route_str
         scenario_file = self.scenario_file
         ego_car_model = self.ego_car_model
+        record_every_n_step = self.record_every_n_step
 
         all_final_generated_transforms_list = []
 
@@ -769,7 +735,7 @@ class MyProblem(Problem):
                 # print('x', x)
 
                 # run simulation
-                objectives, loc, object_type, route_completion, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, scenario_file, ego_car_model)
+                objectives, loc, object_type, route_completion, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, scenario_file, ego_car_model, record_every_n_step=record_every_n_step)
 
 
 
@@ -1061,8 +1027,9 @@ class MyProblem(Problem):
 
 
 
-def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, scenario_file, ego_car_model, ego_car_model_path=None, rerun=False):
+def run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, scenario_file, ego_car_model, ego_car_model_path=None, rerun=False, record_every_n_step=2000):
     arguments = arguments_info()
+    arguments.record_every_n_step = record_every_n_step
     arguments.port = customized_data['port']
     arguments.debug = 1
     if rerun:
@@ -1855,11 +1822,11 @@ class NSGA2_DT(NSGA2):
                         cutoff = len(initial_X)
                         cutoff_end = cutoff
                     else:
-                        subfolders = get_sorted_subfolders(self.warm_up_data_path)
+                        subfolders = get_sorted_subfolders(self.warm_up_path)
                         initial_X, _, initial_objectives_list, _, _ = load_data(subfolders)
 
-                        cutoff = self.warm_up_data_len
-                        cutoff_end = self.warm_up_data_len + 100
+                        cutoff = self.warm_up_len
+                        cutoff_end = self.warm_up_len + 100
 
                         if cutoff == 0:
                             cutoff = len(initial_X)
@@ -2736,7 +2703,8 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     else:
         problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, non_bug_parent_folder=non_bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, scenario_file=scenario_file, ego_car_model=ego_car_model, scheduler_port=scheduler_port, dashboard_address=dashboard_address, customized_config=customized_d, ports=ports, episode_max_time=episode_max_time,
         call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, cumulative_info=cumulative_info, objective_weights=objective_weights,
-        check_unique_coeff=check_unique_coeff, consider_interested_bugs=consider_interested_bugs)
+        check_unique_coeff=check_unique_coeff, consider_interested_bugs=consider_interested_bugs,
+        record_every_n_step=record_every_n_step)
 
 
 

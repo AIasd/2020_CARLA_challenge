@@ -395,19 +395,14 @@ if __name__ == '__main__':
     atexit.register(exit_handler, [port])
 
     # ['rerun', 'adv', 'tsne']
-    task = 'adv'
+    task = 'rerun'
     use_adv = True
     use_unique_bugs = True
     test_unique_bugs = True
     unique_coeff = [0, 0.1, 0.5]
 
     parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_01_27_11_07_18,50_14_adv_nn_700_300_1.01_-8.0_0.75_coeff_0.0_0.1_0.5'
-    # 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/50_14_collision_adv_nn_pytorch_700_300_1.0_0.7_coeff_0.0_0.05_0.25'
-    # 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/collision_adv_nn_pytorch_700_300_0.0_0.0_coeff_0.0_0.1_0.5'
-    # 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_50_14_collision_0.05_0.25_adv_nn_pytorch_300_eps_0'
-    # 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/50_14_collision_adv_nn_pytorch_700_300_1.0_0.7_coeff_0.0_0.05_0.25'
-    # 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/all_adv_nn_pytorch_700_300_0.0_0.0_coeff_0.0_0.1_0.5'
-    # 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/50_14_all_adv_nn_pytorch_700_300_1.0_0.75_0.75_coeff_0.0_0.1_0.5'
+
     pickle_filename = get_picklename(parent_folder)
 
 

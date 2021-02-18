@@ -200,6 +200,8 @@ def specify_args():
     parser.add_argument("--save_action_based_measurements", type=int, default=0)
     parser.add_argument("--changing_weather", type=int, default=0)
 
+    parser.add_argument('--record_every_n_step', type=int, default=2000)
+
     arguments = parser.parse_args()
 
     return arguments
@@ -229,6 +231,7 @@ class arguments_info:
         self.background_vehicles = False
         self.save_action_based_measurements = 0
         self.changing_weather = False
+        self.record_every_n_step = 2000
 
 
 def add_transform(transform1, transform2):
