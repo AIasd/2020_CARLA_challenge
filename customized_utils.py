@@ -2973,15 +2973,25 @@ def inverse_process_X(
     return X_final_test
 
 
-def get_sorted_subfolders(parent_folder):
+def get_sorted_subfolders(parent_folder, folder_type='all'):
     bug_folder = os.path.join(parent_folder, "bugs")
     non_bug_folder = os.path.join(parent_folder, "non_bugs")
-    sub_folders = [
-        os.path.join(bug_folder, sub_name) for sub_name in os.listdir(bug_folder)
-    ] + [
-        os.path.join(non_bug_folder, sub_name)
-        for sub_name in os.listdir(non_bug_folder)
-    ]
+
+    if folder_type == 'all':
+        sub_folders = [
+            os.path.join(bug_folder, sub_name) for sub_name in os.listdir(bug_folder)
+        ] + [
+            os.path.join(non_bug_folder, sub_name)
+            for sub_name in os.listdir(non_bug_folder)
+        ]
+    elif folder_type == 'bugs':
+        sub_folders = [
+            os.path.join(bug_folder, sub_name) for sub_name in os.listdir(bug_folder)
+        ]
+    elif folder_type == 'non_bugs':
+        sub_folders = [
+            os.path.join(non_bug_folder, sub_name) for sub_name in os.listdir(non_bug_folder)
+        ]
 
     ind_sub_folder_list = []
     for sub_folder in sub_folders:

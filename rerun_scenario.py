@@ -28,7 +28,7 @@ from pgd_attack import train_net, pgd_attack, extract_embed
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-p','--port', type=int, default=2033, help='TCP port(s) to listen to')
+parser.add_argument('-p','--port', type=int, default=2045, help='TCP port(s) to listen to')
 arguments = parser.parse_args()
 port = arguments.port
 
@@ -46,7 +46,7 @@ os.environ['HAS_DISPLAY'] = '0'
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
-ego_car_model = 'lbc'
+ego_car_model = 'auto_pilot'
 is_save = True
 
 
@@ -298,6 +298,7 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
 
 
     objectives, loc, object_type, route_completion, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, scenario_file, ego_car_model, rerun=True)
+    print('\n'*10, 'save_path', save_path, '\n'*10)
 
 
 
@@ -307,10 +308,12 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
     if is_save:
         rerun_bugs_folder = make_hierarchical_dir([rerun_save_folder, folder, 'rerun_bugs'])
         rerun_non_bugs_folder = make_hierarchical_dir([rerun_save_folder, folder, 'rerun_non_bugs'])
-
+        print('rerun_bugs_folder',rerun_bugs_folder)
+        print('sub_folder_name', sub_folder_name)
         if is_bug:
 
             print('\n'*3, 'rerun also causes a bug!!!', '\n'*3)
+
             try:
                 # use this version to merge into the existing folder
                 copy_tree(save_path, os.path.join(rerun_bugs_folder, sub_folder_name))
@@ -329,27 +332,35 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
 
 
 
-def rerun_list_of_scenarios(rerun_save_folder, scenario_file, data, mode):
+def rerun_list_of_scenarios(parent_folder, rerun_save_folder, scenario_file, data, mode, ego_car_model):
+    import re
     if data == 'bugs':
-        folder = 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/800_partial_collision/bugs'
+        parent_folder_with_type = parent_folder + '/bugs'
     elif data == 'non_bugs':
-        folder = 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/800_partial_collision/non_bugs'
+        parent_folder_with_type = parent_folder + '/non_bugs'
 
-    subfolder_names = [sub_folder_name for sub_folder_name in sorted(os.listdir(folder))]
+    subfolder_names = get_sorted_subfolders(parent_folder, data)
+    print('len(subfolder_names)', len(subfolder_names))
+    _, _, objectives_list_np, _, _ = load_data(subfolder_names)
+    collision_inds = objectives_list_np[:, 0] > 0.1
+    subfolder_names = (np.array(subfolder_names)[collision_inds]).tolist()
 
+    print('len(subfolder_names)', len(subfolder_names))
+
+    if len(subfolder_names) > 200:
+        subfolder_names = subfolder_names[:200]
+
+    assert len(subfolder_names) >= 2
+    mid = int(len(subfolder_names)//2)
 
     random.seed(0)
     random.shuffle(subfolder_names)
 
 
-    # assert len(subfolder_names) >= 2
-    # mid = int(len(subfolder_names)//2)
-    mid = 118
-
     train_subfolder_names = subfolder_names[:mid]
     test_subfolder_names = subfolder_names[mid:]
 
-    print(train_subfolder_names)
+    print('len(train_subfolder_names)', len(train_subfolder_names))
 
     if mode == 'train':
         chosen_subfolder_names = train_subfolder_names
@@ -360,14 +371,17 @@ def rerun_list_of_scenarios(rerun_save_folder, scenario_file, data, mode):
 
     bug_num = 0
     objectives_avg = 0
-    chosen_subfolder_names = chosen_subfolder_names
-    for ind, sub_folder_name in enumerate(chosen_subfolder_names):
+
+    for ind, sub_folder in enumerate(chosen_subfolder_names):
         print('episode:', ind+1, '/', len(chosen_subfolder_names), 'bug num:', bug_num)
-        sub_folder = os.path.join(folder, sub_folder_name)
+
+        sub_folder_name = re.search(".*/([0-9]*)$", sub_folder).group(1)
+        print('sub_folder', sub_folder)
+        print('sub_folder_name', sub_folder_name)
         if os.path.isdir(sub_folder):
             pickle_filename = os.path.join(sub_folder, 'cur_info.pickle')
             if os.path.exists(pickle_filename):
-                print(pickle_filename)
+                print('pickle_filename', pickle_filename)
                 is_bug, objectives = rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folder_name, scenario_file, ego_car_model=ego_car_model)
 
 
@@ -401,7 +415,7 @@ if __name__ == '__main__':
     test_unique_bugs = True
     unique_coeff = [0, 0.1, 0.5]
 
-    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_01_27_11_07_18,50_14_adv_nn_700_300_1.01_-8.0_0.75_coeff_0.0_0.1_0.5'
+    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_17_22_40_12,50_20_adv_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'
 
     pickle_filename = get_picklename(parent_folder)
 
@@ -434,9 +448,9 @@ if __name__ == '__main__':
         # ['bugs', 'non_bugs']
         data = 'bugs'
         # ['train', 'test', 'all']
-        mode = 'test'
+        mode = 'train'
         rerun_save_folder = make_hierarchical_dir(['rerun', data, mode, time_str])
-        rerun_list_of_scenarios(rerun_save_folder, scenario_file, data, mode)
+        rerun_list_of_scenarios(parent_folder, rerun_save_folder, scenario_file, data, mode, ego_car_model)
 
     elif task == 'adv':
 
