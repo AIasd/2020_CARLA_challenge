@@ -45,8 +45,8 @@ torch.backends.cudnn.benchmark = False
 os.environ['HAS_DISPLAY'] = '0'
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-
-ego_car_model = 'auto_pilot'
+# 'lbc_augment', 'auto_pilot'
+ego_car_model = 'lbc_augment'
 is_save = True
 
 
@@ -245,7 +245,7 @@ is_save = True
 
 
 
-def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folder_name, scenario_file, ego_car_model='lbc', x=[]):
+def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folder_name, scenario_file, ego_car_model='lbc', x=[], record_every_n_step=10):
     is_bug = False
 
     # parameters preparation
@@ -297,7 +297,7 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
     print('x', x)
 
 
-    objectives, loc, object_type, route_completion, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, scenario_file, ego_car_model, rerun=True)
+    objectives, loc, object_type, route_completion, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, scenario_file, ego_car_model, rerun=True, record_every_n_step=record_every_n_step)
     print('\n'*10, 'save_path', save_path, '\n'*10)
 
 
@@ -332,7 +332,7 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
 
 
 
-def rerun_list_of_scenarios(parent_folder, rerun_save_folder, scenario_file, data, mode, ego_car_model):
+def rerun_list_of_scenarios(parent_folder, rerun_save_folder, scenario_file, data, mode, ego_car_model, record_every_n_step=10):
     import re
     if data == 'bugs':
         parent_folder_with_type = parent_folder + '/bugs'
@@ -382,7 +382,7 @@ def rerun_list_of_scenarios(parent_folder, rerun_save_folder, scenario_file, dat
             pickle_filename = os.path.join(sub_folder, 'cur_info.pickle')
             if os.path.exists(pickle_filename):
                 print('pickle_filename', pickle_filename)
-                is_bug, objectives = rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folder_name, scenario_file, ego_car_model=ego_car_model)
+                is_bug, objectives = rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folder_name, scenario_file, ego_car_model=ego_car_model, record_every_n_step=record_every_n_step)
 
 
                 objectives_avg += np.array(objectives)
@@ -415,7 +415,7 @@ if __name__ == '__main__':
     test_unique_bugs = True
     unique_coeff = [0, 0.1, 0.5]
 
-    parent_folder = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_17_22_40_12,50_20_adv_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'
+    parent_folder = 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_18_10_36_32,50_20_adv_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'
 
     pickle_filename = get_picklename(parent_folder)
 
@@ -448,9 +448,11 @@ if __name__ == '__main__':
         # ['bugs', 'non_bugs']
         data = 'bugs'
         # ['train', 'test', 'all']
-        mode = 'train'
+        mode = 'test'
         rerun_save_folder = make_hierarchical_dir(['rerun', data, mode, time_str])
-        rerun_list_of_scenarios(parent_folder, rerun_save_folder, scenario_file, data, mode, ego_car_model)
+        record_every_n_step = 1
+
+        rerun_list_of_scenarios(parent_folder, rerun_save_folder, scenario_file, data, mode, ego_car_model, record_every_n_step=record_every_n_step)
 
     elif task == 'adv':
 

@@ -1,4 +1,5 @@
 collected_data/*
+collected_data_lbc_augment/*
 collected_data_autopilot/*
 collected_data_customized/*
 collected_data_basic_agent/*

@@ -1,30 +1,4 @@
 '''
-# hack: increase the maximum number of files to open to avoid too many files open error due to leakage.
-# import resource
-#
-# print("getrlimit before:", resource.getrlimit(resource.RLIMIT_NOFILE))
-# resource.setrlimit(resource.RLIMIT_NOFILE, (131072, 131072))
-# print("getrlimit:", resource.getrlimit(resource.RLIMIT_NOFILE))
-
-
-
-
-
-
-
-
--r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num'
-
--r 'town07_front_0' -c 'go_straight_town07'
--r 'town01_left_0' -c 'turn_left_town01'
--r 'town04_front_0' -c 'pedestrians_cross_street_town04
--r 'town03_front_1' -c 'change_lane_town03_fixed_npc_num'
-
--r 'town05_front_0' -c 'change_lane_town05_fixed_npc_num'
-
-
-
-
 
 
 
@@ -36,9 +10,6 @@
 
 
 *** retrain deafult model for 50 epochs with 0.01 to get a decent teacher model
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/map_model.py --dataset_dir 'rerun/bugs/train/partial_collision_finetune/town05_right_0_Scenario12_auto_pilot_00/rerun_non_bugs' --max_epochs 1 --lr 1e-5
-
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir 'rerun/bugs/train/partial_collision_finetune/town05_right_0_Scenario12_auto_pilot_00/rerun_non_bugs' --teacher_path 'models/stage1_0.01_augmented_epoch=13.ckpt' --save_dir 'checkpoints/stage2_0.01_augmented' --max_epochs 1 --lr 1e-5 --command_coefficient 0.01
 
 
 ***** fix objectives do not move as expected bug (try regression on predicting those objectives to check if signal exists first; then print out survival's examples objectives to check if behaviors are as expected)
@@ -46,12 +17,6 @@ CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir 're
 ***** check influence of population
 
 ***** fix reproducibility
-
-python ga_fuzzing.py -p 2021 2024 -s 8794 -d 8795 --n_gen 3 --pop_size 2 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 6 --objective_weights -1 1 1 1 -1 0 0 -1 0 --use_single_objective 1 --has_display '1'
-
-
-
-python ga_fuzzing.py -p 2021 -s 8794 -d 8795 --n_gen 1 --pop_size 1 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 1 --objective_weights -1 1 1 1 -1 0 0 -1 0 --use_single_objective 1 --has_display '1'
 
 *** debug radar 0 velocity
 
@@ -99,14 +64,6 @@ python ga_fuzzing.py -p 2021 -s 8794 -d 8795 --n_gen 1 --pop_size 1 -r 'town05_r
 
 
 
-
-
-
-
-
-
-
-*** fixing case study
 
 *** manual driving when rerunning very difficult cases?
 
@@ -345,7 +302,7 @@ parser.add_argument("--root_folder", type=str, default='run_results')
 
 parser.add_argument("--episode_max_time", type=int, default=60)
 parser.add_argument("--n_gen", type=int, default=2)
-parser.add_argument("--pop_size", type=int, default=100)
+parser.add_argument("--pop_size", type=int, default=50)
 parser.add_argument("--survival_multiplier", type=int, default=1)
 parser.add_argument("--n_offsprings", type=int, default=300)
 parser.add_argument("--has_run_num", type=int, default=1000)
@@ -1044,7 +1001,7 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
         base_save_folder = 'collected_data_customized'
     elif ego_car_model == 'lbc_augment':
         arguments.agent = 'scenario_runner/team_code/image_agent.py'
-        arguments.agent_config = 'checkpoints/stage2_pretrained/random_1_1e-4_200_20_73runs/epoch=0.ckpt'
+        arguments.agent_config = '/home/zhongzzy9/Documents/self-driving-car/2020_CARLA_challenge/checkpoints/stage2_pretrained/town03_ga-adv-nn-un-1-1e-4/epoch=0.ckpt'
         base_save_folder = 'collected_data_lbc_augment'
     elif ego_car_model == 'auto_pilot':
         arguments.agent = 'leaderboard/team_code/auto_pilot.py'
@@ -1761,7 +1718,8 @@ class NSGA2_DT(NSGA2):
                 if len(self.pop) > 0:
                     self.tmp_off, parents = self.mating.do(self.problem, self.pop, self.n_offsprings, algorithm=self)
 
-            print('\n'*3, 'after mating len 0', len(self.tmp_off), '\n'*3)
+            print('\n'*3, 'after mating len 0', len(self.tmp_off), 'self.n_offsprings', self.n_offsprings, '\n'*3)
+
 
             if len(self.tmp_off) < self.n_offsprings:
                 remaining_num = self.n_offsprings - len(self.tmp_off)
