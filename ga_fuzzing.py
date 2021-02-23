@@ -226,8 +226,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, eliminate_duplicates_for_list, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized, eliminate_repetitive_vectorized, get_sorted_subfolders, load_data
-
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, eliminate_duplicates_for_list, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized, eliminate_repetitive_vectorized, get_sorted_subfolders, load_data, choose_weight_inds, get_F, get_unique_bugs
 
 from collections import deque
 
@@ -437,6 +436,7 @@ finish_after_has_run = True
 
 only_run_unique_cases = arguments.only_run_unique_cases
 
+use_single_objective = arguments.use_single_objective
 consider_interested_bugs = arguments.consider_interested_bugs
 record_every_n_step = arguments.record_every_n_step
 
@@ -509,7 +509,7 @@ for customizing weather choices, static_types, pedestrian_types, vehicle_types, 
 
 class MyProblem(Problem):
 
-    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, cumulative_info=None, objective_weights=default_objective_weights, check_unique_coeff=default_check_unique_coeff, consider_interested_bugs=1, record_every_n_step=2000):
+    def __init__(self, elementwise_evaluation, bug_parent_folder, non_bug_parent_folder, town_name, scenario, direction, route_str, scenario_file, ego_car_model, scheduler_port, dashboard_address, customized_config, ports=[2000], episode_max_time=10000, customized_parameters_distributions={}, customized_center_transforms={}, call_from_dt=False, dt=False, estimator=None, critical_unique_leaves=None, cumulative_info=None, objective_weights=default_objective_weights, check_unique_coeff=default_check_unique_coeff, consider_interested_bugs=1, record_every_n_step=2000, use_single_objective=True):
 
         customized_parameters_bounds = customized_config['customized_parameters_bounds']
         customized_parameters_distributions = customized_config['customized_parameters_distributions']
@@ -531,6 +531,7 @@ class MyProblem(Problem):
         self.y_list = []
         self.F_list = []
 
+        self.use_single_objective = use_single_objective
         self.consider_interested_bugs = consider_interested_bugs
         self.record_every_n_step = record_every_n_step
 
@@ -859,24 +860,7 @@ class MyProblem(Problem):
 
 
 
-            # standardize current objectives using all objectives so far
-            all_objectives = np.stack(self.objectives_list)
-            current_objectives = np.stack(job_results)
-            print('all_objectives.shape, current_objectives.shape', all_objectives.shape, current_objectives.shape)
-            standardize = StandardScaler()
-            standardize.fit(all_objectives)
-            standardize.transform(current_objectives)
-
-            print('current_objectives', current_objectives, 'objective_weights', objective_weights)
-            current_objectives *= objective_weights
-
-            print('\n'*2, 'all_objectives_mean, all_objectives_std :', standardize.mean_, standardize.var_, '\n'*2)
-
-
-            if arguments.use_single_objective:
-                current_F = np.expand_dims(np.sum(current_objectives, axis=1), axis=1)
-            else:
-                current_F = np.row_stack(current_objectives)
+            current_F = get_F(job_results, self.objectives_list, objective_weights, self.use_single_objective)
 
             out["F"] = current_F
             self.F_list.append(current_F)
@@ -1338,7 +1322,7 @@ class MySamplingVectorized(Sampling):
             # TBD: temporary
             sample_time = 0
             while sample_time < max_sample_times and len(X) < n_samples:
-
+                print('sample_time / max_sample_times', sample_time, '/', max_sample_times, 'len(X)', len(X))
                 sample_time += 1
                 cur_X = []
                 for i, dist in enumerate(parameters_distributions):
@@ -1351,7 +1335,7 @@ class MySamplingVectorized(Sampling):
                 cur_X = np.swapaxes(np.stack(cur_X),0,1)
 
 
-                remaining_inds = if_violate_constraints_vectorized(cur_X, problem.customized_constraints, problem.labels)
+                remaining_inds = if_violate_constraints_vectorized(cur_X, problem.customized_constraints, problem.labels, verbose=False)
                 if len(remaining_inds) == 0:
                     continue
 
@@ -1369,7 +1353,7 @@ class MySamplingVectorized(Sampling):
                     else:
                         prev_X = problem.interested_unique_bugs
                     # print('prev_X.shape', prev_X.shape)
-                    remaining_inds = is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th)
+                    remaining_inds = is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=False)
 
                     if len(remaining_inds) == 0:
                         continue
@@ -1557,6 +1541,8 @@ class MyMatingVectorized(Mating):
 
         # iterate until enough offsprings are created
         while len(off) < n_offsprings:
+            n_infills += 1
+            print('n_infills / mating_max_iterations', n_infills, '/', mating_max_iterations, 'len(off)', len(off))
             # if no new offsprings can be generated within a pre-specified number of generations
             if n_infills >= mating_max_iterations:
                 break
@@ -1590,7 +1576,7 @@ class MyMatingVectorized(Mating):
                 else:
                     prev_X = problem.interested_unique_bugs
 
-                remaining_inds = is_distinct_vectorized(_off_X, prev_X, problem.mask, problem.xl, problem.xu, problem.p, problem.c, problem.th)
+                remaining_inds = is_distinct_vectorized(_off_X, prev_X, problem.mask, problem.xl, problem.xu, problem.p, problem.c, problem.th, verbose=False)
 
                 if len(remaining_inds) == 0:
                     continue
@@ -1612,7 +1598,7 @@ class MyMatingVectorized(Mating):
             # add to the offsprings and increase the mating counter
             off = Population.merge(off, _off)
             parents = Population.merge(parents, _parents)
-            n_infills += 1
+
 
 
 
@@ -1819,7 +1805,7 @@ class NSGA2_DT(NSGA2):
                     # only consider collision case for now
 
                     # print('X_test.shape', X_test.shape)
-
+                    weight_inds = choose_weight_inds(self.problem.objective_weights)
                     obj_preds = []
                     for clf in clfs:
                         obj_preds.append(clf.predict(X_test))
@@ -1846,13 +1832,14 @@ class NSGA2_DT(NSGA2):
                     # print(np.array(self.problem.objectives_list)[:, :3])
                     # print(tmp_objectives)
                     # print(np.array(default_objective_weights[:3]))
-                    tmp_objectives_minus = np.concatenate([np.array(self.problem.objectives_list)[:, :3], tmp_objectives_minus]) * np.array(default_objective_weights[:3])
+                    tmp_objectives_minus = np.concatenate([np.array(self.problem.objectives_list)[:, weight_inds], tmp_objectives_minus]) * np.array(default_objective_weights[weight_inds])
 
                     tmp_pop_minus.set("X", tmp_X_minus)
                     tmp_pop_minus.set("F", tmp_objectives_minus)
 
-
+                    print('len(tmp_objectives_minus)', len(tmp_objectives_minus))
                     inds_minus_top = np.array(self.survival.do(self.problem, tmp_pop_minus, self.pop_size, return_indices=True))
+                    print('inds_minus_top', inds_minus_top, 'len(X_train)', len(X_train), np.sum(inds_minus_top<len(X_train)))
                     # print('inds_minus_top', inds_minus_top)
                     num_of_top_already_run = np.sum(inds_minus_top<len(X_train))
                     num_to_run = self.pop_size - num_of_top_already_run
@@ -1861,7 +1848,7 @@ class NSGA2_DT(NSGA2):
                         tmp_pop_plus = Population(X_test.shape[0], individual=Individual())
 
                         tmp_X_plus = X_test
-                        tmp_objectives_plus = tmp_objectives_plus * np.array(default_objective_weights[:3])
+                        tmp_objectives_plus = tmp_objectives_plus * np.array(default_objective_weights[weight_inds])
 
                         tmp_pop_plus.set("X", tmp_X_plus)
                         tmp_pop_plus.set("F", tmp_objectives_plus)
@@ -1873,7 +1860,7 @@ class NSGA2_DT(NSGA2):
                         self.off = self.tmp_off[inds_plus_top]
                     else:
                         print('no more offsprings to run (regression nn)')
-                        self.off = []
+                        self.off = Population(0, individual=Individual())
                 else:
 
                     if self.uncertainty:
@@ -2069,7 +2056,7 @@ class NSGA2_DT(NSGA2):
                                 if diversity_mode == 'nn_rep':
                                     d_list = calculate_rep_d(clf, X_train, X_test[mid_inds])
                                     if self.use_unique_bugs:
-                                        unique_inds = is_distinct_vectorized(X_test_ori[mid_inds], self.problem.interested_unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th)
+                                        unique_inds = is_distinct_vectorized(X_test_ori[mid_inds], self.problem.interested_unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th, verbose=False)
 
                                         print('len(unique_inds)', len(unique_inds))
                                         d_list[unique_inds] += np.max(d_list)
@@ -2113,7 +2100,7 @@ class NSGA2_DT(NSGA2):
 
                                     scores = clf.predict_proba(high_conf_configs_stack_np)[:, 1]
                                     if self.use_unique_bugs:
-                                        unique_inds = is_distinct_vectorized(high_conf_configs_ori_stack_np, self.problem.interested_unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th)
+                                        unique_inds = is_distinct_vectorized(high_conf_configs_ori_stack_np, self.problem.interested_unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th, verbose=False)
 
                                         print('len(unique_inds)', len(unique_inds))
                                         if len(unique_inds) > 0:
@@ -2233,7 +2220,7 @@ class NSGA2_DT(NSGA2):
 
         if self.only_run_unique_cases:
             X_off = [off_i.X for off_i in self.off]
-            remaining_inds = is_distinct_vectorized(X_off, self.problem.interested_unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th)
+            remaining_inds = is_distinct_vectorized(X_off, self.problem.interested_unique_bugs, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th, verbose=False)
             self.off = self.off[remaining_inds]
 
         self.off.set("n_gen", self.n_gen)
@@ -2284,10 +2271,7 @@ class NSGA2_DT(NSGA2):
 
 
     def _initialize(self):
-
-        if self.warm_up_path and ((not self.dt) or (self.dt and not self.problem.cumulative_info)):
-            from customized_utils import get_sorted_subfolders, load_data, get_unique_bugs
-
+        if self.warm_up_path and ((self.dt and not self.problem.cumulative_info) or (not self.dt)):
             subfolders = get_sorted_subfolders(self.warm_up_path)
             X, _, objectives_list, mask, _ = load_data(subfolders)
 
@@ -2305,34 +2289,36 @@ class NSGA2_DT(NSGA2):
                 X, objectives_list, mask, xl, xu, unique_coeff, self.problem.objective_weights, return_bug_info=True, consider_interested_bugs=self.problem.consider_interested_bugs
             )
 
-            print('type(X), type(objectives_list), type(unique_bugs)', type(X), type(objectives_list), type(self.problem.unique_bugs))
-
             self.all_pop_run_X = np.array(X)
             self.problem.objectives_list = objectives_list.tolist()
 
+        if self.dt:
+            X_list = list(self.X)
+            F_list = list(self.F)
+            pop = Population(len(X_list), individual=Individual())
+            pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen, "CV", [0 for _ in range(len(X_list))], "feasible", [[True] for _ in range(len(X_list))])
+            self.pop = pop
+            self.set_off()
+            pop = self.off
 
+        elif self.warm_up_path:
             X_list = X[-self.pop_size:]
             current_objectives = objectives_list[-self.pop_size:]
-            current_objectives = np.dot(current_objectives, np.expand_dims(np.array(objective_weights), axis=1))
-            F_list = current_objectives.tolist()
-            print('F_list', sorted(F_list))
-            print('len(self.all_pop_run_X)', len(self.all_pop_run_X))
+
+            # current_objectives = np.dot(current_objectives, np.expand_dims(np.array(objective_weights), axis=1))
+            # F_list = current_objectives.tolist()
+
+            F_list = get_F(current_objectives, objectives_list, self.problem.objective_weights, self.problem.use_single_objective)
+
+            # print('F_list', sorted(F_list))
+            # print('len(self.all_pop_run_X)', len(self.all_pop_run_X))
 
             pop = Population(len(X_list), individual=Individual())
             pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen, "CV", [0 for _ in range(len(X_list))], "feasible", [[True] for _ in range(len(X_list))])
 
             self.pop = pop
-            print(self.pop.get('X'))
             self.set_off()
             pop = self.off
-
-
-            print('len(self.all_pop_run_X)', len(self.all_pop_run_X))
-        elif self.dt:
-            X_list = list(self.X)
-            F_list = list(self.F)
-            pop = Population(len(X_list), individual=Individual())
-            pop.set("X", X_list, "F", F_list, "n_gen", self.n_gen, "CV", [0 for _ in range(len(X_list))], "feasible", [[True] for _ in range(len(X_list))])
 
         else:
             # create the initial population
@@ -2345,7 +2331,10 @@ class NSGA2_DT(NSGA2):
             #     remaining_pop = self.plain_initialization.do(self.problem, remaining_num, algorithm=self)
             #     pop = Population.merge(pop, remaining_pop)
 
-            pop = self.plain_initialization.do(self.problem, pop_size, algorithm=self)
+            if self.use_unique_bugs:
+                pop = self.initialization.do(self.problem, pop_size, algorithm=self)
+            else:
+                pop = self.plain_initialization.do(self.problem, pop_size, algorithm=self)
             pop.set("n_gen", self.n_gen)
 
 
@@ -2523,6 +2512,8 @@ def customized_minimize(problem,
 
 
 def run_nsga2_dt():
+    use_initial_x_and_y = True
+
     end_when_no_critical_region = True
     cumulative_info = None
 
@@ -2541,13 +2532,33 @@ def run_nsga2_dt():
     now = datetime.now()
     dt_time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
 
+    if arguments.warm_up_path:
+        subfolders = get_sorted_subfolders(warm_up_path)
+        X, _, objectives_list, _, _ = load_data(subfolders)
+
+        if arguments.warm_up_len > 0:
+            X = X[:arguments.warm_up_len]
+            objectives_list = objectives_list[:arguments.warm_up_len]
+
+        y = determine_y_upon_weights(objectives_list, arguments.objective_weights)
+        F = get_F(objectives_list, objectives_list, arguments.objective_weights, arguments.use_single_objective)
+
+        estimator, inds, critical_unique_leaves = filter_critical_regions(np.array(X), y)
+        X_filtered = np.array(X)[inds]
+        F_filtered = F[inds]
+
+
+
 
     for i in range(outer_iterations):
         dt_time_str_i = dt_time_str
         dt = True
-        if i == 0 or np.sum(y)==0:
+        if (i == 0 and not arguments.warm_up_path) or np.sum(y)==0:
             dt = False
-        X_new, y_new, F_new, objectives_new, labels, hv_new, parent_folder, cumulative_info = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, dt_time_str_i, i, cumulative_info)
+        X_new, y_new, F_new, _, labels, _, parent_folder, cumulative_info, all_pop_run_X, objective_list, objective_weights = run_ga(True, dt, X_filtered, F_filtered, estimator, critical_unique_leaves, dt_time_str_i, i, cumulative_info)
+
+        all_pop_run_X
+        objective_list
 
         if finish_after_has_run and cumulative_info['has_run'] > has_run_num:
             break
@@ -2555,19 +2566,19 @@ def run_nsga2_dt():
         if len(X_new) == 0:
             break
 
-        if i == 0:
+        if i == 0 and not arguments.warm_up_path:
             X = X_new
             y = y_new
             F = F_new
-            objectives = objectives_new
-            hv = hv_new
-
+            # objectives = objectives_new
+            # hv = hv_new
         else:
             X = np.concatenate([X, X_new])
             y = np.concatenate([y, y_new])
             F = np.concatenate([F, F_new])
-            objectives = np.concatenate([objectives, objectives_new])
-            hv = np.concatenate([hv, hv_new])
+            # objectives = np.concatenate([objectives, objectives_new])
+            # hv = np.concatenate([hv, hv_new])
+
 
 
 
@@ -2581,20 +2592,20 @@ def run_nsga2_dt():
 
 
     # Save data
-    has_run_list = cumulative_info['has_run_list']
-    time_list = cumulative_info['time_list']
-    bugs_num_list = cumulative_info['bugs_num_list']
-    unique_bugs_num_list = cumulative_info['unique_bugs_num_list']
-
-
-    n_gen = global_n_gen
-
-    dt_save_file = '_'.join([algorithm_name, route_type, scenario_type, ego_car_model, str(n_gen), str(pop_size), str(outer_iterations), dt_time_str])
-
-    pth = os.path.join(parent_folder, dt_save_file)
-    np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, labels=labels, hv=hv, has_run_list=has_run_list, route_type=route_type, scenario_type=scenario_type)
-
-    print('npz saved')
+    # has_run_list = cumulative_info['has_run_list']
+    # time_list = cumulative_info['time_list']
+    # bugs_num_list = cumulative_info['bugs_num_list']
+    # unique_bugs_num_list = cumulative_info['unique_bugs_num_list']
+    #
+    #
+    # n_gen = global_n_gen
+    #
+    # dt_save_file = '_'.join([algorithm_name, route_type, scenario_type, ego_car_model, str(n_gen), str(pop_size), str(outer_iterations), dt_time_str])
+    #
+    # pth = os.path.join(parent_folder, dt_save_file)
+    # np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, labels=labels, has_run_list=has_run_list, route_type=route_type, scenario_type=scenario_type)
+    #
+    # print('npz saved')
 
 
 
@@ -2609,9 +2620,6 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         if dt and len(list(X)) == 0:
             print('No critical leaves!!! Start from random sampling!!!')
             dt = False
-
-        if dt:
-            n_gen += 1
     else:
         termination_condition = global_termination_condition
 
@@ -2662,7 +2670,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
         problem = MyProblem(elementwise_evaluation=False, bug_parent_folder=bug_parent_folder, non_bug_parent_folder=non_bug_parent_folder, town_name=town_name, scenario=scenario, direction=direction, route_str=route_str, scenario_file=scenario_file, ego_car_model=ego_car_model, scheduler_port=scheduler_port, dashboard_address=dashboard_address, customized_config=customized_d, ports=ports, episode_max_time=episode_max_time,
         call_from_dt=call_from_dt, dt=dt, estimator=estimator, critical_unique_leaves=critical_unique_leaves, cumulative_info=cumulative_info, objective_weights=objective_weights,
         check_unique_coeff=check_unique_coeff, consider_interested_bugs=consider_interested_bugs,
-        record_every_n_step=record_every_n_step)
+        record_every_n_step=record_every_n_step, use_single_objective=use_single_objective)
 
 
 
@@ -2833,7 +2841,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
     }
 
 
-    return X, y, F, objectives, labels, hv, cur_parent_folder, cumulative_info
+    return X, y, F, objectives, labels, hv, cur_parent_folder, cumulative_info, algorithm.all_pop_run_X, problem.objectives_list, problem.objective_weights
 
 if __name__ == '__main__':
     if algorithm_name in ['nsga2-un-dt', 'nsga2-dt']:

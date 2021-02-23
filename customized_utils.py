@@ -1704,8 +1704,8 @@ def if_violate_constraints_vectorized(X, customized_constraints, labels, verbose
             np.sum(coeff * np.power(X[remaining_inds[:, None], ids], powers), axis=1) > constraint["value"]
         )
         remaining_inds = remaining_inds[if_violate_current==0]
-
-    print('constraints filtering', len(X), '->', len(remaining_inds))
+    if verbose:
+        print('constraints filtering', len(X), '->', len(remaining_inds))
 
     return remaining_inds
 
@@ -3061,6 +3061,25 @@ def reformat(cur_info):
 
     return x, objectives, int(is_bug), mask, labels
 
+def choose_weight_inds(objective_weights):
+    collision_activated = np.sum(objective_weights[:3] != 0) > 0
+    offroad_activated = (np.abs(objective_weights[3]) > 0) | (
+        np.abs(objective_weights[5]) > 0
+    )
+    wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
+        np.abs(objective_weights[5]) > 0
+    )
+    red_light_activated = np.abs(objective_weights[-1]) > 0
+
+    if collision_activated:
+        weight_inds = np.arange(0,3)
+    elif offroad_activated or wronglane_activated:
+        weight_inds = np.arange(3,6)
+    elif red_light_activated:
+        weight_inds = np.arange(9,10)
+    else:
+        raise
+    return weight_inds
 
 def pretrain_regression_nets(initial_X, initial_objectives_list, objective_weights, xl_ori, xu_ori, labels, customized_constraints, cutoff, cutoff_end):
 
@@ -3096,22 +3115,8 @@ def pretrain_regression_nets(initial_X, initial_objectives_list, objective_weigh
         unique_bugs_len,
     ) = param_for_recover_and_decode
 
+    weight_inds = choose_weight_inds(objective_weights)
 
-    collision_activated = np.sum(objective_weights[:3] != 0) > 0
-    offroad_activated = (np.abs(objective_weights[3]) > 0) | (
-        np.abs(objective_weights[5]) > 0
-    )
-    wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
-        np.abs(objective_weights[5]) > 0
-    )
-    red_light_activated = np.abs(objective_weights[-1]) > 0
-
-    if collision_activated:
-        weight_inds = np.arange(0,3)
-    elif offroad_activated or wronglane_activated:
-        weight_inds = np.arange(3,6)
-    else:
-        raise
 
     from pgd_attack import train_regression_net
     chosen_weights = objective_weights[weight_inds]
@@ -3232,3 +3237,24 @@ def select_batch_max_d_greedy(d_list, train_test_cutoff, batch_size):
         # print('remaining_inds after', remaining_inds)
         chosen_inds.append(chosen_ind)
     return chosen_inds
+
+def get_F(current_objectives, all_objectives, objective_weights, use_single_objective):
+    # standardize current objectives using all objectives so far
+    all_objectives = np.stack(all_objectives)
+    current_objectives = np.stack(current_objectives)
+    # print('all_objectives.shape, current_objectives.shape', all_objectives.shape, current_objectives.shape)
+    standardize = StandardScaler()
+    standardize.fit(all_objectives)
+    standardize.transform(current_objectives)
+
+    # print('current_objectives', current_objectives, 'objective_weights', objective_weights)
+    current_objectives *= objective_weights
+    #
+    # print('\n'*2, 'all_objectives_mean, all_objectives_std :', standardize.mean_, standardize.var_, '\n'*2)
+
+
+    if use_single_objective:
+        current_F = np.expand_dims(np.sum(current_objectives, axis=1), axis=1)
+    else:
+        current_F = np.row_stack(current_objectives)
+    return current_F

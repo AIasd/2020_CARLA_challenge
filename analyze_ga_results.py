@@ -645,12 +645,13 @@ def calculate_pairwise_dist(path_list):
 
 
 
-def draw_unique_bug_num_over_simulations(path_list, warmup_pth, warmup_pth_cutoff, save_filename='num_of_unique_bugs', scene_name='', legend=True, range_upper_bound=6, bug_type='collision'):
+def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_cutoff, save_filename='num_of_unique_bugs', scene_name='', legend=True, range_upper_bound=6, bug_type='collision', unique_coeffs=[[]]):
     def subroutine(prev_X, cur_X, prev_objectives, cur_objectives, cutoff):
         if cutoff == 0:
             return 0
 
         cutoff_start = 0
+        cutoff = np.min([cutoff, len(cur_X)])
         if label == 'ga-un':
             cutoff_start += warmup_pth_cutoff
             cutoff += warmup_pth_cutoff
@@ -661,23 +662,27 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth, warmup_pth_cutof
             cur_inds = cur_objectives[cutoff_start:cutoff, 0] > 0.1
             prev_X_bug = prev_X[prev_inds]
             cur_X_bug = cur_X[cutoff_start:cutoff][cur_inds]
-            inds = is_distinct_vectorized(cur_X_bug, prev_X_bug, mask, xl, xu, p, c, th, verbose=True)
+            inds = is_distinct_vectorized(cur_X_bug, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
             bug_num = len(inds)
+            print('all bug num: ', len(cur_X_bug))
 
         elif bug_type == 'out-of-road':
             prev_inds = prev_objectives[:, -3] == 1
             cur_inds = cur_objectives[cutoff_start:cutoff, -3] == 1
             prev_X_bug = prev_X[prev_inds]
-            cur_X_bug = cur_X[cutoff_start:cutoff][cur_inds]
-            inds = is_distinct_vectorized(cur_X_bug, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+            cur_X_bug_1 = cur_X[cutoff_start:cutoff][cur_inds]
+            inds = is_distinct_vectorized(cur_X_bug_1, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
             bug_num = len(inds)
 
             prev_inds = prev_objectives[:, -2] == 1
             cur_inds = cur_objectives[cutoff_start:cutoff, -2] == 1
             prev_X_bug = prev_X[prev_inds]
-            cur_X_bug = cur_X[cutoff_start:cutoff][cur_inds]
-            inds = is_distinct_vectorized(cur_X_bug, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+            cur_X_bug_2 = cur_X[cutoff_start:cutoff][cur_inds]
+
+            inds = is_distinct_vectorized(cur_X_bug_2, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
             bug_num += len(inds)
+
+            print('all bug num: ', len(cur_X_bug_1)+len(cur_X_bug_2))
 
 
 
@@ -688,28 +693,41 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth, warmup_pth_cutof
 
     fig = plt.figure()
     axes = fig.add_subplot(1,1,1)
-    line_style = ['-', ':', '--', '-.', '-', '-', '-', '-']
+    line_style = ['-', ':', '--', '-.', '-', ':', '--', '-.']
 
     p = 0
-    c = 0.1
-    th = 0.5
+
     cutoffs = [50*i for i in range(0, range_upper_bound)]
 
-    subfolders = get_sorted_subfolders(warmup_pth)
-    prev_X, _, prev_objectives, _, _ = load_data(subfolders)
-    prev_X = np.array(prev_X)[:warmup_pth_cutoff]
-    prev_objectives = prev_objectives[:warmup_pth_cutoff]
 
-
-    pickle_filename = get_picklename(warmup_pth)
-    with open(pickle_filename, 'rb') as f_in:
-        d = pickle.load(f_in)
-        xl = d['xl']
-        xu = d['xu']
-        mask = d['mask']
 
 
     for i, (label, pth_list) in enumerate(path_list):
+        if len(unique_coeffs) == 0:
+            c = 0.1
+            th = 0.5
+        else:
+            c, th = unique_coeffs[i]
+
+        if len(warmup_pth_list) == 1:
+            warmup_pth = warmup_pth_list[0]
+        else:
+            warmup_pth = warmup_pth_list[i]
+
+        subfolders = get_sorted_subfolders(warmup_pth)
+        prev_X, _, prev_objectives, _, _ = load_data(subfolders)
+        prev_X = np.array(prev_X)[:warmup_pth_cutoff]
+        prev_objectives = prev_objectives[:warmup_pth_cutoff]
+
+
+        pickle_filename = get_picklename(warmup_pth)
+        with open(pickle_filename, 'rb') as f_in:
+            d = pickle.load(f_in)
+            xl = d['xl']
+            xu = d['xu']
+            mask = d['mask']
+
+
         print('-'*30, label, '-'*30)
         num_of_unique_bugs_list = []
         for pth in pth_list:
@@ -721,9 +739,9 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth, warmup_pth_cutof
                     if os.path.isdir(filepath):
                         subfolders = get_sorted_subfolders(filepath)
                         tmp_X, _, tmp_objectives, _, _ = load_data(subfolders)
-                        cur_X.append(tmp_X)
-                        cur_objectives.append(tmp_objectives)
-
+                        if len(tmp_X) > 0:
+                            cur_X.append(tmp_X)
+                            cur_objectives.append(tmp_objectives)
                 cur_X = np.concatenate(cur_X)
                 cur_objectives = np.concatenate(cur_objectives)
             else:
@@ -742,15 +760,20 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth, warmup_pth_cutof
             num_of_unique_bugs_list.append(num_of_unique_bugs)
         num_of_unique_bugs_list = np.array(num_of_unique_bugs_list)
         # print(num_of_unique_bugs_list.shape)
-        num_of_unique_bugs_std = np.std(num_of_unique_bugs_list, axis=0)
-        num_of_unique_bugs_mean = np.mean(num_of_unique_bugs_list, axis=0)
-        axes.errorbar(cutoffs, num_of_unique_bugs, yerr=num_of_unique_bugs_std, label=label, linewidth=2, linestyle=line_style[i], capsize=5)
+
+        if len(pth_list) == 1:
+            axes.plot(cutoffs, num_of_unique_bugs_list.squeeze(), label=label, linewidth=2, linestyle=line_style[i], markersize=5, marker='.')
+        else:
+            num_of_unique_bugs_std = np.std(num_of_unique_bugs_list, axis=0)
+            num_of_unique_bugs_mean = np.mean(num_of_unique_bugs_list, axis=0)
+
+            axes.errorbar(cutoffs, num_of_unique_bugs, yerr=num_of_unique_bugs_std, label=label, linewidth=2, linestyle=line_style[i], capsize=5)
 
 
 
     axes.set_title(scene_name, fontsize=26)
     if legend:
-        axes.legend(loc=2, prop={'size': 26}, fancybox=True, framealpha=0.2)
+        axes.legend(loc=2, prop={'size': 18}, fancybox=True, framealpha=0.2)
     axes.set_xlabel('# simulations', fontsize=26)
     axes.set_ylabel('# unique violations', fontsize=26)
     plt.xticks(fontsize=18)
@@ -774,28 +797,47 @@ if __name__ == '__main__':
     ]
 
     town03_out_of_road_path_list = [
-    ('ga-un-nn-grad', []),
-    ('nsga2-sm-un-a', []),
-    ('nsga2-sm', []),
-    ('nsga2-dt', []),
+    ('ga-un-nn-grad', ['run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road/2021_02_20_23_50_02,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road_2/2021_02_22_11_30_44,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('nsga2-sm-un-a', ['run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road/2021_02_21_16_22_51,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road_2/2021_02_22_11_30_32,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('nsga2-sm', ['run_results/nsga2/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road/2021_02_21_16_22_16,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road_2/2021_02_22_11_30_37,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
+    ('nsga2-dt', ['run_results/nsga2-dt/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road/2021_02_21_10_57_24', 'run_results/nsga2-dt/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road_2/2021_02_22_00_22_22']),
     ]
 
     town05_out_of_road_path_list = [
-    ('ga-un-nn-grad', ['run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road/2021_02_20_23_49_57,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
-    ('nsga2-sm-un-a', ['run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road/2021_02_20_23_49_43,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
-    ('nsga2-sm', ['run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road/2021_02_20_23_49_47,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
+    ('ga-un-nn-grad', ['run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road/2021_02_20_23_49_57,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road_2/2021_02_22_00_22_13,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('nsga2-sm-un-a', ['run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road/2021_02_22_00_21_51,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road_2/2021_02_22_11_30_18,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('nsga2-sm', ['run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road/2021_02_22_00_22_02,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road_2/2021_02_22_11_30_24,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
     ('nsga2-dt', ['run_results/nsga2-dt/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_700_500nsga2initial_out_of_road/2021_02_20_23_49_52']),
     ]
 
     town07_ablation_path_list = [
     ('ga-un-nn-grad(eps=1)', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_17_22_40_12,50_20_adv_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
-    ('ga-un-nn-grad(eps=0.3)', []),
+    ('ga-un-nn-grad(eps=0.3)', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_21_10_57_47,50_22_adv_nn_700_100_0.3_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_0.3']),
     ('ra-un-nn-grad', ['run_results/random-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_700_500nsga2initial/2021_02_20_19_22_41,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
     ('ga-un-nn', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_17_22_40_59,50_20_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
     ('ga-un', ['run_results/seeds/nsga2_un_1500/town07_front_0/2021_02_17_11_54_52,50_30_none_1500_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
-    ('ga', []),
-    ('ra', [])
+    ('ga', ['run_results/nsga2/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_500nsga2initial_1000/2021_02_21_13_58_17,50_22_none_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
+    ('ra', ['run_results/random/town07_front_0/go_straight_town07/lbc/0.1_0.5_700_500nsga2initial/2021_02_21_13_58_49,50_22_none_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01'])
     ]
+
+    town07_seeds_ablation_path_list = [
+    ('ga-un-nn-grad(eps=1)', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_17_22_40_12,50_20_adv_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'])
+
+    ]
+
+    town07_unique_ablation_path_list = [
+    ('ga-un-nn-grad(0.05, 0.25)', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_300_500nsga2initial_diff_th/2021_02_21_19_08_51,50_22_adv_nn_300_100_1.01_-4_0.9_coeff_0.0_0.05_0.25__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('ga-un-nn-grad(0.1, 0.25)', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_300_500nsga2initial_diff_th/2021_02_21_21_01_13,50_22_adv_nn_300_100_1.01_-4_0.9_coeff_0.0_0.1_0.25__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('ga-un-nn-grad(0.2, 0.25)', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_300_500nsga2initial_diff_th/2021_02_21_19_25_57,50_10_adv_nn_300_100_1.01_-4_0.9_coeff_0.0_0.2_0.25__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('ga-un-nn-grad(0.05, 0.5)', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_300_500nsga2initial_diff_th/2021_02_21_20_28_14,50_10_adv_nn_300_100_1.01_-4_0.9_coeff_0.0_0.05_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('ga-un-nn-grad(0.1, 0.5)', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_17_22_40_12,50_20_adv_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('ga-un-nn-grad(0.2, 0.5)', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_300_500nsga2initial_diff_th/2021_02_21_20_40_13,50_12_adv_nn_300_100_1.01_-4_0.9_coeff_0.0_0.2_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('ga-un-nn-grad(0.05, 0.75)', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_300_500nsga2initial_diff_th/2021_02_21_22_02_57,50_12_adv_nn_300_100_1.01_-4_0.9_coeff_0.0_0.05_0.75__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('ga-un-nn-grad(0.1, 0.75)', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_300_500nsga2initial_diff_th/2021_02_22_22_21_35,50_12_adv_nn_300_100_1.01_-4_0.9_coeff_0.0_0.1_0.75__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('ga-un-nn-grad(0.2, 0.75)', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_300_500nsga2initial_diff_th/2021_02_22_23_09_14,50_12_adv_nn_300_100_1.01_-4_0.9_coeff_0.0_0.2_0.75__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'])
+    ]
+
+
 
     warmup_pth_town07 = 'run_results/seeds/nsga2_un_1500/town07_front_0/2021_02_17_11_54_52,50_30_none_1500_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'
     warmup_pth_town01 = 'run_results/seeds/nsga2_un_1500/town01_left_0/2021_02_17_22_39_22,50_30_none_1500_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'
@@ -803,7 +845,41 @@ if __name__ == '__main__':
     warmup_pth_town05_out_of_road = 'run_results/seeds/nsga2_un_1500_out_of_road/town05_right_0/2021_02_19_23_28_04,50_30_none_1500_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_250_250_only_unique_1_eps_1.01'
     warmup_pth_cutoff = 500
 
-    # 'collision', 'out-of-road'
-    bug_type = 'collision'
-    save_filename = 'num_of_unique_bugs'
-    draw_unique_bug_num_over_simulations(town01_path_list, warmup_pth_town01, warmup_pth_cutoff, save_filename=save_filename, scene_name=bug_type, legend=True, range_upper_bound=15, bug_type=bug_type)
+
+    # town_path_lists = [town07_path_list, town01_path_list, town03_out_of_road_path_list, town05_out_of_road_path_list, town07_ablation_path_list, town07_seeds_ablation_path_list]
+    # warmup_pths = [warmup_pth_town07, warmup_pth_town01, warmup_pth_town03_out_of_road, warmup_pth_town05_out_of_road, warmup_pth_town07, warmup_pth_town07]
+    # bug_types = ['collision', 'collision', 'out-of-road', 'out-of-road', 'collision', 'collision']
+    # towns = ['town07', 'town01', 'town03', 'town05', 'town07_ablation', 'town07_seeds_ablation']
+    # range_upper_bounds = [15, 15, 15, 15, 15, 7]
+    # unique_coeffs = [[], [], [], [], [], []]
+
+    # town_path_lists = [town07_path_list, town01_path_list, town03_out_of_road_path_list, town05_out_of_road_path_list]
+    # warmup_pths = [warmup_pth_town07, warmup_pth_town01, warmup_pth_town03_out_of_road, warmup_pth_town05_out_of_road]
+    # bug_types = ['collision', 'collision', 'out-of-road', 'out-of-road']
+    # towns = ['town07', 'town01', 'town03', 'town05']
+    # range_upper_bounds = [15, 15, 15, 15]
+    # unique_coeffs = [[], [], [], []]
+
+    town_path_lists = [town07_unique_ablation_path_list]
+    warmup_pths = [warmup_pth_town07]
+    bug_types = ['collision']
+    towns = ['town07_unique_ablation']
+    range_upper_bounds = [7]
+    unique_coeffs_list = [[[0.05, 0.25], [0.1, 0.25], [0.2, 0.25], [0.05, 0.5], [0.1, 0.5], [0.2, 0.5], [0.05, 0.75], [0.1, 0.75], [0.2, 0.75]]]
+
+    def draw_simulation_wrapper(town_path_list, warmup_pth, bug_type, town, range_upper_bound, unique_coeffs):
+        # 'collision', 'out-of-road'
+        save_filename = 'num_of_unique_bugs_'+town+'_'+bug_type+'.pdf'
+        scene_name = town + ' ' + bug_type
+        print('-'*20, scene_name, '-'*20)
+        draw_unique_bug_num_over_simulations(town_path_list, [warmup_pth], warmup_pth_cutoff, save_filename=save_filename, scene_name=scene_name, legend=True, range_upper_bound=range_upper_bound, bug_type=bug_type, unique_coeffs=unique_coeffs)
+
+
+    for i in range(len(town_path_lists)):
+        town_path_list = town_path_lists[i]
+        warmup_pth = warmup_pths[i]
+        bug_type = bug_types[i]
+        town = towns[i]
+        range_upper_bound = range_upper_bounds[i]
+        unique_coeffs = unique_coeffs_list[i]
+        draw_simulation_wrapper(town_path_list, warmup_pth, bug_type, town, range_upper_bound, unique_coeffs)
