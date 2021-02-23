@@ -786,12 +786,13 @@ if __name__ == '__main__':
     ('ga-un-nn-grad', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_17_22_40_12,50_20_adv_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_12_57_59,50_80_adv_nn_1900_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
     ('nsga2-sm-un-a', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_00_23_01,50_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_11_27_47,50_80_regression_nn_1900_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
     ('nsga2-sm', ['run_results/nsga2/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_500nsga2initial_1000/2021_02_18_21_53_03,50_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_11_27_54,50_80_regression_nn_1900_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
-    ('nsga2-dt', ['run_results/nsga2-dt/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_17_56_00', 'run_results/nsga2-dt/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_11_52_50']),
+    # ('nsga2-dt', ['run_results/nsga2-dt/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_17_56_00', 'run_results/nsga2-dt/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_11_52_50']),
+    ('nsga2-dt', ['run_results/nsga2-dt/town07_front_0/go_straight_town07/lbc/new_new_0.1_0.5_1000_500nsga2initial/2021_02_22_23_55_00'])
     ]
 
     town01_path_list = [
     ('ga-un-nn-grad', ['run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_18_16_32_41,50_20_adv_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
-    ('nsga2-sm-un-a', ['run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_10_45_59,52_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('nsga2-sm-un-a', ['run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_10_45_59,52_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_00_19_26,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
     ('nsga2-sm', ['run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_10_46_11,50_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
     ('nsga2-dt', ['run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_17_55_52']),
     ]
@@ -800,14 +801,17 @@ if __name__ == '__main__':
     ('ga-un-nn-grad', ['run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road/2021_02_20_23_50_02,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road_2/2021_02_22_11_30_44,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
     ('nsga2-sm-un-a', ['run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road/2021_02_21_16_22_51,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road_2/2021_02_22_11_30_32,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
     ('nsga2-sm', ['run_results/nsga2/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road/2021_02_21_16_22_16,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road_2/2021_02_22_11_30_37,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
-    ('nsga2-dt', ['run_results/nsga2-dt/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road/2021_02_21_10_57_24', 'run_results/nsga2-dt/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road_2/2021_02_22_00_22_22']),
+    # ('nsga2-dt', ['run_results/nsga2-dt/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road/2021_02_21_10_57_24', 'run_results/nsga2-dt/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial_out_of_road_2/2021_02_22_00_22_22']),
+    ('nsga2-dt', ['run_results/nsga2-dt/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_new_0.1_0.5_1000_500nsga2initial_out_of_road/2021_02_22_22_05_51']),
+
     ]
 
     town05_out_of_road_path_list = [
     ('ga-un-nn-grad', ['run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road/2021_02_20_23_49_57,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road_2/2021_02_22_00_22_13,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
     ('nsga2-sm-un-a', ['run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road/2021_02_22_00_21_51,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road_2/2021_02_22_11_30_18,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
     ('nsga2-sm', ['run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road/2021_02_22_00_22_02,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_500nsga2initial_700_out_of_road_2/2021_02_22_11_30_24,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
-    ('nsga2-dt', ['run_results/nsga2-dt/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_700_500nsga2initial_out_of_road/2021_02_20_23_49_52']),
+    # ('nsga2-dt', ['run_results/nsga2-dt/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_0.1_0.5_700_500nsga2initial_out_of_road/2021_02_20_23_49_52']),
+    ('nsga2-dt', ['run_results/nsga2-dt/town05_right_0/leading_car_braking_town05_fixed_npc_num/lbc/new_new_0.1_0.5_700_500nsga2initial_out_of_road/2021_02_22_22_05_46']),
     ]
 
     town07_ablation_path_list = [
@@ -851,21 +855,28 @@ if __name__ == '__main__':
     # bug_types = ['collision', 'collision', 'out-of-road', 'out-of-road', 'collision', 'collision']
     # towns = ['town07', 'town01', 'town03', 'town05', 'town07_ablation', 'town07_seeds_ablation']
     # range_upper_bounds = [15, 15, 15, 15, 15, 7]
-    # unique_coeffs = [[], [], [], [], [], []]
+    # unique_coeffs_list = [[], [], [], [], [], []]
 
     # town_path_lists = [town07_path_list, town01_path_list, town03_out_of_road_path_list, town05_out_of_road_path_list]
     # warmup_pths = [warmup_pth_town07, warmup_pth_town01, warmup_pth_town03_out_of_road, warmup_pth_town05_out_of_road]
     # bug_types = ['collision', 'collision', 'out-of-road', 'out-of-road']
     # towns = ['town07', 'town01', 'town03', 'town05']
     # range_upper_bounds = [15, 15, 15, 15]
-    # unique_coeffs = [[], [], [], []]
+    # unique_coeffs_list = [[], [], [], []]
 
-    town_path_lists = [town07_unique_ablation_path_list]
-    warmup_pths = [warmup_pth_town07]
-    bug_types = ['collision']
-    towns = ['town07_unique_ablation']
-    range_upper_bounds = [7]
-    unique_coeffs_list = [[[0.05, 0.25], [0.1, 0.25], [0.2, 0.25], [0.05, 0.5], [0.1, 0.5], [0.2, 0.5], [0.05, 0.75], [0.1, 0.75], [0.2, 0.75]]]
+    town_path_lists = [town07_path_list, town03_out_of_road_path_list, town05_out_of_road_path_list]
+    warmup_pths = [warmup_pth_town07, warmup_pth_town03_out_of_road, warmup_pth_town05_out_of_road]
+    bug_types = ['collision', 'out-of-road', 'out-of-road']
+    towns = ['town07', 'town03', 'town05']
+    range_upper_bounds = [15, 15, 15]
+    unique_coeffs_list = [[], [], []]
+
+    # town_path_lists = [town07_unique_ablation_path_list]
+    # warmup_pths = [warmup_pth_town07]
+    # bug_types = ['collision']
+    # towns = ['town07_unique_ablation']
+    # range_upper_bounds = [7]
+    # unique_coeffs_list = [[[0.05, 0.25], [0.1, 0.25], [0.2, 0.25], [0.05, 0.5], [0.1, 0.5], [0.2, 0.5], [0.05, 0.75], [0.1, 0.75], [0.2, 0.75]]]
 
     def draw_simulation_wrapper(town_path_list, warmup_pth, bug_type, town, range_upper_bound, unique_coeffs):
         # 'collision', 'out-of-road'
