@@ -129,4 +129,4 @@ CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir pat
 
 
 # Reference
-This repo is partially built on top of [here](https://github.com/bradyz/2020_CARLA_challenge) and [here](https://github.com/msu-coinlab/pymoo)
+This repo is partially built on top of [Carla Challenge (with LBC supported)](https://github.com/bradyz/2020_CARLA_challenge) and [pymoo](https://github.com/msu-coinlab/pymoo)
