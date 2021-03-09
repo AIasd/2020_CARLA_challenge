@@ -785,7 +785,7 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
     arguments = arguments_info()
     arguments.record_every_n_step = record_every_n_step
     arguments.port = customized_data['port']
-    arguments.debug = 1
+    arguments.debug = 0
     if rerun:
         arguments.debug = 0
 
