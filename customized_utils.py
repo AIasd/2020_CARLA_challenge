@@ -33,7 +33,7 @@ import re
 import math
 from sklearn.preprocessing import StandardScaler
 import pickle
-
+import traceback
 
 def visualize_route(route):
     n = len(route)
@@ -112,20 +112,21 @@ def specify_args():
     parser.add_argument(
         "--port", default="2000", help="TCP port to listen to (default: 2000)"
     )
+    parser.add_argument('--trafficManagerPort', default='8000',
+                        help='Port to use for the TrafficManager (default: 8000)')
+    parser.add_argument('--trafficManagerSeed', default='0',
+                        help='Seed used by the TrafficManager (default: 0)')
     parser.add_argument(
         "--sync", action="store_true", help="Forces the simulation to run synchronously"
     )
     parser.add_argument("--debug", type=int, help="Run with debug output", default=0)
-    parser.add_argument(
-        "--spectator", type=bool, help="Switch spectator view on?", default=True
-    )
     parser.add_argument(
         "--record",
         type=str,
         default="",
         help="Use CARLA recording feature to create a recording of the scenario",
     )
-    # modification: 30->40
+    # modification: 30->15
     parser.add_argument(
         "--timeout",
         default="15.0",
@@ -133,9 +134,6 @@ def specify_args():
     )
 
     # simulation setup
-    parser.add_argument(
-        "--challenge-mode", action="store_true", help="Switch to challenge mode?"
-    )
     parser.add_argument(
         "--routes",
         help="Name of the route to be executed. Point to the route_xml_file to be executed.",
@@ -215,7 +213,7 @@ class arguments_info:
         self.debug = 0
         self.spectator = True
         self.record = ""
-        self.timeout = "15.0"
+        self.timeout = "60.0"
         self.challenge_mode = True
         self.routes = None
         self.scenarios = "leaderboard/data/all_towns_traffic_scenarios_public.json"
@@ -232,6 +230,10 @@ class arguments_info:
         self.save_action_based_measurements = 0
         self.changing_weather = False
         self.record_every_n_step = 2000
+
+        self.trafficManagerPort = '8000'
+        self.trafficManagerSeed = '0'
+
 
 
 def add_transform(transform1, transform2):
@@ -999,48 +1001,48 @@ customized_bounds_and_distributions = {
             "num_of_static_max": 0,
             "num_of_pedestrians_min": 10,
             "num_of_pedestrians_max": 10,
-            "num_of_vehicles_min": 10,
-            "num_of_vehicles_max": 10,
-            "vehicle_waypoint_follower_min_0": 1,
-            "vehicle_waypoint_follower_max_0": 1,
-            "vehicle_waypoint_follower_min_1": 1,
-            "vehicle_waypoint_follower_max_1": 1,
-            "vehicle_waypoint_follower_min_2": 1,
-            "vehicle_waypoint_follower_max_2": 1,
-            "vehicle_waypoint_follower_min_3": 1,
-            "vehicle_waypoint_follower_max_3": 1,
-            "vehicle_waypoint_follower_min_4": 1,
-            "vehicle_waypoint_follower_max_4": 1,
-            "vehicle_waypoint_follower_min_5": 1,
-            "vehicle_waypoint_follower_max_5": 1,
-            "vehicle_waypoint_follower_min_6": 1,
-            "vehicle_waypoint_follower_max_6": 1,
-            "vehicle_waypoint_follower_min_7": 1,
-            "vehicle_waypoint_follower_max_7": 1,
-            "vehicle_waypoint_follower_min_8": 1,
-            "vehicle_waypoint_follower_max_8": 1,
-            "vehicle_waypoint_follower_min_9": 1,
-            "vehicle_waypoint_follower_max_9": 1,
-            "vehicle_avoid_collision_min_0": 1,
-            "vehicle_avoid_collision_max_0": 1,
-            "vehicle_avoid_collision_min_1": 1,
-            "vehicle_avoid_collision_max_1": 1,
-            "vehicle_avoid_collision_min_2": 1,
-            "vehicle_avoid_collision_max_2": 1,
-            "vehicle_avoid_collision_min_3": 1,
-            "vehicle_avoid_collision_max_3": 1,
-            "vehicle_avoid_collision_min_4": 1,
-            "vehicle_avoid_collision_max_4": 1,
-            "vehicle_avoid_collision_min_5": 1,
-            "vehicle_avoid_collision_max_5": 1,
-            "vehicle_avoid_collision_min_6": 1,
-            "vehicle_avoid_collision_max_6": 1,
-            "vehicle_avoid_collision_min_7": 1,
-            "vehicle_avoid_collision_max_7": 1,
-            "vehicle_avoid_collision_min_8": 1,
-            "vehicle_avoid_collision_max_8": 1,
-            "vehicle_avoid_collision_min_9": 1,
-            "vehicle_avoid_collision_max_9": 1,
+            "num_of_vehicles_min": 0,
+            "num_of_vehicles_max": 0,
+            # "vehicle_waypoint_follower_min_0": 1,
+            # "vehicle_waypoint_follower_max_0": 1,
+            # "vehicle_waypoint_follower_min_1": 1,
+            # "vehicle_waypoint_follower_max_1": 1,
+            # "vehicle_waypoint_follower_min_2": 1,
+            # "vehicle_waypoint_follower_max_2": 1,
+            # "vehicle_waypoint_follower_min_3": 1,
+            # "vehicle_waypoint_follower_max_3": 1,
+            # "vehicle_waypoint_follower_min_4": 1,
+            # "vehicle_waypoint_follower_max_4": 1,
+            # "vehicle_waypoint_follower_min_5": 1,
+            # "vehicle_waypoint_follower_max_5": 1,
+            # "vehicle_waypoint_follower_min_6": 1,
+            # "vehicle_waypoint_follower_max_6": 1,
+            # "vehicle_waypoint_follower_min_7": 1,
+            # "vehicle_waypoint_follower_max_7": 1,
+            # "vehicle_waypoint_follower_min_8": 1,
+            # "vehicle_waypoint_follower_max_8": 1,
+            # "vehicle_waypoint_follower_min_9": 1,
+            # "vehicle_waypoint_follower_max_9": 1,
+            # "vehicle_avoid_collision_min_0": 1,
+            # "vehicle_avoid_collision_max_0": 1,
+            # "vehicle_avoid_collision_min_1": 1,
+            # "vehicle_avoid_collision_max_1": 1,
+            # "vehicle_avoid_collision_min_2": 1,
+            # "vehicle_avoid_collision_max_2": 1,
+            # "vehicle_avoid_collision_min_3": 1,
+            # "vehicle_avoid_collision_max_3": 1,
+            # "vehicle_avoid_collision_min_4": 1,
+            # "vehicle_avoid_collision_max_4": 1,
+            # "vehicle_avoid_collision_min_5": 1,
+            # "vehicle_avoid_collision_max_5": 1,
+            # "vehicle_avoid_collision_min_6": 1,
+            # "vehicle_avoid_collision_max_6": 1,
+            # "vehicle_avoid_collision_min_7": 1,
+            # "vehicle_avoid_collision_max_7": 1,
+            # "vehicle_avoid_collision_min_8": 1,
+            # "vehicle_avoid_collision_max_8": 1,
+            # "vehicle_avoid_collision_min_9": 1,
+            # "vehicle_avoid_collision_max_9": 1,
             "pedestrian_x_min_0": -12,
             "pedestrian_x_max_0": -4,
             "pedestrian_y_min_0": -20,
@@ -1922,6 +1924,9 @@ def parse_route_file(route_filename, route_length_lower_bound=50):
     return config_list
 
 
+
+
+
 def eliminate_duplicates_for_list(
     mask, xl, xu, p, c, th, X, prev_unique_bugs, tmp_off=[]
 ):
@@ -2250,9 +2255,10 @@ def get_if_bug_list(objectives_list):
 
 
 def start_server(port):
+    print('start carla server')
     # hack: this heavily relies on the relative path of carla
     cmd_list = shlex.split(
-        "sh ../carla_0994_no_rss/CarlaUE4.sh -opengl -carla-rpc-port="
+        "sh ../carla_0911_no_rss/CarlaUE4.sh -opengl -carla-rpc-port="
         + str(port)
         + " -carla-streaming-port=0"
     )
@@ -2285,6 +2291,80 @@ def start_server(port):
     time.sleep(10)
 
 
+def start_client(obj, host, port):
+    print('initialize carla client')
+
+    while True:
+        try:
+            obj.client = carla.Client(host, port)
+            break
+        except:
+            logging.exception("__init__ error")
+            traceback.print_exc()
+
+def try_load_world(obj, town, host, port):
+    while True:
+        try:
+            print('load town :', town)
+            obj.world = obj.client.load_world(town)
+            break
+        except:
+            logging.exception("_load_and_wait_for_world error")
+            traceback.print_exc()
+
+            start_server(port)
+            obj.client = carla.Client(host, port)
+
+def correct_spawn_locations(x_data, label_to_id, all_final_generated_transforms_list_i, object_type, keys):
+    object_type_plural = object_type
+    if object_type in ['pedestrian', 'vehicle']:
+        object_type_plural += 's'
+
+    num_of_objects_ind = label_to_id['num_of_'+object_type_plural]
+    x_data[num_of_objects_ind] = 0
+
+    empty_slots = deque()
+    for j, (x, y, yaw) in enumerate(all_final_generated_transforms_list_i[object_type]):
+        if x == None:
+            empty_slots.append(j)
+        else:
+            x_data[num_of_objects_ind] += 1
+            if object_type+'_x_'+str(j) not in label_to_id:
+                print(label_to_id)
+                print(object_type+'_x_'+str(j))
+                print(all_final_generated_transforms_list_i[object_type])
+                raise
+            x_j_ind = label_to_id[object_type+'_x_'+str(j)]
+            y_j_ind = label_to_id[object_type+'_y_'+str(j)]
+            yaw_j_ind = label_to_id[object_type+'_yaw_'+str(j)]
+
+
+            # print(object_type, j)
+            # print('x', x_data[x_j_ind], '->', x)
+            # print('y', x_data[y_j_ind], '->', y)
+            # print('yaw', x_data[yaw_j_ind], '->', yaw)
+            x_data[x_j_ind] = x
+            x_data[y_j_ind] = y
+            x_data[yaw_j_ind] = yaw
+
+            if len(empty_slots) > 0:
+                q = empty_slots.popleft()
+                print('shift', j, 'to', q)
+                for k in keys:
+                    # print(k)
+                    ind_to = label_to_id[k+'_'+str(q)]
+                    ind_from = label_to_id[k+'_'+str(j)]
+                    x_data[ind_to] = x_data[ind_from]
+                if object_type == 'vehicle':
+                    for p in range(waypoints_num_limit):
+                        for waypoint_label in waypoint_labels:
+                            ind_to = label_to_id['_'.join(['vehicle', str(q), waypoint_label, str(p)])]
+                            ind_from = label_to_id['_'.join(['vehicle', str(j), waypoint_label, str(p)])]
+                            x_data[ind_to] = x_data[ind_from]
+
+                empty_slots.append(j)
+
+
 def port_to_gpu(port):
     import torch
 
@@ -2295,7 +2375,7 @@ def port_to_gpu(port):
     return gpu
 
 
-def estimate_objectives(save_path, default_objectives):
+def estimate_objectives(save_path, default_objectives=np.array([0., 20., 1., 7., 7., 0., 0., 0., 0., 0.])):
 
     events_path = os.path.join(save_path, "events.txt")
     deviations_path = os.path.join(save_path, "deviations.txt")

@@ -34,3 +34,5 @@ route_to_center_d.pkl
 new_initial_observations_one_ped_const_weather.pkl
 tmp_tsne/*
 *.pdf
+tmp/*
+tmp_old/*

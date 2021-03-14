@@ -37,7 +37,9 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types, weather_names
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, parse_scenario, parse_route_file, estimate_objectives, parse_route_and_scenario_plain
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, parse_scenario, parse_route_file, estimate_objectives, parse_route_and_scenario_plain, correct_spawn_locations
+
+from fuzzing import run_simulation
 
 
 from collections import deque
@@ -147,98 +149,7 @@ default_objectives = [0, 7, 7, 7, 0, 0, 0, 0, 0]
 
 
 
-def run_simulation(customized_data, launch_server, episode_max_time, route_path, route_str, scenario_file, ego_car_model, background_vehicles=False, changing_weather=False):
-    arguments = arguments_info()
-    arguments.port = customized_data['port']
 
-    arguments.background_vehicles = background_vehicles
-
-    # model path and checkpoint path
-    if ego_car_model == 'lbc':
-        arguments.agent = 'scenario_runner/team_code/image_agent.py'
-        arguments.agent_config = 'models/epoch=24.ckpt'
-        base_save_folder = 'collected_data_customized'
-    elif ego_car_model == 'auto_pilot':
-        arguments.agent = 'leaderboard/team_code/auto_pilot.py'
-        arguments.agent_config = ''
-        base_save_folder = 'collected_data_autopilot'
-    elif ego_car_model == 'pid_agent':
-        arguments.agent = 'scenario_runner/team_code/pid_agent.py'
-        arguments.agent_config = ''
-        base_save_folder = 'collected_data_pid_agent'
-    elif ego_car_model == 'map_model':
-        arguments.agent = 'scenario_runner/team_code/map_agent.py'
-        arguments.agent_config = 'models/stage1_default_50_epoch=16.ckpt'
-        base_save_folder = 'collected_data_map_model'
-    else:
-        print('unknown ego_car_model:', ego_car_model)
-        raise
-
-
-
-
-    statistics_manager = StatisticsManager()
-    # Fixed Hyperparameters
-    sample_factor = 5
-    arguments.debug = 0
-
-
-    # Laundry Stuff-------------------------------------------------------------
-    arguments.weather_index = customized_data['weather_index']
-    os.environ['WEATHER_INDEX'] = str(customized_data['weather_index'])
-
-
-    # used to read scenario file
-    arguments.scenarios = scenario_file
-
-    # used to compose folder to save real-time data
-    os.environ['SAVE_FOLDER'] = arguments.save_folder
-
-    # used to read route to run; used to compose folder to save real-time data
-    arguments.routes = route_path
-    os.environ['ROUTES'] = arguments.routes
-
-    # used to record real time deviation data
-    arguments.deviations_folder = arguments.save_folder + '/' + pathlib.Path(os.environ['ROUTES']).stem
-
-    # used to read real-time data
-    save_path = arguments.save_folder + '/' + pathlib.Path(os.environ['ROUTES']).stem
-
-
-    arguments.changing_weather = changing_weather
-
-
-
-    # extract waypoints along route
-    import xml.etree.ElementTree as ET
-    tree = ET.parse(arguments.routes)
-    route_waypoints = []
-
-
-    for route in tree.iter("route"):
-        for waypoint in route.iter('waypoint'):
-            route_waypoints.append(create_transform(float(waypoint.attrib['x']), float(waypoint.attrib['y']), float(waypoint.attrib['z']), float(waypoint.attrib['pitch']), float(waypoint.attrib['yaw']), float(waypoint.attrib['roll'])))
-
-    # --------------------------------------------------------------------------
-
-    customized_data['using_customized_route_and_scenario'] = True
-    customized_data['destination'] = route_waypoints[-1].location
-    customized_data['sample_factor'] = sample_factor
-    customized_data['number_of_attempts_to_request_actor'] = 10
-
-    try:
-        leaderboard_evaluator = LeaderboardEvaluator(arguments, statistics_manager, launch_server, episode_max_time)
-        leaderboard_evaluator.run(arguments, customized_data)
-    except Exception as e:
-        traceback.print_exc()
-    finally:
-        del leaderboard_evaluator
-        # collect signals for estimating objectives
-
-        objectives, loc, object_type, route_completion = estimate_objectives(save_path, default_objectives)
-
-
-    return objectives, loc, object_type, route_completion
 
 
 
@@ -374,57 +285,6 @@ def get_customized_data(port, scenario_type, route_type, ego_x=0, ego_y=0):
 
     return customized_data, other_info
 
-
-
-def correct_spawn_locations(x_data, label_to_id, all_final_generated_transforms_list_i, object_type, keys):
-
-    object_type_plural = object_type
-    if object_type in ['pedestrian', 'vehicle']:
-        object_type_plural += 's'
-
-    num_of_objects_ind = label_to_id['num_of_'+object_type_plural]
-    x_data[num_of_objects_ind] = 0
-
-    empty_slots = deque()
-    for j, (x, y, yaw) in enumerate(all_final_generated_transforms_list_i[object_type]):
-        if x == None:
-            empty_slots.append(j)
-        else:
-            x_data[num_of_objects_ind] += 1
-            if object_type+'_x_'+str(j) not in label_to_id:
-                print(label_to_id)
-                print(object_type+'_x_'+str(j))
-                print(all_final_generated_transforms_list_i[object_type])
-                raise
-            x_j_ind = label_to_id[object_type+'_x_'+str(j)]
-            y_j_ind = label_to_id[object_type+'_y_'+str(j)]
-            yaw_j_ind = label_to_id[object_type+'_yaw_'+str(j)]
-
-
-            # print(object_type, j)
-            # print('x', pop[i].X[x_j_ind], '->', x)
-            # print('y', pop[i].X[y_j_ind], '->', y)
-            # print('yaw', pop[i].X[yaw_j_ind], '->', yaw)
-            x_data[x_j_ind] = x
-            x_data[y_j_ind] = y
-            x_data[yaw_j_ind] = yaw
-
-            if len(empty_slots) > 0:
-                q = empty_slots.popleft()
-                print('shift', j, 'to', q)
-                for k in keys:
-                    print(k)
-                    ind_to = label_to_id[k+'_'+str(q)]
-                    ind_from = label_to_id[k+'_'+str(j)]
-                    x_data[ind_to] = x_data[ind_from]
-                if object_type == 'vehicle':
-                    for p in range(waypoints_num_limit):
-                        for waypoint_label in waypoint_labels:
-                            ind_to = label_to_id['_'.join(['vehicle', str(q), waypoint_label, str(p)])]
-                            ind_from = label_to_id['_'.join(['vehicle', str(j), waypoint_label, str(p)])]
-                            x_data[ind_to] = x_data[ind_from]
-
-                empty_slots.append(j)
 
 
 

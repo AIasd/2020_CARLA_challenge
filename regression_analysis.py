@@ -1,9 +1,24 @@
 """
 TBD:
-update to 0.9.10
-update to 0.9.11
-determinism of pytorch model
+
+python ga_fuzzing.py -p 2027 2030 -s 8788 -d 8789 --n_gen 2 --pop_size 2 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name random --has_run_num 4
+
+fix crash after running fuzzing.py for 6~7 routes
+
+speed up simulation
+
+support looping through routes and check for scenarios activation
+add an API to support not ending the session when violation happens
+
+fix carla challeng scenario data collection
+stop sign autopilot
 add not spawning agents near ego car at the beginning to ga_fuzzing
+
+
+
+
+determinism of pytorch model
+
 
 
 threats to validity:
@@ -201,8 +216,7 @@ python ga_fuzzing.py -p 2021 -s 8784 -d 8785 --n_gen 50 --pop_size 50 -r 'town07
 
 
 
-
-
+python ga_fuzzing.py -p 2015 -s 8782 -d 8783 --n_gen 2 --pop_size 2 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name random --has_run_num 4
 
 
 #############################################################
