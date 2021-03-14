@@ -1,11 +1,37 @@
 """
 TBD:
 
-python ga_fuzzing.py -p 2027 2030 -s 8788 -d 8789 --n_gen 2 --pop_size 2 -r 'town04_front_0' -c 'pedestrians_cross_street_town04' --algorithm_name random --has_run_num 4
+python ga_fuzzing.py -p 2027 -s 8788 -d 8789 --n_gen 20 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07_one_ped' --algorithm_name nsga2-un --has_run_num 1000 --check_unique_coeff 0 0.2 0.5 --has_display 0 --objective_weights -1 1 1 0 0 0 0 0 0 0 --only_run_unique_cases 0
+
+python ga_fuzzing.py -p 2030 -s 8780 -d 8781 --n_gen 20 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07_one_ped' --algorithm_name nsga2 --has_run_num 1000 --check_unique_coeff 0 0.2 0.5 --has_display 0 --only_run_unique_cases 0
+
+python ga_fuzzing.py -p 2033 -s 8782 -d 8783 --n_gen 20 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07_one_ped' --algorithm_name random --has_run_num 1000 --check_unique_coeff 0 0.2 0.5 --has_display 0 --only_run_unique_cases 0
+
+
+
+
+
+*** parameter shift, visualization
+*** fixing generated vehicle's behaviors to follow routes
+*** demo?
+
+*** try fixing?
 
 fix crash after running fuzzing.py for 6~7 routes
 
+collect data (with stop sign supported?(need to update auto_pilot), with new town routes?)
+
+
+integrate RL agent into the framework
+
+
+
+better interface for route selection
+
 speed up simulation
+
+
+
 
 support looping through routes and check for scenarios activation
 add an API to support not ending the session when violation happens

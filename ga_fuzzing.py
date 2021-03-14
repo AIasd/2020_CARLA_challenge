@@ -255,7 +255,7 @@ only_run_unique_cases = arguments.only_run_unique_cases
 use_single_objective = arguments.use_single_objective
 consider_interested_bugs = arguments.consider_interested_bugs
 record_every_n_step = arguments.record_every_n_step
-
+correct_spawn_locations_after_run = arguments.correct_spawn_locations_after_run
 os.environ['PYTHONHASHSEED'] = '0'
 os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
 
@@ -529,7 +529,7 @@ class MyProblem(Problem):
                 cur_info = {'counter':counter, 'x':x, 'data':data, 'objectives':objectives,  'loc':loc, 'object_type':object_type, 'labels':labels, 'mask':mask, 'xl':xl, 'xu':xu, 'is_bug':is_bug, 'route_completion':route_completion,
                 'customized_constraints':customized_constraints, 'info': info}
 
-                print(counter, is_bug, objectives)
+                print('counter:', counter, 'bug:', is_bug, 'objectives:', objectives)
 
 
                 if is_bug:
@@ -789,6 +789,7 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
     arguments.record_every_n_step = record_every_n_step
     arguments.port = customized_data['port']
     arguments.trafficManagerPort = str(int(arguments.port) + 6000)
+    print('trafficManagerPort', arguments.trafficManagerPort)
     arguments.debug = 0
     if rerun:
         arguments.debug = 0
@@ -798,7 +799,6 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
     if ego_car_model == 'lbc':
         arguments.agent = 'scenario_runner/team_code/image_agent.py'
         arguments.agent_config = 'models/epoch=24.ckpt'
-        # arguments.agent_config = 'models/stage2_0.01_augmented_epoch=11.ckpt'
         base_save_folder = 'collected_data_customized'
     elif ego_car_model == 'lbc_augment':
         arguments.agent = 'scenario_runner/team_code/image_agent.py'
@@ -816,6 +816,10 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
         arguments.agent = 'scenario_runner/team_code/map_agent.py'
         arguments.agent_config = 'models/stage1_default_50_epoch=16.ckpt'
         base_save_folder = 'collected_data_map_model'
+    elif ego_car_model == 'rl':
+        arguments.agent = 'scenario_runner/team_code/rl_agent/agent_IAs_RL.py'
+        arguments.agent_config = 'models/rl_agent/model_RL_IAs_CARLA_Challenge'
+        base_save_folder = 'collected_data_rl'
     else:
         print('unknown ego_car_model:', ego_car_model)
 
