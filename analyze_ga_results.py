@@ -23,6 +23,8 @@ from matplotlib.ticker import NullFormatter
 from sklearn.manifold import TSNE
 from customized_utils import  get_distinct_data_points, check_bug, filter_critical_regions, get_sorted_subfolders, load_data, get_picklename, is_distinct_vectorized
 from ga_fuzzing import default_objectives
+from matplotlib.lines import Line2D
+
 
 def draw_hv(bug_res_path, save_folder):
     with open(bug_res_path, 'rb') as f_in:
@@ -645,87 +647,214 @@ def calculate_pairwise_dist(path_list):
 
 
 
-def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_cutoff, save_filename='num_of_unique_bugs', scene_name='', legend=True, range_upper_bound=6, bug_type='collision', unique_coeffs=[[]]):
-    def subroutine(prev_X, cur_X, prev_objectives, cur_objectives, cutoff):
-        if cutoff == 0:
-            return 0
+def visualize_ped_over_time(path, save_filename='ped_over_time', bug_type='collision', unique_coeffs=[0.1, 0.1], range_upper_bound=5, warmup_path=None, warmup_len=None):
 
-        cutoff_start = 0
-        cutoff = np.min([cutoff, len(cur_X)])
-        if label == 'ga-un':
-            cutoff_start += warmup_pth_cutoff
-            cutoff += warmup_pth_cutoff
+    def plot_arrow(ax, x_i, value_inds, color, width=0.002, head_width=0.2):
+        x_0_ind, y_0_ind, yaw_0_ind, speed_0_ind = value_inds
 
-        bug_num = 0
-        if bug_type == 'collision':
+        x, y = x_i[x_0_ind], x_i[y_0_ind]
+        yaw = np.deg2rad(x_i[yaw_0_ind])
+        speed = x_i[speed_0_ind]
+
+        dx = np.cos(yaw)*speed/5
+        dy = np.sin(yaw)*speed/5
+
+        ax.arrow(x, y, dx, dy, color=color, head_width=head_width, alpha=0.5, width=width)
+        ax.set_ylim(-11, 11)
+        ax.set_xlim(11, -11)
+
+
+    label = ''
+    cutoffs = [250*i for i in range(1, range_upper_bound)]
+    p = 0
+    c, th = unique_coeffs
+
+
+    subfolders = get_sorted_subfolders(path)
+    cur_X, _, cur_objectives, _, _ = load_data(subfolders)
+    cur_X = np.array(cur_X)
+
+    if warmup_path:
+        subfolders = get_sorted_subfolders(warmup_path)
+        prev_X, _, prev_objectives, _, _ = load_data(subfolders)
+        prev_X = np.array(prev_X)[:warmup_len]
+        prev_objectives = np.array(prev_objectives)[:warmup_len]
+
+        cur_X = np.concatenate([prev_X, cur_X])
+        cur_objectives = np.concatenate([prev_objectives, cur_objectives])
+
+    pickle_filename = get_picklename(path)
+
+
+    with open(pickle_filename, 'rb') as f_in:
+        d = pickle.load(f_in)
+        xl = d['xl']
+        xu = d['xu']
+        mask = d['mask']
+        labels = np.array(d['labels'])
+        labels_to_inds = {label:i for i, label in enumerate(labels)}
+
+        changeable_inds = np.arange(len(xu))[xu-xl>0.001]
+
+        print(len(labels), labels)
+        print('changeable inds', changeable_inds)
+        print('changeable labels', len(labels[changeable_inds]), labels[changeable_inds])
+        print('changeable xu', xu[changeable_inds])
+        print('cur_X[0].shape', cur_X[0].shape)
+
+        x_0_ind = labels_to_inds['pedestrian_x_0']
+        y_0_ind = labels_to_inds['pedestrian_y_0']
+        yaw_0_ind = labels_to_inds['pedestrian_yaw_0']
+        speed_0_ind = labels_to_inds['pedestrian_speed_0']
+
+        value_inds = (x_0_ind, y_0_ind, yaw_0_ind, speed_0_ind)
+
+
+        fig, axes = plt.subplots(1, len(cutoffs), figsize=(8*len(cutoffs),5))
+
+        num_of_unique_bugs = []
+
+        bug_inds = np.arange(len(cur_X))[cur_objectives[:, 0] > 0.1]
+        non_bug_inds = np.arange(len(cur_X))[cur_objectives[:, 0] <= 0.1]
+        cur_X_bug = cur_X[bug_inds]
+
+
+        inds = is_distinct_vectorized(cur_X_bug, [], mask, xl, xu, p, c, th, verbose=False)
+        print('p,c,th', p, c, th)
+        print('len(cur_X_bug)', len(cur_X_bug))
+        print('len(inds)', len(inds))
+
+        unique_bug_inds = bug_inds[inds]
+
+        non_bug_color = 'green'
+        bug_color = 'blue'
+        unique_bug_color = 'red'
+
+
+        for j, cutoff in enumerate(cutoffs):
+            ax = axes[j]
+            cutoff_start = cutoff - 250
+
+            current_range = np.arange(cutoff_start, cutoff)
+
+            # print('unique_bug_inds', unique_bug_inds)
+            # print('bug_inds', bug_inds)
+            for ind in non_bug_inds:
+                if ind in current_range:
+                    color = non_bug_color
+                    plot_arrow(ax, cur_X[ind], value_inds, color)
+            for ind in bug_inds:
+                if ind not in unique_bug_inds:
+                    if ind in current_range:
+                        color = bug_color
+                        plot_arrow(ax, cur_X[ind], value_inds, color)
+            for ind in unique_bug_inds:
+                if ind in current_range:
+                    color = unique_bug_color
+                    plot_arrow(ax, cur_X[ind], value_inds, color, width=0.1, head_width=0.4)
+
+            if j == 0:
+                legend_elements = [Line2D([0], [0], color=non_bug_color, lw=4, label='Non Bugs'), Line2D([0], [0], color=bug_color, lw=4, label='Bugs'), Line2D([0], [0], color=unique_bug_color, lw=4, label='Unique Bugs')]
+                ax.legend(handles=legend_elements, loc=2, prop={'size': 23}, fancybox=True, framealpha=0.2)
+
+            ax.set_title(str(cutoff_start)+'-'+str(cutoff), fontsize=20)
+
+        fig.suptitle(save_filename+' with bugs '+str(len(unique_bug_inds))+'/'+str(len(bug_inds)), fontsize=26)
+        fig.tight_layout()
+        fig.savefig('tmp/'+save_filename)
+
+
+
+def count_unique_bug_num(prev_X, cur_X, prev_objectives, cur_objectives, cutoff, label, bug_type, xl, xu, mask, p, c, th):
+    if cutoff == 0:
+        return 0
+
+    cutoff_start = 0
+    cutoff = np.min([cutoff, len(cur_X)])
+    # if label == 'ga-un':
+    #     cutoff_start += warmup_pth_cutoff
+    #     cutoff += warmup_pth_cutoff
+
+    prev_X_bug = []
+    bug_num = 0
+    if bug_type == 'collision':
+        if len(prev_X) > 0:
             prev_inds = prev_objectives[:, 0] > 0.1
-            cur_inds = cur_objectives[cutoff_start:cutoff, 0] > 0.1
             prev_X_bug = prev_X[prev_inds]
-            cur_X_bug = cur_X[cutoff_start:cutoff][cur_inds]
-            inds = is_distinct_vectorized(cur_X_bug, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
-            bug_num += len(inds)
-            print('all bug num: ', len(cur_X_bug))
+        cur_inds = cur_objectives[cutoff_start:cutoff, 0] > 0.1
+        cur_X_bug = cur_X[cutoff_start:cutoff][cur_inds]
+        inds = is_distinct_vectorized(cur_X_bug, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+        bug_num += len(inds)
+        print('all bug num: ', len(cur_X_bug))
 
-        elif bug_type == 'out-of-road':
+    elif bug_type == 'out-of-road':
+        if len(prev_X) > 0:
             prev_inds = prev_objectives[:, -3] == 1
-            cur_inds = cur_objectives[cutoff_start:cutoff, -3] == 1
             prev_X_bug = prev_X[prev_inds]
-            cur_X_bug_1 = cur_X[cutoff_start:cutoff][cur_inds]
-            inds = is_distinct_vectorized(cur_X_bug_1, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
-            bug_num += len(inds)
 
-            prev_inds = prev_objectives[:, -2] == 1
-            cur_inds = cur_objectives[cutoff_start:cutoff, -2] == 1
-            prev_X_bug = prev_X[prev_inds]
-            cur_X_bug_2 = cur_X[cutoff_start:cutoff][cur_inds]
+        cur_inds = cur_objectives[cutoff_start:cutoff, -3] == 1
+        cur_X_bug_1 = cur_X[cutoff_start:cutoff][cur_inds]
+        inds = is_distinct_vectorized(cur_X_bug_1, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+        bug_num += len(inds)
 
-            inds = is_distinct_vectorized(cur_X_bug_2, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
-            bug_num += len(inds)
+        prev_inds = prev_objectives[:, -2] == 1
+        cur_inds = cur_objectives[cutoff_start:cutoff, -2] == 1
+        prev_X_bug = prev_X[prev_inds]
+        cur_X_bug_2 = cur_X[cutoff_start:cutoff][cur_inds]
 
-            print('all bug num: ', len(cur_X_bug_1)+len(cur_X_bug_2))
-        elif bug_type == 'all':
+        inds = is_distinct_vectorized(cur_X_bug_2, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+        bug_num += len(inds)
+
+        print('all bug num: ', len(cur_X_bug_1)+len(cur_X_bug_2))
+    elif bug_type == 'all':
+        if len(prev_X) > 0:
             prev_inds = prev_objectives[:, 0] > 0.1
-            cur_inds = cur_objectives[cutoff_start:cutoff, 0] > 0.1
             prev_X_bug = prev_X[prev_inds]
-            cur_X_bug_1 = cur_X[cutoff_start:cutoff][cur_inds]
-            inds = is_distinct_vectorized(cur_X_bug_1, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
-            bug_num += len(inds)
 
+        cur_inds = cur_objectives[cutoff_start:cutoff, 0] > 0.1
+
+        cur_X_bug_1 = cur_X[cutoff_start:cutoff][cur_inds]
+        inds = is_distinct_vectorized(cur_X_bug_1, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+        bug_num += len(inds)
+
+        if len(prev_X) > 0:
             prev_inds = prev_objectives[:, -3] == 1
-            cur_inds = cur_objectives[cutoff_start:cutoff, -3] == 1
             prev_X_bug = prev_X[prev_inds]
-            cur_X_bug_2 = cur_X[cutoff_start:cutoff][cur_inds]
-            inds = is_distinct_vectorized(cur_X_bug_2, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
-            bug_num += len(inds)
 
-            prev_inds = prev_objectives[:, -2] == 1
-            cur_inds = cur_objectives[cutoff_start:cutoff, -2] == 1
-            prev_X_bug = prev_X[prev_inds]
-            cur_X_bug_3 = cur_X[cutoff_start:cutoff][cur_inds]
+        cur_inds = cur_objectives[cutoff_start:cutoff, -3] == 1
 
-            inds = is_distinct_vectorized(cur_X_bug_3, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
-            bug_num += len(inds)
+        cur_X_bug_2 = cur_X[cutoff_start:cutoff][cur_inds]
+        inds = is_distinct_vectorized(cur_X_bug_2, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+        bug_num += len(inds)
 
-            # prev_inds = prev_objectives[:, -1] == 1
-            # cur_inds = cur_objectives[cutoff_start:cutoff, -1] == 1
-            # prev_X_bug = prev_X[prev_inds]
-            # cur_X_bug_4 = cur_X[cutoff_start:cutoff][cur_inds]
-            #
-            # inds = is_distinct_vectorized(cur_X_bug_4, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
-            # bug_num += len(inds)
+        prev_inds = prev_objectives[:, -2] == 1
+        cur_inds = cur_objectives[cutoff_start:cutoff, -2] == 1
+        prev_X_bug = prev_X[prev_inds]
+        cur_X_bug_3 = cur_X[cutoff_start:cutoff][cur_inds]
 
-            print('collision:', len(cur_X_bug_1))
-            print('wronglane:', len(cur_X_bug_2))
-            print('off-road:', len(cur_X_bug_3))
-            # print('red-light:', len(cur_X_bug_4))
-            print('all bug num:', len(cur_X_bug_1)+len(cur_X_bug_2)+len(cur_X_bug_3))
+        inds = is_distinct_vectorized(cur_X_bug_3, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+        bug_num += len(inds)
+
+        # prev_inds = prev_objectives[:, -1] == 1
+        # cur_inds = cur_objectives[cutoff_start:cutoff, -1] == 1
+        # prev_X_bug = prev_X[prev_inds]
+        # cur_X_bug_4 = cur_X[cutoff_start:cutoff][cur_inds]
+        #
+        # inds = is_distinct_vectorized(cur_X_bug_4, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+        # bug_num += len(inds)
+
+        print('collision:', len(cur_X_bug_1))
+        print('wronglane:', len(cur_X_bug_2))
+        print('off-road:', len(cur_X_bug_3))
+        # print('red-light:', len(cur_X_bug_4))
+        print('all bug num:', len(cur_X_bug_1)+len(cur_X_bug_2)+len(cur_X_bug_3))
+
+    print(cutoff, bug_num)
+    # print(inds)
+    return bug_num
 
 
-
-        print(cutoff, bug_num)
-        # print(inds)
-        return bug_num
-
+def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_cutoff, save_filename='num_of_unique_bugs', scene_name='', legend=True, range_upper_bound=6, bug_type='collision', unique_coeffs=[[]], plot_prev_X=False):
 
     fig = plt.figure()
     axes = fig.add_subplot(1,1,1)
@@ -735,13 +864,10 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_
 
     cutoffs = [50*i for i in range(0, range_upper_bound)]
 
-
-
-
     for i, (label, pth_list) in enumerate(path_list):
         if len(unique_coeffs) == 0:
             c = 0.1
-            th = 0.5
+            th = 0.1
         else:
             c, th = unique_coeffs[i]
 
@@ -750,13 +876,17 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_
         else:
             warmup_pth = warmup_pth_list[i]
 
-        subfolders = get_sorted_subfolders(warmup_pth)
-        prev_X, _, prev_objectives, _, _ = load_data(subfolders)
-        prev_X = np.array(prev_X)[:warmup_pth_cutoff]
-        prev_objectives = prev_objectives[:warmup_pth_cutoff]
+        if warmup_pth:
+            subfolders = get_sorted_subfolders(warmup_pth)
+            prev_X, _, prev_objectives, _, _ = load_data(subfolders)
+            prev_X = np.array(prev_X)[:warmup_pth_cutoff]
+            prev_objectives = prev_objectives[:warmup_pth_cutoff]
+        else:
+            prev_X = []
+            prev_objectives = []
 
 
-        pickle_filename = get_picklename(warmup_pth)
+        pickle_filename = get_picklename(pth_list[0])
         with open(pickle_filename, 'rb') as f_in:
             d = pickle.load(f_in)
             xl = d['xl']
@@ -765,7 +895,7 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_
 
 
         print('-'*30, label, '-'*30)
-        print('prev_X.shape', prev_X.shape)
+        print('len(prev_X)', len(prev_X))
         num_of_unique_bugs_list = []
         for pth in pth_list:
             if 'dt' in label:
@@ -788,10 +918,16 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_
 
 
 
+            if plot_prev_X and len(prev_X) > 0:
+                cur_X = np.concatenate([prev_X, cur_X])
+                cur_objectives = np.concatenate([prev_objectives, cur_objectives])
+
+                prev_X = []
+                prev_objectives = []
 
             num_of_unique_bugs = []
             for cutoff in cutoffs:
-                num = subroutine(prev_X, cur_X, prev_objectives, cur_objectives, cutoff)
+                num = count_unique_bug_num(prev_X, cur_X, prev_objectives, cur_objectives, cutoff, label, bug_type, xl, xu, mask, p, c, th)
                 num_of_unique_bugs.append(num)
 
             num_of_unique_bugs_list.append(num_of_unique_bugs)
@@ -817,6 +953,18 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_
     plt.yticks(fontsize=18)
     fig.tight_layout()
     fig.savefig(save_filename)
+
+
+
+def draw_simulation_wrapper(town_path_list, warmup_pth, bug_type, town, range_upper_bound, unique_coeffs, warmup_pth_cutoff=500, plot_prev_X=False):
+    # 'collision', 'out-of-road'
+    save_filename = 'num_of_unique_bugs_'+town+'_'+bug_type+'.pdf'
+    scene_name = town + ' ' + bug_type
+    print('-'*20, scene_name, '-'*20)
+
+    draw_unique_bug_num_over_simulations(town_path_list, warmup_pth, warmup_pth_cutoff, save_filename=save_filename, scene_name=scene_name, legend=True, range_upper_bound=range_upper_bound, bug_type=bug_type, unique_coeffs=unique_coeffs, plot_prev_X=plot_prev_X)
+
+
 
 if __name__ == '__main__':
     town07_path_list = [
@@ -974,19 +1122,27 @@ if __name__ == '__main__':
     # range_upper_bounds = [7]
     # unique_coeffs_list = [[[0.05, 0.25], [0.1, 0.25], [0.2, 0.25], [0.05, 0.5], [0.1, 0.5], [0.2, 0.5], [0.05, 0.75]]]
 
-    def draw_simulation_wrapper(town_path_list, warmup_pth, bug_type, town, range_upper_bound, unique_coeffs):
-        # 'collision', 'out-of-road'
-        save_filename = 'num_of_unique_bugs_'+town+'_'+bug_type+'.pdf'
-        scene_name = town + ' ' + bug_type
-        print('-'*20, scene_name, '-'*20)
-        draw_unique_bug_num_over_simulations(town_path_list, [warmup_pth], warmup_pth_cutoff, save_filename=save_filename, scene_name=scene_name, legend=True, range_upper_bound=range_upper_bound, bug_type=bug_type, unique_coeffs=unique_coeffs)
 
 
-    for i in range(len(town_path_lists)):
-        town_path_list = town_path_lists[i]
-        warmup_pth = warmup_pths[i]
-        bug_type = bug_types[i]
-        town = towns[i]
-        range_upper_bound = range_upper_bounds[i]
-        unique_coeffs = unique_coeffs_list[i]
-        draw_simulation_wrapper(town_path_list, warmup_pth, bug_type, town, range_upper_bound, unique_coeffs)
+
+    # for i in range(len(town_path_lists)):
+    #     town_path_list = town_path_lists[i]
+    #     warmup_pth = warmup_pths[i]
+    #     bug_type = bug_types[i]
+    #     town = towns[i]
+    #     range_upper_bound = range_upper_bounds[i]
+    #     unique_coeffs = unique_coeffs_list[i]
+    #     draw_simulation_wrapper(town_path_list, warmup_pth, bug_type, town, range_upper_bound, unique_coeffs)
+
+
+
+    one_ped_path_list = [('random', 'run_results/random/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_10_55_32,50_20_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', None, None), ('random-un', 'run_results/random-un/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_10_55_36,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', None, None), ('ga', 'run_results/nsga2/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_20_55_46,50_20_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', None, None), ('ga-un', 'run_results/nsga2-un/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_10_55_24,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', None, None), ('ga-un-nn', 'run_results/nsga2-un/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_20_55_58,50_20_nn_500_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_10_55_24,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 500), ('ga-un-adv-nn', 'run_results/nsga2-un/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_20_55_52,50_20_adv_nn_500_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_10_55_24,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 500)]
+    for alg, path, warmup_path, warmup_len in one_ped_path_list:
+        print('\n'*3, '-'*20, alg, '-'*20, '\n'*3)
+        visualize_ped_over_time(path, save_filename='ped_over_time'+'_'+alg, bug_type='collision', unique_coeffs=[0.1, 0.1], range_upper_bound=5, warmup_path=warmup_path, warmup_len=warmup_len)
+
+
+
+    # town_path_list = [(p[0], [p[1]]) for p in one_ped_path_list]
+    # warmup_pth_list = [p[2] for p in one_ped_path_list]
+    # draw_simulation_wrapper(town_path_list, warmup_pth_list, bug_type='collision', town='town07', range_upper_bound=21, unique_coeffs=[], warmup_pth_cutoff=500, plot_prev_X=True)

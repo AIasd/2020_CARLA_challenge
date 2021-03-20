@@ -34,6 +34,7 @@ import math
 from sklearn.preprocessing import StandardScaler
 import pickle
 
+from collections import deque
 
 def visualize_route(route):
     n = len(route)
@@ -848,6 +849,46 @@ customized_bounds_and_distributions = {
         },
         "customized_parameters_distributions": {},
         "customized_center_transforms": {},
+        "customized_constraints": [],
+    },
+    "go_straight_town07_one_ped": {
+        "customized_parameters_bounds": {
+            "friction_min": 0.9,
+            "friction_max": 0.9,
+            "num_of_weathers_min": 0,
+            "num_of_weathers_max": 0,
+            "num_of_static_min": 0,
+            "num_of_static_max": 0,
+            "num_of_pedestrians_min": 1,
+            "num_of_pedestrians_max": 1,
+            "num_of_vehicles_min": 0,
+            "num_of_vehicles_max": 0,
+
+            "pedestrian_x_min_0": -10,
+            "pedestrian_x_max_0": 10,
+            "pedestrian_y_min_0": -10,
+            "pedestrian_y_max_0": 10,
+            "pedestrian_speed_min_0": 1,
+            "pedestrian_speed_max_0": 5,
+            "pedestrian_trigger_distance_min_0": 10,
+            "pedestrian_trigger_distance_max_0": 10,
+            "pedestrian_dist_to_travel_min_0": 20,
+            "pedestrian_dist_to_travel_max_0": 20,
+            "num_of_pedestrian_types_min_0": 0,
+            "num_of_pedestrian_types_max_0": 0,
+
+
+            # "vehicle_x_min_0": -10,
+            # "vehicle_x_max_0": 10,
+            # "vehicle_y_min_0": -2,
+            # "vehicle_y_max_0": 2,
+
+        },
+        "customized_parameters_distributions": {},
+        "customized_center_transforms": {
+        "pedestrian_center_transform_0": ("waypoint_ratio", 50),
+        # "vehicle_center_transform_0": ("waypoint_ratio", 50)
+        },
         "customized_constraints": [],
     },
     "leading_car_braking_town05": {
@@ -2043,40 +2084,30 @@ def is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=True):
     eps = 1e-10
     remaining_inds = np.arange(cur_X.shape[0])
 
-    if len(prev_X) == 0:
-        return remaining_inds
-    else:
-        mask = np.array(mask)
-        xl = np.array(xl)
-        xu = np.array(xu)
+    mask = np.array(mask)
+    xl = np.array(xl)
+    xu = np.array(xu)
 
-        variant_fields = (xu - xl) > eps
-        variant_fields_num = np.sum(variant_fields)
-        th_num = np.max([np.round(th * variant_fields_num), 1])
+    variant_fields = (xu - xl) > eps
+    variant_fields_num = np.sum(variant_fields)
+    th_num = np.max([np.round(th * variant_fields_num), 1])
 
-        mask = mask[variant_fields]
-        xl = xl[variant_fields]
-        xu = xu[variant_fields]
+    mask = mask[variant_fields]
+    int_inds = mask == "int"
+    real_inds = mask == "real"
+    xl = xl[variant_fields]
+    xu = xu[variant_fields]
+    xl = np.concatenate([np.zeros(np.sum(int_inds)), xl[real_inds]])
+    xu = np.concatenate([0.99*np.ones(np.sum(int_inds)), xu[real_inds]])
 
-        cur_X = cur_X[:, variant_fields]
+    cur_X = cur_X[:, variant_fields]
+    cur_X = np.concatenate([cur_X[:, int_inds], cur_X[:, real_inds]], axis=1) / (np.abs(xu - xl) + eps)
+
+    if len(prev_X) > 0:
         prev_X = prev_X[:, variant_fields]
-
-        int_inds = mask == "int"
-        real_inds = mask == "real"
-
-
-        xl = np.concatenate([np.zeros(np.sum(int_inds)), xl[real_inds]])
-        xu = np.concatenate([0.99*np.ones(np.sum(int_inds)), xu[real_inds]])
-
-
-        cur_X = np.concatenate([cur_X[:, int_inds], cur_X[:, real_inds]], axis=1) / (np.abs(xu - xl) + eps)
         prev_X = np.concatenate([prev_X[:, int_inds], prev_X[:, real_inds]], axis=1) / (np.abs(xu - xl) + eps)
 
-
-        cur_X_exp = np.expand_dims(cur_X, axis=1)
-        prev_X_exp = np.expand_dims(prev_X, axis=0)
-
-        diff_raw = np.abs(cur_X_exp - prev_X_exp)
+        diff_raw = np.abs(np.expand_dims(cur_X, axis=1) - np.expand_dims(prev_X, axis=0))
         diff = np.ones(diff_raw.shape) * (diff_raw > c)
         diff_norm = np.linalg.norm(diff, p, axis=2)
         equal = diff_norm < th_num
@@ -2087,33 +2118,31 @@ def is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=True):
         if verbose:
             print('prev X filtering:',cur_X.shape[0], '->', len(remaining_inds))
 
-        if len(remaining_inds) == 0:
-            return []
+    if len(remaining_inds) == 0:
+        return []
 
-        cur_X_remaining = cur_X[remaining_inds]
+    cur_X_remaining = cur_X[remaining_inds]
+    print('len(cur_X_remaining)', len(cur_X_remaining))
+    unique_inds = []
+    for i in range(len(cur_X_remaining)-1):
+        diff_raw = np.abs(np.expand_dims(cur_X_remaining[i], axis=0) - cur_X_remaining[i+1:])
+        diff = np.ones(diff_raw.shape) * (diff_raw > c)
+        diff_norm = np.linalg.norm(diff, p, axis=1)
+        equal = diff_norm < th_num
+        if np.mean(equal) == 0:
+            unique_inds.append(i)
 
+    unique_inds.append(len(cur_X_remaining)-1)
 
+    if verbose:
+        print('cur X filtering:',cur_X_remaining.shape[0], '->', len(unique_inds))
 
-        unique_inds = []
-        for i in range(len(cur_X_remaining)-1):
-            diff_raw = np.abs(np.expand_dims(cur_X_remaining[i], axis=0) - cur_X_remaining[i+1:])
-            diff = np.ones(diff_raw.shape) * (diff_raw > c)
-            diff_norm = np.linalg.norm(diff, p, axis=1)
-            equal = diff_norm < th_num
-            if np.mean(equal) == 0:
-                unique_inds.append(i)
-
-        unique_inds.append(len(cur_X_remaining)-1)
-
-        if verbose:
-            print('cur X filtering:',cur_X_remaining.shape[0], '->', len(unique_inds))
-
-        if len(unique_inds) == 0:
-            return []
-        remaining_inds = remaining_inds[np.array(unique_inds)]
+    if len(unique_inds) == 0:
+        return []
+    remaining_inds = remaining_inds[np.array(unique_inds)]
 
 
-        return remaining_inds
+    return remaining_inds
 
 def eliminate_repetitive_vectorized(cur_X, mask, xl, xu, p, c, th, verbose=True):
     cur_X = np.array(cur_X)
@@ -2284,6 +2313,54 @@ def start_server(port):
     # 10s is usually enough
     time.sleep(10)
 
+def correct_spawn_locations(x_data, label_to_id, all_final_generated_transforms_list_i, object_type, keys):
+    object_type_plural = object_type
+    if object_type in ['pedestrian', 'vehicle']:
+        object_type_plural += 's'
+
+    num_of_objects_ind = label_to_id['num_of_'+object_type_plural]
+    x_data[num_of_objects_ind] = 0
+
+    empty_slots = deque()
+    for j, (x, y, yaw) in enumerate(all_final_generated_transforms_list_i[object_type]):
+        if x == None:
+            empty_slots.append(j)
+        else:
+            x_data[num_of_objects_ind] += 1
+            if object_type+'_x_'+str(j) not in label_to_id:
+                print(label_to_id)
+                print(object_type+'_x_'+str(j))
+                print(all_final_generated_transforms_list_i[object_type])
+                raise
+            x_j_ind = label_to_id[object_type+'_x_'+str(j)]
+            y_j_ind = label_to_id[object_type+'_y_'+str(j)]
+            yaw_j_ind = label_to_id[object_type+'_yaw_'+str(j)]
+
+
+            # print(object_type, j)
+            # print('x', x_data[x_j_ind], '->', x)
+            # print('y', x_data[y_j_ind], '->', y)
+            # print('yaw', x_data[yaw_j_ind], '->', yaw)
+            x_data[x_j_ind] = x
+            x_data[y_j_ind] = y
+            x_data[yaw_j_ind] = yaw
+
+            if len(empty_slots) > 0:
+                q = empty_slots.popleft()
+                print('shift', j, 'to', q)
+                for k in keys:
+                    # print(k)
+                    ind_to = label_to_id[k+'_'+str(q)]
+                    ind_from = label_to_id[k+'_'+str(j)]
+                    x_data[ind_to] = x_data[ind_from]
+                if object_type == 'vehicle':
+                    for p in range(waypoints_num_limit):
+                        for waypoint_label in waypoint_labels:
+                            ind_to = label_to_id['_'.join(['vehicle', str(q), waypoint_label, str(p)])]
+                            ind_from = label_to_id['_'.join(['vehicle', str(j), waypoint_label, str(p)])]
+                            x_data[ind_to] = x_data[ind_from]
+
+                empty_slots.append(j)
 
 def port_to_gpu(port):
     import torch
@@ -3137,7 +3214,7 @@ def pretrain_regression_nets(initial_X, initial_objectives_list, objective_weigh
 
 
 def get_picklename(parent_folder):
-    pickle_filename = parent_folder + "/bugs/"
+    pickle_filename = parent_folder + "/non_bugs/"
     assert os.path.isdir(pickle_filename), pickle_filename
     i = 1
     while True:

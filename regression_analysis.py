@@ -1,10 +1,31 @@
 """
 TBD:
-update to 0.9.10
-update to 0.9.11
-determinism of pytorch model
-add not spawning agents near ego car at the beginning to ga_fuzzing
+python ga_fuzzing.py -p 2027 -s 8788 -d 8789 --n_gen 25 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07_one_ped' --algorithm_name nsga2-un --has_run_num 1000 --check_unique_coeff 0 0.1 0.1 --has_display 0 --objective_weights -1 1 1 0 0 0 0 0 0 0 --record_every_n_step 5
 
+
+
+python ga_fuzzing.py -p 2033 -s 8782 -d 8783 --n_gen 20 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07_one_ped' --algorithm_name random --has_run_num 1000 --check_unique_coeff 0 0.1 0.1 --has_display 0 --only_run_unique_cases 0 --record_every_n_step 5
+
+python ga_fuzzing.py -p 2036 -s 8784 -d 8785 --n_gen 25 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07_one_ped' --algorithm_name random-un --has_run_num 1000 --check_unique_coeff 0 0.1 0.1 --has_display 0 --only_run_unique_cases 0 --record_every_n_step 5
+
+
+
+
+
+
+python ga_fuzzing.py -p 2015 -s 8780 -d 8781 --n_gen 20 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07_one_ped' --algorithm_name nsga2 --has_run_num 1000 --check_unique_coeff 0 0.1 0.1 --has_display 0 --objective_weights -1 1 1 0 0 0 0 0 0 0 --only_run_unique_cases 0 --record_every_n_step 5
+
+python ga_fuzzing.py -p 2018 -s 8792 -d 8793 --n_gen 20 --pop_size 50  -r 'town07_front_0' -c 'go_straight_town07_one_ped' --algorithm_name nsga2-un --has_run_num 500 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/nsga2-un/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_10_55_24,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01' --warm_up_len 500 --check_unique_coeff 0 0.1 0.1 --has_display 0 --record_every_n_step 5
+
+python ga_fuzzing.py -p 2021 -s 8794 -d 8795 --n_gen 20 --pop_size 50  -r 'town07_front_0' -c 'go_straight_town07_one_ped' --algorithm_name nsga2-un --has_run_num 500 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode nn --warm_up_path 'run_results/nsga2-un/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_10_55_24,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01' --warm_up_len 500 --check_unique_coeff 0 0.1 0.1 --has_display 0 --record_every_n_step 5
+
+
+
+
+
+
+further limit the number of labels
+visualize all found bugs
 
 threats to validity:
 type of controllers

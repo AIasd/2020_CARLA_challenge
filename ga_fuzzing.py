@@ -39,7 +39,7 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, eliminate_duplicates_for_list, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized, eliminate_repetitive_vectorized, get_sorted_subfolders, load_data, choose_weight_inds, get_F, get_unique_bugs
+from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, parse_route_and_scenario, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, eliminate_duplicates_for_list, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized, eliminate_repetitive_vectorized, get_sorted_subfolders, load_data, choose_weight_inds, get_F, get_unique_bugs, correct_spawn_locations
 
 from collections import deque
 
@@ -161,6 +161,8 @@ parser.add_argument('--consider_interested_bugs', type=int, default=1)
 
 parser.add_argument('--record_every_n_step', type=int, default=2000)
 
+parser.add_argument('--correct_spawn_locations_after_run', type=int, default=1)
+
 arguments = parser.parse_args()
 
 
@@ -252,6 +254,7 @@ only_run_unique_cases = arguments.only_run_unique_cases
 use_single_objective = arguments.use_single_objective
 consider_interested_bugs = arguments.consider_interested_bugs
 record_every_n_step = arguments.record_every_n_step
+correct_spawn_locations_after_run = arguments.correct_spawn_locations_after_run
 
 os.environ['PYTHONHASHSEED'] = '0'
 os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
@@ -2218,6 +2221,9 @@ class SimpleDuplicateElimination(ElementwiseDuplicateElimination):
 
 
 class MyEvaluator(Evaluator):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.correct_spawn_locations_after_run = correct_spawn_locations_after_run
     def _eval(self, problem, pop, **kwargs):
 
         super()._eval(problem, pop, **kwargs)
@@ -2225,66 +2231,21 @@ class MyEvaluator(Evaluator):
         # hack:
         label_to_id = {label:i for i, label in enumerate(problem.labels)}
 
-        def correct_spawn_locations(all_final_generated_transforms_list_i, i, object_type, keys):
-            object_type_plural = object_type
-            if object_type in ['pedestrian', 'vehicle']:
-                object_type_plural += 's'
 
-            num_of_objects_ind = label_to_id['num_of_'+object_type_plural]
-            pop[i].X[num_of_objects_ind] = 0
-
-            empty_slots = deque()
-            for j, (x, y, yaw) in enumerate(all_final_generated_transforms_list_i[object_type]):
-                if x == None:
-                    empty_slots.append(j)
-                else:
-                    pop[i].X[num_of_objects_ind] += 1
-                    if object_type+'_x_'+str(j) not in label_to_id:
-                        print(object_type+'_x_'+str(j))
-                        print(all_final_generated_transforms_list_i[object_type])
-                        raise
-                    x_j_ind = label_to_id[object_type+'_x_'+str(j)]
-                    y_j_ind = label_to_id[object_type+'_y_'+str(j)]
-                    yaw_j_ind = label_to_id[object_type+'_yaw_'+str(j)]
-
-
-                    # print(object_type, j)
-                    # print('x', pop[i].X[x_j_ind], '->', x)
-                    # print('y', pop[i].X[y_j_ind], '->', y)
-                    # print('yaw', pop[i].X[yaw_j_ind], '->', yaw)
-                    pop[i].X[x_j_ind] = x
-                    pop[i].X[y_j_ind] = y
-                    pop[i].X[yaw_j_ind] = yaw
-
-                    if len(empty_slots) > 0:
-                        q = empty_slots.popleft()
-                        print('shift', j, 'to', q)
-                        for k in keys:
-                            # print(k)
-                            ind_to = label_to_id[k+'_'+str(q)]
-                            ind_from = label_to_id[k+'_'+str(j)]
-                            pop[i].X[ind_to] = pop[i].X[ind_from]
-                        if object_type == 'vehicle':
-                            for p in range(waypoints_num_limit):
-                                for waypoint_label in waypoint_labels:
-                                    ind_to = label_to_id['_'.join(['vehicle', str(q), waypoint_label, str(p)])]
-                                    ind_from = label_to_id['_'.join(['vehicle', str(j), waypoint_label, str(p)])]
-                                    pop[i].X[ind_to] = pop[i].X[ind_from]
-
-                        empty_slots.append(j)
 
 
 
         with open('tmp_folder/total.pickle', 'rb') as f_in:
             all_final_generated_transforms_list = pickle.load(f_in)
 
-        # for i, all_final_generated_transforms_list_i in enumerate(all_final_generated_transforms_list):
-        #     if all_final_generated_transforms_list_i:
-        #         # print(i)
-        #         correct_spawn_locations(all_final_generated_transforms_list_i, i, 'static', static_general_labels)
-        #         correct_spawn_locations(all_final_generated_transforms_list_i, i, 'pedestrian', pedestrian_general_labels)
-        #         correct_spawn_locations(all_final_generated_transforms_list_i, i, 'vehicle', vehicle_general_labels)
-                # print('\n'*3)
+        if self.correct_spawn_locations_after_run:
+            print('-'*10, 'correct_spawn_locations', '-'*10)
+            for i, all_final_generated_transforms_list_i in enumerate(all_final_generated_transforms_list):
+                if all_final_generated_transforms_list_i:
+                    correct_spawn_locations(pop[i].X, label_to_id, all_final_generated_transforms_list_i, 'static', static_general_labels)
+                    correct_spawn_locations(pop[i].X, label_to_id, all_final_generated_transforms_list_i, 'pedestrian', pedestrian_general_labels)
+                    correct_spawn_locations(pop[i].X, label_to_id, all_final_generated_transforms_list_i, 'vehicle', vehicle_general_labels)
+                    print('\n'*3)
         # print(pop[0].X)
 
 
@@ -2578,7 +2539,7 @@ def run_ga(call_from_dt=False, dt=False, X=None, F=None, estimator=None, critica
                    seed=0,
                    verbose=False,
                    save_history=False,
-                   evaluator=MyEvaluator())
+                   evaluator=MyEvaluator(correct_spawn_locations_after_run=correct_spawn_locations_after_run))
 
     print('We have found', len(problem.bugs), 'bugs in total.')
 
