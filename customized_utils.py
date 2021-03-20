@@ -239,6 +239,8 @@ class arguments_info:
         self.trafficManagerPort = '8000'
         self.trafficManagerSeed = '0'
 
+        self.ego_car_model = 'lbc'
+
 
 
 def add_transform(transform1, transform2):

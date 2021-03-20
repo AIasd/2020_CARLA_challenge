@@ -794,7 +794,7 @@ def run_simulation(customized_data, launch_server, episode_max_time, call_from_d
     if rerun:
         arguments.debug = 0
 
-
+    arguments.ego_car_model = ego_car_model
 
     if ego_car_model == 'lbc':
         arguments.agent = 'scenario_runner/team_code/image_agent.py'
