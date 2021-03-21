@@ -35,3 +35,4 @@ new_initial_observations_one_ped_const_weather.pkl
 tmp_tsne/*
 *.pdf
 tmp/*
+tmp_10hz/*

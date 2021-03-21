@@ -1111,7 +1111,7 @@ def start_server(port):
     cmd_list = shlex.split(
         "sh ../carla_0994_no_rss/CarlaUE4.sh -opengl -carla-rpc-port="
         + str(port)
-        + " -carla-streaming-port=0"
+        + " -carla-streaming-port=0 -quality-level=Epic"
     )
     while is_port_in_use(int(port)):
         try:
@@ -1140,6 +1140,31 @@ def start_server(port):
     print("-" * 20, "start server at port", port)
     # 10s is usually enough
     time.sleep(10)
+
+
+def start_client(obj, host, port):
+    print('initialize carla client')
+
+    while True:
+        try:
+            obj.client = carla.Client(host, port)
+            break
+        except:
+            logging.exception("__init__ error")
+            traceback.print_exc()
+
+def try_load_world(obj, town, host, port):
+    while True:
+        try:
+            print('load town :', town)
+            obj.world = obj.client.load_world(town)
+            break
+        except:
+            logging.exception("_load_and_wait_for_world error")
+            traceback.print_exc()
+
+            start_server(port)
+            obj.client = carla.Client(host, port)
 
 def correct_spawn_locations(x_data, label_to_id, all_final_generated_transforms_list_i, object_type, keys):
     object_type_plural = object_type
@@ -1200,7 +1225,7 @@ def port_to_gpu(port):
     return gpu
 
 
-def estimate_objectives(save_path, default_objectives):
+def estimate_objectives(save_path, default_objectives=np.array([0., 20., 1., 7., 7., 0., 0., 0., 0., 0.])):
 
     events_path = os.path.join(save_path, "events.txt")
     deviations_path = os.path.join(save_path, "deviations.txt")
