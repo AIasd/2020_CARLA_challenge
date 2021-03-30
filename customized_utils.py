@@ -33,6 +33,8 @@ import re
 import math
 from sklearn.preprocessing import StandardScaler
 import pickle
+import logging
+import traceback
 
 from collections import deque
 
@@ -132,7 +134,7 @@ def specify_args():
     # modification: 30->40
     parser.add_argument(
         "--timeout",
-        default="15.0",
+        default="30.0",
         help="Set the CARLA client timeout value in seconds",
     )
 
@@ -219,7 +221,7 @@ class arguments_info:
         self.debug = 0
         self.spectator = True
         self.record = ""
-        self.timeout = "15.0"
+        self.timeout = "30.0"
         self.challenge_mode = True
         self.routes = None
         self.scenarios = "leaderboard/data/all_towns_traffic_scenarios_public.json"
@@ -1156,8 +1158,9 @@ def start_client(obj, host, port):
 def try_load_world(obj, town, host, port):
     while True:
         try:
-            print('load town :', town)
+            print('start loading town :', town)
             obj.world = obj.client.load_world(town)
+            print('finish loading town :', town)
             break
         except:
             logging.exception("_load_and_wait_for_world error")
