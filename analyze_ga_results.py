@@ -21,7 +21,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter
 from sklearn.manifold import TSNE
-from customized_utils import  get_distinct_data_points, check_bug, filter_critical_regions, get_sorted_subfolders, load_data, get_picklename, is_distinct_vectorized
+from customized_utils import  get_distinct_data_points, check_bug, filter_critical_regions, get_sorted_subfolders, load_data, get_picklename, is_distinct_vectorized, get_event_location_and_object_type
 from ga_fuzzing import default_objectives
 from matplotlib.lines import Line2D
 
@@ -965,6 +965,70 @@ def draw_simulation_wrapper(town_path_list, warmup_pth, bug_type, town, range_up
     draw_unique_bug_num_over_simulations(town_path_list, warmup_pth, warmup_pth_cutoff, save_filename=save_filename, scene_name=scene_name, legend=True, range_upper_bound=range_upper_bound, bug_type=bug_type, unique_coeffs=unique_coeffs, plot_prev_X=plot_prev_X)
 
 
+def draw_accident_location(town_list, plot_prev_X=True):
+
+    for label, town_path, warmup_pth in town_list:
+        print(label)
+        if warmup_pth:
+            subfolders = get_sorted_subfolders(warmup_pth)
+            prev_X, _, prev_objectives, _, _ = load_data(subfolders)
+            prev_locations, prev_object_type_list = get_event_location_and_object_type(subfolders, verbose=False)
+            prev_X = np.array(prev_X)[:warmup_pth_cutoff]
+            prev_objectives = prev_objectives[:warmup_pth_cutoff]
+            prev_locations = prev_locations[:warmup_pth_cutoff]
+            prev_object_type_list = prev_object_type_list[:warmup_pth_cutoff]
+        else:
+            prev_X = []
+            prev_objectives = []
+            prev_locations = []
+            prev_object_type_list = []
+
+
+        pickle_filename = get_picklename(town_path)
+        with open(pickle_filename, 'rb') as f_in:
+            d = pickle.load(f_in)
+            xl = d['xl']
+            xu = d['xu']
+            mask = d['mask']
+
+
+        # print('len(prev_X)', len(prev_X))
+
+        subfolders = get_sorted_subfolders(town_path)
+        cur_X, _, cur_objectives, _, _ = load_data(subfolders)
+        cur_X = np.array(cur_X)
+        cur_locations, cur_object_type_list = get_event_location_and_object_type(subfolders, verbose=False)
+
+        if plot_prev_X and len(prev_X) > 0:
+            cur_X = np.concatenate([prev_X, cur_X])
+            cur_objectives = np.concatenate([prev_objectives, cur_objectives])
+
+            cur_locations = np.concatenate([prev_locations, cur_locations])
+            cur_object_type_list = prev_object_type_list + cur_object_type_list
+
+
+        collision_inds = cur_objectives[:, 0] > 0.01
+        cur_object_type_list = np.array(cur_object_type_list)[collision_inds]
+        cur_locations = cur_locations[collision_inds]
+
+        pedestrian_collision_inds = cur_object_type_list == 'walker.pedestrian.0001'
+        vehicle_collision_inds = cur_object_type_list == 'vehicle.dodge_charger.police'
+
+        pedestrian_cur_locations = cur_locations[pedestrian_collision_inds]
+        vehicle_cur_locations = cur_locations[vehicle_collision_inds]
+
+        print(len(pedestrian_cur_locations), len(vehicle_cur_locations))
+
+        plt.scatter(pedestrian_cur_locations[:, 0], pedestrian_cur_locations[:, 1], label='pedestrian collision')
+        plt.scatter(vehicle_cur_locations[:, 0], vehicle_cur_locations[:, 1], label='vehicle collision')
+        plt.legend()
+        plt.title(label)
+        plt.gca().invert_yaxis()
+        plt.savefig(label)
+        plt.clf()
+
+
+
 
 if __name__ == '__main__':
     town07_path_list = [
@@ -1137,10 +1201,21 @@ if __name__ == '__main__':
 
 
     one_ped_path_list = [('random', 'run_results/random/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_10_55_32,50_20_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', None, None), ('random-un', 'run_results/random-un/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_10_55_36,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', None, None), ('ga', 'run_results/nsga2/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_20_55_46,50_20_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', None, None), ('ga-un', 'run_results/nsga2-un/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_10_55_24,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', None, None), ('ga-un-nn', 'run_results/nsga2-un/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_20_55_58,50_20_nn_500_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_10_55_24,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 500), ('ga-un-adv-nn', 'run_results/nsga2-un/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_20_55_52,50_20_adv_nn_500_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07_one_ped/lbc/2021_03_15_10_55_24,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 500)]
-    for alg, path, warmup_path, warmup_len in one_ped_path_list:
-        print('\n'*3, '-'*20, alg, '-'*20, '\n'*3)
-        visualize_ped_over_time(path, save_filename='ped_over_time'+'_'+alg, bug_type='collision', unique_coeffs=[0.1, 0.1], range_upper_bound=5, warmup_path=warmup_path, warmup_len=warmup_len)
+    # for alg, path, warmup_path, warmup_len in one_ped_path_list:
+    #     print('\n'*3, '-'*20, alg, '-'*20, '\n'*3)
+    #     visualize_ped_over_time(path, save_filename='ped_over_time'+'_'+alg, bug_type='collision', unique_coeffs=[0.1, 0.1], range_upper_bound=5, warmup_path=warmup_path, warmup_len=warmup_len)
 
+
+
+
+    town05_left_collision_list = [('nsga2', 'run_results/nsga2/town05_left_0/turn_left_town05/lbc/2021_03_30_19_06_09,50_20_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', None),
+    ('nsga2-un', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_10_54_55,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', None),
+    ('random', 'run_results/random/town05_left_0/turn_left_town05/lbc/2021_03_30_19_06_02,50_20_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', None),
+    ('adv_nn', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_22_55_47,50_25_adv_nn_500_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_10_54_55,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'),
+    ('nn', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_22_55_54,50_25_nn_500_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_10_54_55,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01')
+    ]
+
+    draw_accident_location(town05_left_collision_list)
 
 
     # town_path_list = [(p[0], [p[1]]) for p in one_ped_path_list]

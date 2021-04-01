@@ -80,6 +80,73 @@ customized_bounds_and_distributions = {
         },
         "customized_constraints": [],
     },
+    "turn_left_town07_one_ped_and_one_vehicle": {
+        "customized_parameters_bounds": {
+            "friction_min": 0.9,
+            "friction_max": 0.9,
+
+            "num_of_weathers_min": 0,
+            "num_of_weathers_max": 0,
+
+            "num_of_static_min": 0,
+            "num_of_static_max": 0,
+            "num_of_pedestrians_min": 1,
+            "num_of_pedestrians_max": 1,
+            "num_of_vehicles_min": 1,
+            "num_of_vehicles_max": 1,
+
+            "pedestrian_x_min_0": 7,
+            "pedestrian_x_max_0": 13,
+            "pedestrian_y_min_0": -3,
+            "pedestrian_y_max_0": 2,
+            "pedestrian_speed_min_0": 1,
+            "pedestrian_speed_max_0": 5,
+            "pedestrian_trigger_distance_min_0": 10,
+            "pedestrian_trigger_distance_max_0": 10,
+            "pedestrian_dist_to_travel_min_0": 20,
+            "pedestrian_dist_to_travel_max_0": 20,
+            "num_of_pedestrian_types_min_0": 0,
+            "num_of_pedestrian_types_max_0": 0,
+
+
+
+            "vehicle_x_min_0": 3.5,
+            "vehicle_x_max_0": 3.5,
+            "vehicle_y_min_0": 0,
+            "vehicle_y_max_0": 10,
+            "vehicle_speed_min_0": 1,
+            "vehicle_speed_max_0": 5,
+            "vehicle_trigger_distance_min_0": 20,
+            "vehicle_trigger_distance_max_0": 20,
+            "vehicle_dist_to_travel_min_0": 20,
+            "vehicle_dist_to_travel_max_0": 20,
+            "num_of_vehicle_types_min_0": 0,
+            "num_of_vehicle_types_max_0": 0,
+            "vehicle_initial_speed_min_0": 2,
+            "vehicle_initial_speed_max_0": 7,
+            "vehicle_targeted_speed_min_0": 2,
+            "vehicle_targeted_speed_max_0": 7,
+            "vehicle_trigger_distance_min_0": 5,
+            "vehicle_trigger_distance_max_0": 20,
+            "vehicle_avoid_collision_min_0": 1,
+            "vehicle_avoid_collision_max_0": 1,
+            "vehicle_dist_to_travel_min_0": 10,
+            "vehicle_dist_to_travel_max_0": 30,
+
+            "num_of_vehicle_colors_min_0": 0,
+            "num_of_vehicle_colors_max_0": 0,
+            "vehicle_targeted_yaw_min_0": 10,
+            "vehicle_targeted_yaw_max_0": 30,
+
+
+        },
+        "customized_parameters_distributions": {},
+        "customized_center_transforms": {
+        "pedestrian_center_transform_0": ("waypoint_ratio", 50),
+        "vehicle_center_transform_0": ("waypoint_ratio", 75)
+        },
+        "customized_constraints": [],
+    },
     "leading_car_braking_town05": {
         "customized_parameters_bounds": {
             "num_of_static_min": 0,
@@ -165,6 +232,85 @@ customized_bounds_and_distributions = {
                 "value": 0,
             }
         ],
+    },
+    "turn_left_town05": {
+        "customized_parameters_bounds": {
+            "friction_min": 0.9,
+            "friction_max": 0.9,
+
+            "num_of_weathers_min": 0,
+            "num_of_weathers_max": 0,
+
+            "num_of_static_min": 0,
+            "num_of_static_max": 0,
+            "num_of_pedestrians_min": 1,
+            "num_of_pedestrians_max": 1,
+            "num_of_vehicles_min": 1,
+            "num_of_vehicles_max": 1,
+
+            "pedestrian_x_min_0": -7,
+            "pedestrian_x_max_0": 7,
+            "pedestrian_y_min_0": -7,
+            "pedestrian_y_max_0": 7,
+            "pedestrian_yaw_min_0": 0,
+            "pedestrian_yaw_max_0": 360,
+            "pedestrian_speed_min_0": 1,
+            "pedestrian_speed_max_0": 5,
+            "pedestrian_trigger_distance_min_0": 5,
+            "pedestrian_trigger_distance_max_0": 15,
+            "pedestrian_dist_to_travel_min_0": 50,
+            "pedestrian_dist_to_travel_max_0": 50,
+            "num_of_pedestrian_types_min_0": 0,
+            "num_of_pedestrian_types_max_0": 0,
+
+            "vehicle_x_min_0": -4,
+            "vehicle_x_max_0": 4,
+            "vehicle_y_min_0": -50,
+            "vehicle_y_max_0": -10,
+            "vehicle_yaw_min_0": 90,
+            "vehicle_yaw_max_0": 90,
+            "vehicle_trigger_distance_min_0": 10,
+            "vehicle_trigger_distance_max_0": 50,
+            "vehicle_dist_to_travel_min_0": 90,
+            "vehicle_dist_to_travel_max_0": 90,
+            "num_of_vehicle_types_min_0": 1,
+            "num_of_vehicle_types_max_0": 1,
+            "vehicle_initial_speed_min_0": 0,
+            "vehicle_initial_speed_max_0": 0,
+            "vehicle_targeted_speed_min_0": 3,
+            "vehicle_targeted_speed_max_0": 9,
+            "vehicle_avoid_collision_min_0": 1,
+            "vehicle_avoid_collision_max_0": 1,
+            "num_of_vehicle_colors_min_0": 1,
+            "num_of_vehicle_colors_max_0": 1,
+
+            "vehicle_waypoint_follower_min_0": 0,
+            "vehicle_waypoint_follower_max_0": 0,
+
+            "vehicle_targeted_x_min_0": -5,
+            "vehicle_targeted_x_max_0": -5,
+            "vehicle_targeted_y_min_0": 50,
+            "vehicle_targeted_y_max_0": 50,
+            "vehicle_targeted_yaw_min_0": 90,
+            "vehicle_targeted_yaw_max_0": 90,
+
+            # "vehicle_waypoint_follower_min_0": 1,
+            # "vehicle_waypoint_follower_max_0": 1,
+            #
+            # "vehicle_targeted_x_min_0": -15,
+            # "vehicle_targeted_x_max_0": -15,
+            # "vehicle_targeted_y_min_0": 25,
+            # "vehicle_targeted_y_max_0": 25,
+            # "vehicle_targeted_yaw_min_0": 90,
+            # "vehicle_targeted_yaw_max_0": 90
+
+        },
+        "customized_parameters_distributions": {},
+        "customized_center_transforms": {
+        "pedestrian_center_transform_0": ("waypoint_ratio", 85),
+        "vehicle_center_transform_0": ("waypoint_ratio", 50)
+        },
+        "customized_constraints": [],
     },
     "change_lane_town05": {
         "customized_parameters_bounds": {
@@ -874,6 +1020,12 @@ customized_routes = {
         "route_id": 1,
         "location_list": [(-120, 15), (-120, -20)],
     },
+    "town05_left_0": {
+        "town_name": "Town05",
+        "direction": "left",
+        "route_id": 0,
+        "location_list": [(-120, 15), (-144, -4)],
+    },
     # change lane, city, error: other cars are not moving
     "town10HD_front_0": {
         "town_name": "Town10HD",
@@ -887,6 +1039,12 @@ customized_routes = {
         "direction": "left",
         "route_id": 0,
         "location_list": [(-75, -64), (-102, -42)],
+    },
+    "town07_left_1": {
+        "town_name": "Town07",
+        "direction": "left",
+        "route_id": 1,
+        "location_list": [(-151, -60), (-135, -31)],
     },
     # change lane, highway, error: other cars are not moving
     "town04_front_1": {

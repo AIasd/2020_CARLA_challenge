@@ -1228,7 +1228,7 @@ def port_to_gpu(port):
     return gpu
 
 
-def estimate_objectives(save_path, default_objectives=np.array([0., 20., 1., 7., 7., 0., 0., 0., 0., 0.])):
+def estimate_objectives(save_path, default_objectives=np.array([0., 20., 1., 7., 7., 0., 0., 0., 0., 0.]), verbose=True):
 
     events_path = os.path.join(save_path, "events.txt")
     deviations_path = os.path.join(save_path, "deviations.txt")
@@ -1294,7 +1294,8 @@ def estimate_objectives(save_path, default_objectives=np.array([0., 20., 1., 7.,
         for infraction in infractions[infraction_type]:
             if "collisions" in infraction_type:
                 typ = re.search(".*with type=(.*) and id.*", infraction)
-                print(infraction, typ)
+                if verbose:
+                    print(infraction, typ)
                 if typ:
                     object_type = typ.group(1)
                 loc = re.search(
@@ -1958,6 +1959,16 @@ def load_data(subfolders):
 
     return data_list, np.array(is_bug_list), np.array(objectives_list), mask, labels
 
+def get_event_location_and_object_type(subfolders, verbose=True):
+    location_list = []
+    object_type_list = []
+
+    for subfolder in subfolders:
+        _, (x, y), object_type, route_completion = estimate_objectives(subfolder, verbose=verbose)
+        location_list.append((x, y))
+        object_type_list.append(object_type)
+    locations = np.array(location_list)
+    return locations, object_type_list
 
 def reformat(cur_info):
     objectives = cur_info["objectives"]

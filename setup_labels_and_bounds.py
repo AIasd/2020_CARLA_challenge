@@ -37,9 +37,17 @@ weather_labels = [
 # number of waypoints to perturb
 waypoints_num_limit = 0
 
-waypoint_labels = ["perturbation_x", "perturbation_y"]
+waypoint_labels = [
+    "perturbation_x",
+    "perturbation_y"
+]
 
-static_general_labels = ["num_of_static_types", "static_x", "static_y", "static_yaw"]
+static_general_labels = [
+    "num_of_static_types",
+    "static_x",
+    "static_y",
+    "static_yaw"
+]
 
 pedestrian_general_labels = [
     "num_of_pedestrian_types",
