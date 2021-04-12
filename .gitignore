@@ -36,3 +36,4 @@ tmp_tsne/*
 *.pdf
 tmp/*
 tmp_10hz/*
+collected_data_lbc_augment_ped/*

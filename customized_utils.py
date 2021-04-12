@@ -38,8 +38,8 @@ import traceback
 
 from collections import deque
 
-from scene_configs import customized_bounds_and_distributions, customized_routes
-from setup_labels_and_bounds import general_labels, weather_labels, waypoints_num_limit, waypoint_labels, static_general_labels, pedestrian_general_labels, vehicle_general_labels, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2
+
+from setup_labels_and_bounds import general_labels, weather_labels, waypoints_num_limit, waypoint_labels, static_general_labels, pedestrian_general_labels, vehicle_general_labels
 
 def visualize_route(route):
     n = len(route)
@@ -252,18 +252,19 @@ def add_transform(transform1, transform2):
 
 def convert_x_to_customized_data(
     x,
-    waypoints_num_limit,
-    max_num_of_static,
-    max_num_of_pedestrians,
-    max_num_of_vehicles,
-    static_types,
-    pedestrian_types,
-    vehicle_types,
-    vehicle_colors,
-    customized_center_transforms,
-    parameters_min_bounds,
-    parameters_max_bounds,
+    fuzzing_content,
+    port
 ):
+    from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
+
+    waypoints_num_limit = fuzzing_content.search_space_info.waypoints_num_limit
+    num_of_static_max = fuzzing_content.search_space_info.num_of_static_max
+    num_of_pedestrians_max = fuzzing_content.search_space_info.num_of_pedestrians_max
+    num_of_vehicles_max = fuzzing_content.search_space_info.num_of_vehicles_max
+
+    customized_center_transforms = fuzzing_content.customized_center_transforms
+    parameters_min_bounds = fuzzing_content.parameters_min_bounds
+    parameters_max_bounds = fuzzing_content.parameters_max_bounds
 
     # parameters
     # global
@@ -316,7 +317,7 @@ def convert_x_to_customized_data(
 
     # static
     static_list = []
-    for i in range(max_num_of_static):
+    for i in range(num_of_static_max):
         if i < num_of_static:
             static_type_i = static_types[int(x[ind])]
             static_transform_i = create_transform(
@@ -328,7 +329,7 @@ def convert_x_to_customized_data(
 
     # pedestrians
     pedestrian_list = []
-    for i in range(max_num_of_pedestrians):
+    for i in range(num_of_pedestrians_max):
         if i < num_of_pedestrians:
             pedestrian_type_i = pedestrian_types[int(x[ind])]
             pedestrian_transform_i = create_transform(
@@ -347,7 +348,7 @@ def convert_x_to_customized_data(
 
     # vehicles
     vehicle_list = []
-    for i in range(max_num_of_vehicles):
+    for i in range(num_of_vehicles_max):
         if i < num_of_vehicles:
             vehicle_type_i = vehicle_types[int(x[ind])]
 
@@ -403,8 +404,6 @@ def convert_x_to_customized_data(
         else:
             ind += 14 + waypoints_num_limit * 2
 
-    # for parallel simulation
-    port = int(x[ind])
 
     customized_data = {
         "friction": friction,
@@ -526,14 +525,7 @@ def filter_critical_regions(X, y):
 
 
 
-# Customize parameters
-def customize_parameters(parameters, customized_parameters):
-    for k, v in customized_parameters.items():
-        if k in parameters:
-            parameters[k] = v
-        else:
-            # print(k, 'is not defined in the parameters.')
-            pass
+
 
 
 
@@ -626,127 +618,48 @@ def if_violate_constraints(x, customized_constraints, labels, verbose=False):
     return if_violate, [violated_constraints, involved_labels]
 
 
-def parse_route_and_scenario(
-    location_list, town_name, scenario, direction, route_str, scenario_file
-):
-
-    # Parse Route
-    TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
-    <routes>
-    %s
-    </routes>"""
-
-    print(location_list, town_name, scenario, direction, route_str)
-
-    pitch = 0
-    roll = 0
-    yaw = 0
-    z = 0
-
-    start_str = '<route id="{}" town="{}">\n'.format(route_str, town_name)
-    waypoint_template = (
-        '\t<waypoint pitch="{}" roll="{}" x="{}" y="{}" yaw="{}" z="{}" />\n'
-    )
-    end_str = "</route>"
-
-    wp_str = ""
-
-    for x, y in location_list:
-        wp = waypoint_template.format(pitch, roll, x, y, yaw, z)
-        wp_str += wp
-
-    final_str = start_str + wp_str + end_str
-
-    folder = make_hierarchical_dir(
-        ["leaderboard/data/customized_routes", town_name, scenario, direction]
-    )
-
-    pathlib.Path(folder + "/route_{}.xml".format(route_str)).write_text(
-        TEMPLATE % final_str
-    )
-
-    # Parse Scenario
-    x_0, y_0 = location_list[0]
-    parse_scenario(scenario_file, town_name, route_str, x_0, y_0)
 
 
-def parse_route_and_scenario_plain(location_list, town_name, route_str, scenario_file):
 
-    # Parse Route
-    TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
-    <routes>
-    %s
-    </routes>"""
+# def parse_route_and_scenario_plain(location_list, town_name, route_str, scenario_file):
+#
+#     # Parse Route
+#     TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
+#     <routes>
+#     %s
+#     </routes>"""
+#
+#     pitch = 0
+#     roll = 0
+#     yaw = 0
+#     z = 0
+#
+#     start_str = '<route id="{}" town="{}">\n'.format(route_str, town_name)
+#     waypoint_template = (
+#         '\t<waypoint pitch="{}" roll="{}" x="{}" y="{}" yaw="{}" z="{}" />\n'
+#     )
+#     end_str = "</route>"
+#
+#     wp_str = ""
+#
+#     for x, y in location_list:
+#         wp = waypoint_template.format(pitch, roll, x, y, yaw, z)
+#         wp_str += wp
+#
+#     final_str = start_str + wp_str + end_str
+#
+#     folder = make_hierarchical_dir(["leaderboard/data/temporary_routes", town_name])
+#     route_path = folder + "/route_{}.xml".format(route_str)
+#
+#     pathlib.Path(route_path).write_text(TEMPLATE % final_str)
+#
+#     # Parse Scenario
+#     x_0, y_0 = location_list[0]
+#     parse_scenario(scenario_file, town_name, route_str, x_0, y_0)
+#
+#     return route_path
 
-    pitch = 0
-    roll = 0
-    yaw = 0
-    z = 0
 
-    start_str = '<route id="{}" town="{}">\n'.format(route_str, town_name)
-    waypoint_template = (
-        '\t<waypoint pitch="{}" roll="{}" x="{}" y="{}" yaw="{}" z="{}" />\n'
-    )
-    end_str = "</route>"
-
-    wp_str = ""
-
-    for x, y in location_list:
-        wp = waypoint_template.format(pitch, roll, x, y, yaw, z)
-        wp_str += wp
-
-    final_str = start_str + wp_str + end_str
-
-    folder = make_hierarchical_dir(["leaderboard/data/temporary_routes", town_name])
-    route_path = folder + "/route_{}.xml".format(route_str)
-
-    pathlib.Path(route_path).write_text(TEMPLATE % final_str)
-
-    # Parse Scenario
-    x_0, y_0 = location_list[0]
-    parse_scenario(scenario_file, town_name, route_str, x_0, y_0)
-
-    return route_path
-
-
-def parse_scenario(scenario_file, town_name, route_str, x_0, y_0):
-    # Parse Scenario
-    x_0_str = str(x_0)
-    y_0_str = str(y_0)
-
-    new_scenario = {
-        "available_scenarios": [
-            {
-                town_name: [
-                    {
-                        "available_event_configurations": [
-                            {
-                                "route": int(route_str),
-                                "center": {
-                                    "pitch": "0.0",
-                                    "x": x_0_str,
-                                    "y": y_0_str,
-                                    "yaw": "270",
-                                    "z": "0.0",
-                                },
-                                "transform": {
-                                    "pitch": "0.0",
-                                    "x": x_0_str,
-                                    "y": y_0_str,
-                                    "yaw": "270",
-                                    "z": "0.0",
-                                },
-                            }
-                        ],
-                        "scenario_type": "Scenario12",
-                    }
-                ]
-            }
-        ]
-    }
-
-    with open(scenario_file, "w") as f_out:
-        annotation_dict = json.dump(new_scenario, f_out, indent=4)
 
 
 def parse_route_file(route_filename, route_length_lower_bound=50):
@@ -1680,18 +1593,11 @@ def process_specific_bug(
     specific_bugs = np.array(bugs)[chosen_bugs]
     specific_bugs_inds_list = np.array(bugs_inds_list)[chosen_bugs]
 
-    # print('specific_bugs', specific_bugs)
     unique_specific_bugs, specific_distinct_inds = get_distinct_data_points(
         specific_bugs, mask, xl, xu, p, c, th
     )
 
-    # print('\n'*5)
-    # print('mask, xl, xu, p, c, th', mask, xl, xu, p, c, th)
-    # print('\n'*5)
-
     unique_specific_bugs_inds_list = specific_bugs_inds_list[specific_distinct_inds]
-
-    # print(bug_type_ind, specific_distinct_inds, specific_bugs_inds_list, unique_specific_bugs_inds_list)
 
     return (
         list(unique_specific_bugs),
@@ -1699,9 +1605,32 @@ def process_specific_bug(
         len(unique_specific_bugs),
     )
 
+def classify_bug_type(objectives, object_type=''):
+    bug_str = ''
+    bug_type = 0
+    if objectives[0] > 0.1:
+        collision_types = {'pedestrian_collision':pedestrian_types, 'car_collision':car_types, 'motercycle_collision':motorcycle_types, 'cyclist_collision':cyclist_types, 'static_collision':static_types}
+        for k,v in collision_types.items():
+            if object_type in v:
+                bug_str = k
+        if not bug_str:
+            bug_str = 'unknown_collision'+'_'+object_type
+        bug_type = 1
+    elif objectives[-3]:
+        bug_str = 'offroad'
+        bug_type = 2
+    elif objectives[-2]:
+        bug_str = 'wronglane'
+        bug_type = 3
+    if objectives[-1]:
+        bug_str += 'run_red_light'
+        if bug_type > 4:
+            bug_type = 4
+    return bug_type, bug_str
+
 
 def get_unique_bugs(
-    X, objectives_list, mask, xl, xu, unique_coeff, objective_weights, return_indices=False, return_bug_info=False, consider_interested_bugs=1
+    X, objectives_list, mask, xl, xu, unique_coeff, objective_weights, return_mode='unique_inds_and_interested_and_bugcounts', consider_interested_bugs=1
 ):
     p, c, th = unique_coeff
     bugs_type_list = []
@@ -1709,16 +1638,7 @@ def get_unique_bugs(
     bugs_inds_list = []
     for i, (x, objectives) in enumerate(zip(X, objectives_list)):
         if check_bug(objectives):
-            bug_type = 5
-            if objectives[0] > 0.1:
-                bug_type = 1
-            elif objectives[-3]:
-                bug_type = 2
-            elif objectives[-2]:
-                bug_type = 3
-            if objectives[-1]:
-                if bug_type > 4:
-                    bug_type = 4
+            bug_type, _ = classify_bug_type(objectives)
             bugs_type_list.append(bug_type)
             bugs.append(x)
             bugs_inds_list.append(i)
@@ -1788,17 +1708,20 @@ def get_unique_bugs(
     else:
         interested_unique_bugs = unique_bugs
 
-    print(
-        "unique bugs num:",
-        unique_bugs_num,
-        unique_collision_num,
-        unique_offroad_num,
-        unique_wronglane_num,
-        unique_redlight_num,
-    )
-    if return_bug_info:
+
+    num_of_collisions = np.sum(np.array(bugs_type_list)==1)
+    num_of_offroad = np.sum(np.array(bugs_type_list)==2)
+    num_of_wronglane = np.sum(np.array(bugs_type_list)==3)
+    num_of_redlight = np.sum(np.array(bugs_type_list)==4)
+
+
+
+    if return_mode == 'unique_inds_and_interested_and_bugcounts':
+        return unique_bugs, unique_bugs_inds_list, interested_unique_bugs, [num_of_collisions, num_of_offroad, num_of_wronglane, num_of_redlight,
+        unique_collision_num, unique_offroad_num, unique_wronglane_num, unique_redlight_num]
+    elif return_mode == 'return_bug_info':
         return unique_bugs, (bugs, bugs_type_list, bugs_inds_list, interested_unique_bugs)
-    elif return_indices:
+    elif return_mode == 'return_indices':
         return unique_bugs, unique_bugs_inds_list
     else:
         return unique_bugs
@@ -1908,8 +1831,12 @@ def inverse_process_X(
 
 
 def get_sorted_subfolders(parent_folder, folder_type='all'):
-    bug_folder = os.path.join(parent_folder, "bugs")
-    non_bug_folder = os.path.join(parent_folder, "non_bugs")
+    if 'rerun_bugs' in os.listdir(parent_folder):
+        bug_folder = os.path.join(parent_folder, "rerun_bugs")
+        non_bug_folder = os.path.join(parent_folder, "rerun_non_bugs")
+    else:
+        bug_folder = os.path.join(parent_folder, "bugs")
+        non_bug_folder = os.path.join(parent_folder, "non_bugs")
 
     if folder_type == 'all':
         sub_folders = [
@@ -1986,22 +1913,17 @@ def reformat(cur_info):
         is_wrong_lane,
         is_run_red_light,
     ) = objectives
-    accident_x, accident_y = cur_info["loc"]
+    # accident_x, accident_y = cur_info["loc"]
 
     # route_completion = cur_info['route_completion']
 
     # result_info = [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, accident_x, accident_y, is_bug, route_completion]
 
-    data, x, xl, xu, mask, labels = (
-        cur_info["data"],
+    x, mask, labels = (
         cur_info["x"][:-1],
-        cur_info["xl"],
-        cur_info["xu"],
         cur_info["mask"],
-        cur_info["labels"],
+        cur_info["labels"]
     )
-
-    assert len(x) == len(xl)
 
     return x, objectives, int(is_bug), mask, labels
 
@@ -2186,19 +2108,57 @@ def get_F(current_objectives, all_objectives, objective_weights, use_single_obje
     # standardize current objectives using all objectives so far
     all_objectives = np.stack(all_objectives)
     current_objectives = np.stack(current_objectives)
-    # print('all_objectives.shape, current_objectives.shape', all_objectives.shape, current_objectives.shape)
+
     standardize = StandardScaler()
     standardize.fit(all_objectives)
     standardize.transform(current_objectives)
 
-    # print('current_objectives', current_objectives, 'objective_weights', objective_weights)
     current_objectives *= objective_weights
-    #
-    # print('\n'*2, 'all_objectives_mean, all_objectives_std :', standardize.mean_, standardize.var_, '\n'*2)
-
 
     if use_single_objective:
         current_F = np.expand_dims(np.sum(current_objectives, axis=1), axis=1)
     else:
         current_F = np.row_stack(current_objectives)
     return current_F
+
+def set_general_seed(seed=0):
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
+
+    import random
+    import torch
+    import numpy as np
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    # torch.set_deterministic(True)
+    torch.backends.cudnn.benchmark = False
+    # torch.backends.cudnn.deterministic = True
+    # torch.backends.cudnn.enabled = False
+
+
+
+def count_and_group_output_unique_bugs(inds, outputs, labels, min_bounds, max_bounds, diff_th):
+    '''
+    ***grid counting: maximum number of distinct elements
+    distinct counting: minimum number of distinct elements
+    1.general
+    bug type, normalized (/|start location - end location|) bug location, ego car speed when bug happens
+
+    2.collision specific
+    collision object type (i.e. pedestrian, bicyclist, small vehicle, or truck), normalized (/car width) relative angle of the other involved object at collision
+
+    '''
+
+    m = len(labels)
+    print(outputs.shape, outputs[:2])
+    outputs_grid_inds = (outputs - min_bounds) / ((max_bounds - min_bounds) * diff_th)
+    outputs_grid_inds = outputs_grid_inds.astype(int)
+    print(outputs_grid_inds.shape, outputs_grid_inds[:2])
+    from collections import defaultdict
+    unique_bugs_group = defaultdict(list)
+
+    for i in range(outputs.shape[0]):
+        unique_bugs_group[tuple(outputs_grid_inds[i])].append((inds[i], outputs[i]))
+
+    return unique_bugs_group

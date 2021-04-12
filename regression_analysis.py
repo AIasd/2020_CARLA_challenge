@@ -1,24 +1,37 @@
 """
-TBD:
-python ga_fuzzing.py -p 2027 -s 8788 -d 8789 --n_gen 25 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07_one_ped' --algorithm_name nsga2-un --has_run_num 1000 --check_unique_coeff 0 0.1 0.1 --has_display 0 --objective_weights -1 1 1 0 0 0 0 0 0 0 --record_every_n_step 5
 
 
-
-python ga_fuzzing.py -p 2033 -s 8782 -d 8783 --n_gen 20 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07_one_ped' --algorithm_name random --has_run_num 1000 --check_unique_coeff 0 0.1 0.1 --has_display 0 --only_run_unique_cases 0 --record_every_n_step 5
-
-python ga_fuzzing.py -p 2036 -s 8784 -d 8785 --n_gen 25 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07_one_ped' --algorithm_name random-un --has_run_num 1000 --check_unique_coeff 0 0.1 0.1 --has_display 0 --only_run_unique_cases 0 --record_every_n_step 5
-
-
-
-
-python ga_fuzzing.py -p 2015 -s 8794 -d 8795 --n_gen 25 --pop_size 50 -r 'town05_left_0' -c 'turn_left_town05' --algorithm_name nsga2-un --has_run_num 1000 --check_unique_coeff 0 0.2 0.2 --has_display 0 --only_run_unique_cases 1 --record_every_n_step 5 --objective_weights -1 1 1 0 0 0 0 0 0 0
+*** analyze the number of distinct unique bugs of existing methods using past run
+*** better separate out fuzzing with carla
+*** connect fuzzing with svl
 
 
 
 
+improve bug count (do not count other's responsibility; maybe narrow down fov of considering bugs?)
 
-python ga_fuzzing.py -p 2015 -s 8780 -d 8781 --n_gen 20 --pop_size 50 -r 'town07_front_0' -c 'go_straight_town07_one_ped' --algorithm_name nsga2 --has_run_num 1000 --check_unique_coeff 0 0.1 0.1 --has_display 0 --objective_weights -1 1 1 0 0 0 0 0 0 0 --only_run_unique_cases 0 --record_every_n_step 5
+1.try fintuning step1 + step2?
+2.make other agents to avoid collision?
+3.improve for autopilot? (more conservative for vehicle and pedestrian)
+4.design a representative testing suit for retrained model's generalizability
+5.take route-completion / route completion percentage into evaluation creteria
 
+
+
+1.propose a new unique bugs definition (output space seems to be not well-studied in previous work in this domain. people tend to hand-wave with the input space definition)
+2.develop algorithm for effectively finding new unique bugs (based on the new fine-grained search objective, and new way of finding parents / mutations)
+3.show the impact of new unique bugs on retraining
+4.allow user to maximize number of configs causing one new unique bug and provide a way to interpret these configs by grouping them / highlighting important fields leading to the bug
+
+
+
+
+
+
+
+
+
+python ga_fuzzing.py -p 2015 -s 8794 -d 8795 --n_gen 2 --pop_size 1 -r 'town05_left_0' -c 'turn_left_town05' --algorithm_name nsga2-un --has_run_num 2 --check_unique_coeff 0 0.2 0.2 --has_display 0 --only_run_unique_cases 1 --record_every_n_step 10000 --objective_weights -1 1 1 0 0 0 0 0 0 0 -m lbc_augment_ped --n_offsprings 2
 
 
 
@@ -311,7 +324,7 @@ finetuning:
 
 python rerun_scenario.py
 
-CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir 'rerun/bugs/train/2021_02_19_19_56_11_town03/town03_front_1_Scenario12_auto_pilot_00/rerun_non_bugs' --teacher_path 'models/stage1_default_50_epoch=16.ckpt' --save_dir 'checkpoints/stage2_pretrained' --max_epochs 1 --lr 1e-4 --command_coefficient 0.01
+CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir 'rerun/bugs/train/2021_04_03_22_40_54_autopilot_ped_no_debug_2/town05_left_0_Scenario12_auto_pilot_00/rerun_non_bugs' --teacher_path 'models/stage1_default_50_epoch=16.ckpt' --save_dir 'checkpoints/stage2_pretrained' --max_epochs 1 --lr 1e-4 --command_coefficient 0.01 --batch_size 1
 
 
 CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir path/to/data --teacher_path path/to/model/from/stage1
@@ -325,6 +338,76 @@ auto_pilot on bugs test, 44 / 118
 lbc after finetuning (autopilot successful rerun on bugs) on bugs test, 54 / 118 bugs
 
 lbc after finetuning (autopilot successful rerun on random) on bugs test, 53 / 118 bugs
+
+
+
+non_bug train auto_pilot
+
+
+vehicle collision test
+success/all
+1/26 (lbc)
+19/26 (lbc_augment with ped collision train)
+26/26 (lbc_augment with vehicle collision train)
+11/26 (auto pilot)
+(lbc_augment with non bug)
+
+ped collision test
+26/26 (lbc_augment with vehicle collision train)
+26/26 (lbc_augment with ped collision train)
+13/26 (lbc)
+17/26 (auto pilot)
+(lbc_augment with non bug)
+
+
+
+
+
+
+
+
+
+
+
+
+vehicle collision test
+ (lbc)
+Running (lbc_augment with vehicle collision train)
+10 / 32 (lbc_augment with ped collision train)
+ (auto pilot)
+(lbc_augment with non bug)
+
+ped collision test
+27 / 32 Running (lbc_augment with vehicle collision train)
+24 / 32 (lbc_augment with ped collision train)
+ (lbc)
+ (auto pilot)
+28 / 32 (lbc_augment with non bug)
+
+observe the behavior of vehicle train and potentially increase its slow speed timeout
+
+
+
+
+vehicle collision train
+39 / 42 (lbc_augment with vehicle collision train)
+31 / 42 (lbc_augment with ped collision train)
+36 / 42 (lbc_augment with non bug)
+
+ped collision train
+27 / 32 (lbc_augment with vehicle collision train) (slow and stop close to off road)
+32 / 32 (lbc_augment with ped collision train) (usually succeed)
+32 / 32 (lbc_augment with non bug) (very slow, stop in the middle of route)
+
+0.625 = 20 / 32 (autopilot on ped bugs from lbc)
+0.583 = 14 / 24 (autopilot on ped bugs from lbc_augment_ped)
+0.35 = 7 / 20 (autopilot on ped bugs from lbc_augment_ped2)
+
+
+1st fuzzing(lbc): 59, 216
+2nd fuzzing(lbc_augment_ped): 25, 142
+3rd fuzzing(lbc_augment_ped2): 23, 47
+
 
 
 

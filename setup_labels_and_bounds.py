@@ -12,6 +12,12 @@ from object_types import (
     motorcycle_types,
     cyclist_types,
 )
+
+
+class emptyobject():
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
 # hack:
 general_labels = [
     "friction",
@@ -303,3 +309,48 @@ def setup_bounds_mask_labels_distributions_stage2(
         parameters_distributions,
         n_var,
     )
+
+
+def assign_key_value_pairs(search_space_info, fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds):
+    for d in [fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds]:
+        for k, v in d.items():
+            assert not hasattr(search_space_info, k), k+'should not appear twice.'
+            setattr(search_space_info, k, v)
+
+def generate_fuzzing_content(customized_config):
+    customized_parameters_bounds = customized_config['customized_parameters_bounds']
+
+    customized_parameters_distributions = customized_config['customized_parameters_distributions']
+
+    customized_center_transforms = customized_config['customized_center_transforms']
+
+    customized_constraints = customized_config['customized_constraints']
+
+    fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels = setup_bounds_mask_labels_distributions_stage1()
+    customize_parameters(parameters_min_bounds, customized_parameters_bounds)
+    customize_parameters(parameters_max_bounds, customized_parameters_bounds)
+
+    fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels, parameters_distributions, n_var = setup_bounds_mask_labels_distributions_stage2(fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds, mask, labels)
+
+    customize_parameters(parameters_min_bounds, customized_parameters_bounds)
+    customize_parameters(parameters_max_bounds, customized_parameters_bounds)
+    customize_parameters(parameters_distributions, customized_parameters_distributions)
+
+    search_space_info = emptyobject()
+    assign_key_value_pairs(search_space_info, fixed_hyperparameters, parameters_min_bounds, parameters_max_bounds)
+
+
+    fuzzing_content = emptyobject(labels=labels, mask=mask, parameters_min_bounds=parameters_min_bounds, parameters_max_bounds=parameters_max_bounds, parameters_distributions=parameters_distributions, customized_constraints=customized_constraints, customized_center_transforms=customized_center_transforms, n_var=n_var, fixed_hyperparameters=fixed_hyperparameters,
+    search_space_info=search_space_info)
+
+    return fuzzing_content
+
+
+# Customize parameters
+def customize_parameters(parameters, customized_parameters):
+    for k, v in customized_parameters.items():
+        if k in parameters:
+            parameters[k] = v
+        else:
+            # print(k, 'is not defined in the parameters.')
+            pass

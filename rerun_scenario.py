@@ -42,11 +42,11 @@ torch.set_deterministic(True)
 torch.backends.cudnn.benchmark = False
 
 
-os.environ['HAS_DISPLAY'] = '0'
+os.environ['HAS_DISPLAY'] = '1'
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 # 'lbc_augment', 'auto_pilot'
-ego_car_model = 'lbc_augment'
+ego_car_model = 'lbc_augment_ped'
 is_save = True
 
 
@@ -255,7 +255,8 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
         launch_server = False
 
     with open(pickle_filename, 'rb') as f_in:
-        d = pickle.load(f_in)['info']
+        pf = pickle.load(f_in)
+        d = pf['info']
 
         if len(x) == 0:
             x = d['x']
@@ -283,6 +284,9 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
         direction = d['direction']
         route_str = d['route_str']
         route_type = d['route_type']
+
+        mask = pf['mask']
+        labels = pf['labels']
 
 
     folder = '_'.join([route_type, scenario, ego_car_model, route_str])
@@ -315,18 +319,26 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
             print('\n'*3, 'rerun also causes a bug!!!', '\n'*3)
 
             try:
-                # use this version to merge into the existing folder
-                copy_tree(save_path, os.path.join(rerun_bugs_folder, sub_folder_name))
+                new_path = os.path.join(rerun_bugs_folder, sub_folder_name)
+                copy_tree(save_path, new_path)
             except:
                 print('fail to copy from', save_path)
                 traceback.print_exc()
         else:
             try:
-                # use this version to merge into the existing folder
-                copy_tree(save_path, os.path.join(rerun_non_bugs_folder, sub_folder_name))
+                new_path = os.path.join(rerun_non_bugs_folder, sub_folder_name)
+                copy_tree(save_path, new_path)
             except:
                 print('fail to copy from', save_path)
                 traceback.print_exc()
+
+
+        cur_info = {'x':x, 'objectives':objectives, 'labels':labels, 'mask':mask, 'is_bug':is_bug}
+
+
+        with open(new_path+'/'+'cur_info.pickle', 'wb') as f_out:
+            pickle.dump(cur_info, f_out)
+
 
     return is_bug, objectives
 
@@ -334,40 +346,65 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
 
 def rerun_list_of_scenarios(parent_folder, rerun_save_folder, scenario_file, data, mode, ego_car_model, record_every_n_step=10):
     import re
-    if data == 'bugs':
-        parent_folder_with_type = parent_folder + '/bugs'
-    elif data == 'non_bugs':
-        parent_folder_with_type = parent_folder + '/non_bugs'
 
     subfolder_names = get_sorted_subfolders(parent_folder, data)
     print('len(subfolder_names)', len(subfolder_names))
-    _, _, objectives_list_np, _, _ = load_data(subfolder_names)
-    collision_inds = objectives_list_np[:, 0] > 0.1
-    subfolder_names = (np.array(subfolder_names)[collision_inds]).tolist()
-
-    print('len(subfolder_names)', len(subfolder_names))
-
-    if len(subfolder_names) > 200:
-        subfolder_names = subfolder_names[:200]
-
-    assert len(subfolder_names) >= 2
-    mid = int(len(subfolder_names)//2)
-
-    random.seed(0)
-    random.shuffle(subfolder_names)
 
 
-    train_subfolder_names = subfolder_names[:mid]
-    test_subfolder_names = subfolder_names[mid:]
+    if data == 'bugs':
+        cur_X, _, cur_objectives, _, _ = load_data(subfolder_names)
+        cur_X = np.array(cur_X)
+        from customized_utils import get_event_location_and_object_type
+        cur_locations, cur_object_type_list = get_event_location_and_object_type(subfolder_names, verbose=False)
 
-    print('len(train_subfolder_names)', len(train_subfolder_names))
+        collision_inds = cur_objectives[:, 0] > 0.01
 
-    if mode == 'train':
-        chosen_subfolder_names = train_subfolder_names
-    elif mode == 'test':
-        chosen_subfolder_names = test_subfolder_names
-    elif mode == 'all':
-        chosen_subfolder_names = subfolder_names
+        subfolder_names = np.array(subfolder_names)[collision_inds]
+        cur_object_type_list = np.array(cur_object_type_list)[collision_inds]
+        # cur_locations = cur_locations[collision_inds]
+
+        pedestrian_collision_inds = cur_object_type_list == 'walker.pedestrian.0001'
+        vehicle_collision_inds = cur_object_type_list == 'vehicle.dodge_charger.police'
+
+        pedestrian_subfolder_names = subfolder_names[pedestrian_collision_inds]
+        vehicle_subfolder_names = subfolder_names[vehicle_collision_inds]
+
+
+        print('len(pedestrian_subfolder_names), len(vehicle_subfolder_names)')
+        print(len(pedestrian_subfolder_names), len(vehicle_subfolder_names))
+
+        min_len = np.min([len(pedestrian_subfolder_names), len(vehicle_subfolder_names)])
+        mid = min_len // 2
+        print('mid', mid)
+        # ped_test: -mid:
+        # vehicle_test: -mid:
+
+        if mode == 'train':
+            # chosen_subfolder_names = pedestrian_subfolder_names[:mid]
+            chosen_subfolder_names = pedestrian_subfolder_names
+        elif mode == 'test':
+            chosen_subfolder_names = pedestrian_subfolder_names[-mid:]
+        elif mode == 'all':
+            chosen_subfolder_names = subfolder_names
+
+    else:
+        mid = 32
+
+        random.seed(0)
+        random.shuffle(subfolder_names)
+
+        train_subfolder_names = subfolder_names[:mid]
+        test_subfolder_names = subfolder_names[-mid:]
+
+        if mode == 'train':
+            chosen_subfolder_names = train_subfolder_names
+        elif mode == 'test':
+            chosen_subfolder_names = test_subfolder_names
+        elif mode == 'all':
+            chosen_subfolder_names = subfolder_names
+
+
+
 
     bug_num = 0
     objectives_avg = 0
@@ -398,6 +435,7 @@ def rerun_list_of_scenarios(parent_folder, rerun_save_folder, scenario_file, dat
 
 
 if __name__ == '__main__':
+
     time_str = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
 
@@ -408,49 +446,45 @@ if __name__ == '__main__':
 
     atexit.register(exit_handler, [port])
 
+    parent_folder = 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc_augment_ped/2021_04_04_22_48_47,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'
+
+
+    # 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_04_02_15_40_29,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'
+
     # ['rerun', 'adv', 'tsne']
     task = 'rerun'
-    use_adv = True
-    use_unique_bugs = True
-    test_unique_bugs = True
-    unique_coeff = [0, 0.1, 0.5]
 
-    parent_folder = 'run_results/nsga2-un/town03_front_1/change_lane_town03_fixed_npc_num/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_18_10_36_32,50_20_adv_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'
+    unique_coeff = [0, 0.2, 0.2]
 
-    pickle_filename = get_picklename(parent_folder)
+    if task in ['adv', 'tsne']:
+        use_unique_bugs = True
+        pickle_filename = get_picklename(parent_folder)
+        save_path = 'tmp_X_and_objectives'+'_'.join([str(use_unique_bugs), str(eps), str(adv_conf_th), str(unique_coeff[0]), str(unique_coeff[1]), str(unique_coeff[2]), str(cutoff), str(cutoff_end)])
+        save_path = os.path.join(parent_tsne_folder, save_path)
 
+        if task == 'adv':
+            use_adv = True
+            test_unique_bugs = True
+            rerun_save_folder = make_hierarchical_dir(['adv', time_str])
+            cutoff = 300
+            cutoff_end = 350
+            eps = 0.0
+            adv_conf_th = 0.75
+        elif task == 'tsne':
+            parent_tsne_folder = 'tmp_tsne'
+            if not os.path.exists(parent_tsne_folder):
+                os.mkdir(parent_tsne_folder)
+            consider_unique_for_tsne = True
 
-
-    parent_tsne_folder = 'tmp_tsne'
-
-    # only used for adv
-    rerun_save_folder = make_hierarchical_dir(['adv', time_str])
-    cutoff = 300
-    cutoff_end = 350
-    eps = 0.0
-    adv_conf_th = 0.75
-    # 1.01
-
-    save_path = 'tmp_X_and_objectives'+'_'.join([str(use_unique_bugs), str(eps), str(adv_conf_th), str(unique_coeff[0]), str(unique_coeff[1]), str(unique_coeff[2]), str(cutoff), str(cutoff_end)])
-    save_path = os.path.join(parent_tsne_folder, save_path)
-
-
-
-    # 'tmp_X_and_objectives'
-    # 'tmp_X_and_objectives_prev_all_True'
-    if not os.path.exists(parent_tsne_folder):
-        os.mkdir(parent_tsne_folder)
-
-
-    consider_unique_for_tsne = True
 
     if task == 'rerun':
         # ['bugs', 'non_bugs']
         data = 'bugs'
         # ['train', 'test', 'all']
-        mode = 'test'
+        mode = 'train'
+        print('ego_car_model', ego_car_model, 'data', data, 'mode', mode)
         rerun_save_folder = make_hierarchical_dir(['rerun', data, mode, time_str])
-        record_every_n_step = 1
+        record_every_n_step = 5
 
         rerun_list_of_scenarios(parent_folder, rerun_save_folder, scenario_file, data, mode, ego_car_model, record_every_n_step=record_every_n_step)
 
