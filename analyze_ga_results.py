@@ -1030,63 +1030,129 @@ def draw_accident_location(town_list, plot_prev_X=True):
         plt.savefig(label)
         plt.clf()
 
-def count_bug(path):
-    subfolder_names = get_sorted_subfolders(path)
+def count_bug(town_list):
+    for label, town_path, warmup_pth, warmup_pth_cutoff in town_list:
+        from customized_utils import get_event_location_and_object_type, count_and_group_output_unique_bugs
 
-    cur_X, _, cur_objectives, _, _ = load_data(subfolder_names)
-    cur_X = np.array(cur_X)
-    from customized_utils import get_event_location_and_object_type, count_and_group_output_unique_bugs
+        subfolders = get_sorted_subfolders(town_path)
+        cur_X, _, cur_objectives, _, _, cur_info = load_data(subfolders)
+        cur_locations, cur_object_type_list = get_event_location_and_object_type(subfolders, verbose=False)
+        cur_X = np.array(cur_X)
 
+        if warmup_pth:
+            subfolders = get_sorted_subfolders(warmup_pth)
+            prev_X, _, prev_objectives, _, _, cur_info = load_data(subfolders)
+            prev_locations, prev_object_type_list = get_event_location_and_object_type(subfolders, verbose=False)
+            prev_X = np.array(prev_X)[:warmup_pth_cutoff]
+            prev_objectives = prev_objectives[:warmup_pth_cutoff]
+            prev_locations = prev_locations[:warmup_pth_cutoff]
+            prev_object_type_list = prev_object_type_list[:warmup_pth_cutoff]
 
-    cur_locations, cur_object_type_list = get_event_location_and_object_type(subfolder_names, verbose=False)
+            cur_X = np.concatenate([prev_X, cur_X])
+            cur_objectives = np.concatenate([prev_objectives, cur_objectives])
 
+            cur_locations = np.concatenate([prev_locations, cur_locations])
+            cur_object_type_list = prev_object_type_list + cur_object_type_list
 
-
-
-    bug_inds = np.arange(cur_X.shape[0])[cur_objectives[:, 0] > 0.01]
-    cur_locations = np.array(cur_locations)[bug_inds]
-    ego_speed = cur_objectives[:, 0][bug_inds]
-    cur_object_type_list = np.array(cur_object_type_list)[bug_inds]
-    obj_type_inds = np.zeros(len(cur_object_type_list))
-
-
-    for i, obj_type in enumerate(cur_object_type_list):
-        obj_type_ind = 0
-        if obj_type == 'walker.pedestrian.0001':
-            obj_type_ind = 1
-        elif obj_type == 'vehicle.dodge_charger.police':
-            obj_type_ind = 2
-        obj_type_inds[i] = obj_type_ind
-    ego_speed = np.expand_dims(ego_speed, axis=1)
-    obj_type_inds = np.expand_dims(obj_type_inds, axis=1)
-
-    outputs = np.concatenate([cur_locations, ego_speed, obj_type_inds], axis=1)
+        bug_inds = np.arange(cur_X.shape[0])[cur_objectives[:, 0] > 0.01]
+        cur_locations = np.array(cur_locations)[bug_inds]
+        ego_speed = cur_objectives[:, 0][bug_inds]
+        cur_object_type_list = np.array(cur_object_type_list)[bug_inds]
+        obj_type_inds = np.zeros(len(cur_object_type_list))
 
 
-    labels = ['x', 'y', 'speed', 'object_type']
-    min_bounds = np.array([-144, -4, 0, 0])
-    max_bounds = np.array([-120, 15, 9, 2])
-    diff_th = np.array([5, 5, 3, 1])
+        for i, obj_type in enumerate(cur_object_type_list):
+            obj_type_ind = 0
+            if obj_type == 'walker.pedestrian.0001':
+                obj_type_ind = 1
+            elif obj_type == 'vehicle.dodge_charger.police':
+                obj_type_ind = 2
+            obj_type_inds[i] = obj_type_ind
+        ego_speed = np.expand_dims(ego_speed, axis=1)
+        obj_type_inds = np.expand_dims(obj_type_inds, axis=1)
+
+        outputs = np.concatenate([cur_locations, ego_speed, obj_type_inds], axis=1)
+        from scene_configs import customized_routes
+        start, end = customized_routes[cur_info['info']['route_type']]['location_list']
+        x_min = np.min([start[0], end[0]])
+        y_min = np.min([start[1], end[1]])
+        x_max = np.max([start[0], end[0]])
+        y_max = np.max([start[1], end[1]])
+        print(label)
+        print('x_min, x_max, y_min, y_max', x_min, x_max, y_min, y_max)
+        labels = ['x', 'y', 'speed', 'object_type']
+
+        min_bounds = np.array([x_min-1, y_min-1, 0, 1])
+        max_bounds = np.array([x_max+1, y_max+1, 9, 2])
 
 
-    unique_bugs_group = count_and_group_output_unique_bugs(bug_inds, outputs, labels, min_bounds, max_bounds, diff_th)
-    print('len(unique_bugs_group)', len(unique_bugs_group))
-    print('unique_bugs_group', unique_bugs_group)
-    # collision_inds = cur_objectives[:, 0] > 0.01
-    #
-    # subfolder_names = np.array(subfolder_names)[collision_inds]
-    # cur_object_type_list = np.array(cur_object_type_list)[collision_inds]
-    # # cur_locations = cur_locations[collision_inds]
-    #
-    # pedestrian_collision_inds = cur_object_type_list == 'walker.pedestrian.0001'
-    # vehicle_collision_inds = cur_object_type_list == 'vehicle.dodge_charger.police'
-    #
-    # pedestrian_subfolder_names = subfolder_names[pedestrian_collision_inds]
-    # vehicle_subfolder_names = subfolder_names[vehicle_collision_inds]
-    #
-    #
-    # print('len(pedestrian_subfolder_names), len(vehicle_subfolder_names)')
-    # print(len(pedestrian_subfolder_names), len(vehicle_subfolder_names))
+        # town07_front:
+        # diff_th = np.array([1, 10, 3, 1])
+        # town05_left:
+        diff_th = np.array([10, 10, 3, 1])
+
+        unique_bugs_group = count_and_group_output_unique_bugs(bug_inds, outputs, labels, min_bounds, max_bounds, diff_th)
+        print('len(unique_bugs_group)', len(unique_bugs_group))
+        print('unique_bugs_group', unique_bugs_group.keys())
+        unique_bugs = np.array(list(unique_bugs_group.keys()))
+        print(unique_bugs)
+
+
+
+
+        # plt.ylim([-1, 10])
+        # plt.xlim([-1, 3])
+        # plt.scatter(unique_bugs[:, 2], unique_bugs[:, 1])
+        # print(unique_bugs[:, 1])
+        # print(unique_bugs[:, 2])
+        # plt.xlabel('speed grid')
+        # plt.ylabel('y axis grid')
+        # plt.title(label+','+str(len(unique_bugs_group))+'/30')
+        # plt.gca().invert_yaxis()
+        # plt.savefig(label)
+        # plt.clf()
+
+
+
+        # plt.ylim([-1, 10])
+        # plt.xlim([-1, 3])
+        ped_collision_inds = unique_bugs[:, 3] == 0
+        vehicle_collision_inds = unique_bugs[:, 3] == 1
+        print(unique_bugs)
+        unique_bugs_ped = unique_bugs[ped_collision_inds]
+        unique_bugs_vehicle = unique_bugs[vehicle_collision_inds]
+
+        # plt.scatter(unique_bugs_ped[:, 0], unique_bugs_ped[:, 1], label='pedestrian_collision')
+        # plt.scatter(unique_bugs_vehicle[:, 0], unique_bugs_vehicle[:, 1], label='vehicle_collision')
+
+
+        def plot_arrow(x_list, y_list, speed_list, color, width=0.002, head_width=0.06):
+            for x, y, speed in zip(x_list, y_list, speed_list):
+                if color == 'red':
+                    dx = 0
+                    dy = speed/5
+                    label = 'pedestrian collision'
+                elif color == 'blue':
+                    dx = ((speed+0.5)/5)*np.cos(45)
+                    dy =((speed+0.5)/5)*np.sin(45)
+                    label = 'vehicle collision'
+                plt.arrow(x, y, dx, dy, color=color, head_width=head_width, alpha=0.5, width=width, label=label)
+
+
+
+        plot_arrow(unique_bugs_ped[:, 0], unique_bugs_ped[:, 1], unique_bugs_ped[:, 2], 'red')
+        plot_arrow(unique_bugs_vehicle[:, 0], unique_bugs_vehicle[:, 1], unique_bugs_vehicle[:, 2], 'blue')
+
+
+        plt.xlabel('x axis grid')
+        plt.ylabel('y axis grid')
+        plt.title(label+','+str(len(unique_bugs_group))+'/30')
+        plt.gca().invert_yaxis()
+        plt.savefig(label)
+        plt.clf()
+
+
+
 
 
 
@@ -1268,15 +1334,28 @@ if __name__ == '__main__':
     #     visualize_ped_over_time(path, save_filename='ped_over_time'+'_'+alg, bug_type='collision', unique_coeffs=[0.1, 0.1], range_upper_bound=5, warmup_path=warmup_path, warmup_len=warmup_len)
 
 
+    # town_07_front
+    # random: 8
+    # random_un: 6
+    # ga: 9
+    # ga_un: 12
+    # ga_un_nn: 12
+    # ga_un_adv_nn: 11
 
+    # town_05_left
+    # ga: 18
+    # ga_un: 20
+    # random: 19
+    # ga_un_adv_nn: 19
+    # ga_un_nn: 19
 
-    town05_left_collision_list = [('nsga2', 'run_results/nsga2/town05_left_0/turn_left_town05/lbc/2021_03_30_19_06_09,50_20_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', None),
-    ('nsga2-un', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_10_54_55,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', None),
-    ('random', 'run_results/random/town05_left_0/turn_left_town05/lbc/2021_03_30_19_06_02,50_20_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', None),
-    ('adv_nn', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_22_55_47,50_25_adv_nn_500_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_10_54_55,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'),
-    ('nn', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_22_55_54,50_25_nn_500_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_10_54_55,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'),
-    ('nsga2-un-lbc-augment-ped', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc_augment_ped/2021_04_04_15_54_46,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', None),
-    ('nsga2-un-lbc-augment-ped-2', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc_augment_ped/2021_04_04_22_48_47,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', None)
+    town05_left_collision_list = [('nsga2', 'run_results/nsga2/town05_left_0/turn_left_town05/lbc/2021_03_30_19_06_09,50_20_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', None, None),
+    ('nsga2-un', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_10_54_55,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', None, None),
+    ('random', 'run_results/random/town05_left_0/turn_left_town05/lbc/2021_03_30_19_06_02,50_20_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', None, None),
+    ('adv_nn', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_22_55_47,50_25_adv_nn_500_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_10_54_55,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 500),
+    ('nn', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_22_55_54,50_25_nn_500_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_03_30_10_54_55,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 500),
+    ('nsga2-un-lbc-augment-ped', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc_augment_ped/2021_04_04_15_54_46,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', None, None),
+    ('nsga2-un-lbc-augment-ped-2', 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc_augment_ped/2021_04_04_22_48_47,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', None, None)
     ]
 
     # draw_accident_location(town05_left_collision_list)
@@ -1287,7 +1366,7 @@ if __name__ == '__main__':
     # draw_simulation_wrapper(town_path_list, warmup_pth_list, bug_type='collision', town='town07', range_upper_bound=21, unique_coeffs=[], warmup_pth_cutoff=500, plot_prev_X=True)
 
 
-    count_bug('run_results/nsga2/town05_left_0/turn_left_town05/lbc/2021_03_30_19_06_09,50_20_none_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.1__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01')
+    count_bug(town05_left_collision_list)
 
     # rerun/bugs/train/2021_04_04_15_00_30_non_train_lbc_agent_ped_no_debug/town05_left_0_Scenario12_lbc_augment_00
     # rerun/bugs/train/2021_04_04_14_59_45_vehicle_train_lbc_agent_ped_no_debug/town05_left_0_Scenario12_lbc_augment_00

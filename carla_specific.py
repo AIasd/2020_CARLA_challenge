@@ -314,10 +314,6 @@ def parse_scenario(scenario_file, town_name, route_str, x_0, y_0):
 
 def initialize_carla_specific(fuzzing_arguments):
 
-    # scenario_type = 'leading_car_braking'
-    customized_config = customized_bounds_and_distributions[fuzzing_arguments.scenario_type]
-    fuzzing_content = generate_fuzzing_content(customized_config)
-
     route_info = customized_routes[fuzzing_arguments.route_type]
 
     town_name = route_info['town_name']
@@ -345,7 +341,7 @@ def initialize_carla_specific(fuzzing_arguments):
     location_list=location_list)
 
 
-    return sim_specific_arguments, fuzzing_content
+    return sim_specific_arguments
 
 
 def initialize_tmp_scenario_file():

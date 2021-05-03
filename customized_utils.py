@@ -1884,7 +1884,7 @@ def load_data(subfolders):
                 is_bug_list.append(is_bug)
                 objectives_list.append(objectives)
 
-    return data_list, np.array(is_bug_list), np.array(objectives_list), mask, labels
+    return data_list, np.array(is_bug_list), np.array(objectives_list), mask, labels, cur_info
 
 def get_event_location_and_object_type(subfolders, verbose=True):
     location_list = []
@@ -2151,10 +2151,12 @@ def count_and_group_output_unique_bugs(inds, outputs, labels, min_bounds, max_bo
     '''
 
     m = len(labels)
-    print(outputs.shape, outputs[:2])
-    outputs_grid_inds = (outputs - min_bounds) / ((max_bounds - min_bounds) * diff_th)
+
+    # print(outputs.shape, outputs)
+    outputs_grid_inds = ((outputs - min_bounds)*diff_th) / (max_bounds - min_bounds)
     outputs_grid_inds = outputs_grid_inds.astype(int)
-    print(outputs_grid_inds.shape, outputs_grid_inds[:2])
+    # print(outputs_grid_inds.shape, outputs_grid_inds)
+
     from collections import defaultdict
     unique_bugs_group = defaultdict(list)
 

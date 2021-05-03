@@ -37,3 +37,4 @@ tmp_tsne/*
 tmp/*
 tmp_10hz/*
 collected_data_lbc_augment_ped/*
+exp_9/coco/coco_confusion_repair_aug

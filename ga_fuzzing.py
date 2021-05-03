@@ -1902,7 +1902,6 @@ def customized_minimize(problem,
 
 
 def run_nsga2_dt(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run_simulation):
-    use_initial_x_and_y = True
 
     end_when_no_critical_region = True
     cumulative_info = None
@@ -1912,9 +1911,7 @@ def run_nsga2_dt(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run
     X = None
     y = None
     F = None
-    objectives = None
     labels = None
-    hv = None
     estimator = None
     critical_unique_leaves = None
 
@@ -1970,16 +1967,10 @@ def run_nsga2_dt(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run
             X = X_new
             y = y_new
             F = F_new
-            # objectives = objectives_new
-            # hv = hv_new
         else:
             X = np.concatenate([X, X_new])
             y = np.concatenate([y, y_new])
             F = np.concatenate([F, F_new])
-            # objectives = np.concatenate([objectives, objectives_new])
-            # hv = np.concatenate([hv, hv_new])
-
-
 
 
         estimator, inds, critical_unique_leaves = filter_critical_regions(X, y)
@@ -1989,25 +1980,6 @@ def run_nsga2_dt(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run
 
         if len(X_filtered) == 0 and end_when_no_critical_region:
             break
-
-
-    # Save data
-    # has_run_list = cumulative_info['has_run_list']
-    # time_list = cumulative_info['time_list']
-    # bugs_num_list = cumulative_info['bugs_num_list']
-    # unique_bugs_num_list = cumulative_info['unique_bugs_num_list']
-    #
-    #
-    # n_gen = global_n_gen
-    #
-    # dt_save_file = '_'.join([algorithm_name, route_type, scenario_type, ego_car_model, str(n_gen), str(pop_size), str(outer_iterations), dt_time_str])
-    #
-    # pth = os.path.join(parent_folder, dt_save_file)
-    # np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, labels=labels, has_run_list=has_run_list, route_type=route_type, scenario_type=scenario_type)
-    #
-    # print('npz saved')
-
-
 
 
 
@@ -2120,18 +2092,6 @@ def run_ga(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run_simul
 
 
 
-
-    # # for drawing hv
-    # # create the performance indicator object with reference point
-    # metric = Hypervolume(ref_point=np.array([7.0, 7.0, 7.0, 7.0, 7.0]))
-    # # collect the population in each generation
-    # pop_each_gen = [a.pop for a in res.history]
-    # # receive the population in each generation
-    # obj_and_feasible_each_gen = [pop[pop.get("feasible")[:,0]].get("F") for pop in pop_each_gen]
-    # # calculate for each generation the HV metric
-    # hv = np.array([metric.calc(f) for f in obj_and_feasible_each_gen])
-
-
     if len(problem.x_list) > 0:
         X = np.stack(problem.x_list)
         F = np.concatenate(problem.F_list)
@@ -2157,11 +2117,6 @@ def run_ga(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run_simul
     th = problem.th
 
 
-    # save another data npz for easy comparison with dt results
-    # non_dt_save_file = '_'.join([algorithm_name, route_type, scenario_type, ego_car_model, str(n_gen), str(pop_size)])
-    # pth = os.path.join(bug_parent_folder, non_dt_save_file)
-    # np.savez(pth, X=X, y=y, F=F, objectives=objectives, time_list=time_list, bugs_num_list=bugs_num_list, unique_bugs_num_list=unique_bugs_num_list, has_run=has_run, has_run_list=has_run_list, labels=labels, hv=hv, mask=mask, xl=xl, xu=xu, p=p, c=c, th=th, route_type=route_type, scenario_type=scenario_type, rank_mode=rank_mode, ranking_model=ranking_model, initial_fit_th=initial_fit_th)
-    # print('npz saved')
 
     cumulative_info = {
         'has_run': problem.has_run,
@@ -2190,8 +2145,19 @@ def run_ga_general(fuzzing_arguments, sim_specific_arguments, fuzzing_content, r
         run_ga(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run_simulation)
 
 if __name__ == '__main__':
+
+    from scene_configs import customized_bounds_and_distributions
+    from setup_labels_and_bounds import generate_fuzzing_content
+
+    # Scenario Description
+    # use some default scenario config
+    customized_config = customized_bounds_and_distributions[fuzzing_arguments.scenario_type]
+    # translate scenario config to fuzzing_content
+    fuzzing_content = generate_fuzzing_content(customized_config)
+
+
     if fuzzing_arguments.simulator == 'carla':
-        sim_specific_arguments, fuzzing_content = initialize_carla_specific(fuzzing_arguments)
+        sim_specific_arguments = initialize_carla_specific(fuzzing_arguments)
         run_simulation = run_carla_simulation
     elif fuzzing_arguments.simulator == 'svl':
         pass
