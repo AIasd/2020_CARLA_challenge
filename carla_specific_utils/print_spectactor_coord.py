@@ -30,9 +30,10 @@ _PORT_ = 2000
 _SLEEP_TIME_ = 1
 
 
-def main():
+def main(map):
 	client = carla.Client(_HOST_, _PORT_)
 	client.set_timeout(2.0)
+    client.load_world(map)
 	world = client.get_world()
 
 	# print(help(t))
@@ -49,4 +50,10 @@ def main():
 
 
 if __name__ == '__main__':
-	main()
+
+    argparser.add_argument(
+        '--map',
+        default='Town05',
+        help='which map to use')
+    args = argparser.parse_args()
+    main(args.map)

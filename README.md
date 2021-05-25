@@ -80,28 +80,16 @@ For more API information, checkout the interface inside `ga_fuzzing.py`.
 
 
 ## Check out maps and find coordinates
-Check out the map details by spinning up a CARLA server
-
+Check out the map coordinates by running
 ```
 ./CarlaUE4.sh -quality-level=Epic -world-port=2000 -resx=800 -resy=600 -opengl
 ```
-and running
+in one's carla's folder to spin the carla server and then running
 ```
-python carla_specific_utils/inspect_routes.py
+python carla_specific_utils/print_spectactor_coord.py --map Town05
 ```
-Also see the corresponding birdview layout [here](https://carla.readthedocs.io/en/latest/core_map/) for direction and traffic lights information.
+in a separate window. Also see the corresponding birdview layout [here](https://carla.readthedocs.io/en/latest/core_map/) for direction and traffic lights information. Note to switch town map, one can change the parameter --map.
 
-Note to switch town map, one can change the corresponding variable inside this script.
-
-## Extract short routes extracted from CARLA challenge routes
-```
-python generate_short_routes.py
-```
-
-## Run on short routes
-```
-python run_new_routes.py
-```
 
 
 ## Retrain model from scratch
