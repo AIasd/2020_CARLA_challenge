@@ -2,27 +2,16 @@ import argparse
 import carla
 import os
 import numpy as np
-from leaderboard.customized.object_params import Static, Pedestrian, Vehicle
+
 from dask.distributed import Client, LocalCluster
 from psutil import process_iter
 from signal import SIGTERM
 import socket
 from collections import OrderedDict
-from object_types import (
-    WEATHERS,
-    pedestrian_types,
-    vehicle_types,
-    static_types,
-    vehicle_colors,
-    car_types,
-    motorcycle_types,
-    cyclist_types,
-)
 
 import sys
 import xml.etree.ElementTree as ET
 import pathlib
-from leaderboard.utils.route_parser import RouteParser
 
 import json
 from sklearn import tree
@@ -39,75 +28,34 @@ import traceback
 from collections import deque
 
 
-from setup_labels_and_bounds import general_labels, weather_labels, waypoints_num_limit, waypoint_labels, static_general_labels, pedestrian_general_labels, vehicle_general_labels
-
-def visualize_route(route):
-    n = len(route)
-
-    x_list = []
-    y_list = []
-
-    # The following code prints out the planned route
-    for i, (transform, command) in enumerate(route):
-        x = transform.location.x
-        y = transform.location.y
-        z = transform.location.z
-        pitch = transform.rotation.pitch
-        yaw = transform.rotation.yaw
-        if i == 0:
-            s = "start"
-            x_s = [x]
-            y_s = [y]
-        elif i == n - 1:
-            s = "end"
-            x_e = [x]
-            y_e = [y]
-        else:
-            s = "point"
-            x_list.append(x)
-            y_list.append(y)
-
-        # print(s, x, y, z, pitch, yaw, command
-
-    import matplotlib.pyplot as plt
-
-    plt.gca().invert_yaxis()
-    plt.scatter(x_list, y_list)
-    plt.scatter(x_s, y_s, c="red", linewidths=5)
-    plt.scatter(x_e, y_e, c="black", linewidths=5)
-
-    plt.show()
 
 
-def perturb_route(route, perturbation):
-    num_to_perturb = min([len(route), len(perturbation) + 2])
-    for i in range(num_to_perturb):
-        if i != 0 and i != num_to_perturb - 1:
-            route[i][0].location.x += perturbation[i - 1][0]
-            route[i][0].location.y += perturbation[i - 1][1]
-
-
-def create_transform(x, y, z, pitch, yaw, roll):
-    location = carla.Location(x, y, z)
-    rotation = carla.Rotation(pitch, yaw, roll)
-    transform = carla.Transform(location, rotation)
-    return transform
-
-
-def copy_transform(t):
-    return create_transform(
-        t.location.x,
-        t.location.y,
-        t.location.z,
-        t.rotation.pitch,
-        t.rotation.yaw,
-        t.rotation.roll,
-    )
-
-
-def rand_real(rng, low, high):
-    return rng.random() * (high - low) + low
-
+# ---------------- Misc -------------------
+class arguments_info:
+    def __init__(self):
+        self.host = "localhost"
+        self.port = "2000"
+        self.sync = False
+        self.debug = 0
+        self.spectator = True
+        self.record = ""
+        self.timeout = "30.0"
+        self.challenge_mode = True
+        self.routes = None
+        self.scenarios = "leaderboard/data/all_towns_traffic_scenarios_public.json"
+        self.repetitions = 1
+        self.agent = "scenario_runner/team_code/image_agent.py"
+        self.agent_config = "models/epoch=24.ckpt"
+        self.track = "SENSORS"
+        self.resume = False
+        self.checkpoint = ""
+        self.weather_index = 19
+        self.save_folder = "collected_data_customized"
+        self.deviations_folder = ""
+        self.background_vehicles = False
+        self.save_action_based_measurements = 0
+        self.changing_weather = False
+        self.record_every_n_step = 2000
 
 def specify_args():
     # general parameters
@@ -212,228 +160,6 @@ def specify_args():
 
     return arguments
 
-
-class arguments_info:
-    def __init__(self):
-        self.host = "localhost"
-        self.port = "2000"
-        self.sync = False
-        self.debug = 0
-        self.spectator = True
-        self.record = ""
-        self.timeout = "30.0"
-        self.challenge_mode = True
-        self.routes = None
-        self.scenarios = "leaderboard/data/all_towns_traffic_scenarios_public.json"
-        self.repetitions = 1
-        self.agent = "scenario_runner/team_code/image_agent.py"
-        self.agent_config = "models/epoch=24.ckpt"
-        self.track = "SENSORS"
-        self.resume = False
-        self.checkpoint = ""
-        self.weather_index = 19
-        self.save_folder = "collected_data_customized"
-        self.deviations_folder = ""
-        self.background_vehicles = False
-        self.save_action_based_measurements = 0
-        self.changing_weather = False
-        self.record_every_n_step = 2000
-
-
-def add_transform(transform1, transform2):
-    x = transform1.location.x + transform2.location.x
-    y = transform1.location.y + transform2.location.y
-    z = transform1.location.z + transform2.location.z
-    pitch = transform1.rotation.pitch + transform2.rotation.pitch
-    yaw = transform1.rotation.yaw + transform2.rotation.yaw
-    roll = transform1.rotation.roll + transform2.rotation.roll
-    return create_transform(x, y, z, pitch, yaw, roll)
-
-
-def convert_x_to_customized_data(
-    x,
-    fuzzing_content,
-    port
-):
-    from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
-
-    waypoints_num_limit = fuzzing_content.search_space_info.waypoints_num_limit
-    num_of_static_max = fuzzing_content.search_space_info.num_of_static_max
-    num_of_pedestrians_max = fuzzing_content.search_space_info.num_of_pedestrians_max
-    num_of_vehicles_max = fuzzing_content.search_space_info.num_of_vehicles_max
-
-    customized_center_transforms = fuzzing_content.customized_center_transforms
-    parameters_min_bounds = fuzzing_content.parameters_min_bounds
-    parameters_max_bounds = fuzzing_content.parameters_max_bounds
-
-    # parameters
-    # global
-    friction = x[0]
-    weather_index = int(x[1])
-    num_of_static = int(x[2])
-    num_of_pedestrians = int(x[3])
-    num_of_vehicles = int(x[4])
-
-    ind = 5
-
-    # if use_fine_grained_weather:
-    if weather_index == -1:
-        fine_grained_weather = carla.WeatherParameters(
-            x[ind],
-            x[ind + 1],
-            x[ind + 2],
-            x[ind + 3],
-            x[ind + 4],
-            x[ind + 5],
-            x[ind + 6],
-            x[ind + 7],
-            x[ind + 8],
-            x[ind + 9],
-        )
-        print(
-            "weather params:",
-            x[ind],
-            x[ind + 1],
-            x[ind + 2],
-            x[ind + 3],
-            x[ind + 4],
-            x[ind + 5],
-            x[ind + 6],
-            x[ind + 7],
-            x[ind + 8],
-            x[ind + 9],
-        )
-        ind += 10
-    else:
-        fine_grained_weather = None
-
-    # ego car
-    ego_car_waypoints_perturbation = []
-    for _ in range(waypoints_num_limit):
-        dx = x[ind]
-        dy = x[ind + 1]
-        ego_car_waypoints_perturbation.append([dx, dy])
-        ind += 2
-
-    # static
-    static_list = []
-    for i in range(num_of_static_max):
-        if i < num_of_static:
-            static_type_i = static_types[int(x[ind])]
-            static_transform_i = create_transform(
-                x[ind + 1], x[ind + 2], 0, 0, x[ind + 3], 0
-            )
-            static_i = Static(model=static_type_i, spawn_transform=static_transform_i)
-            static_list.append(static_i)
-        ind += 4
-
-    # pedestrians
-    pedestrian_list = []
-    for i in range(num_of_pedestrians_max):
-        if i < num_of_pedestrians:
-            pedestrian_type_i = pedestrian_types[int(x[ind])]
-            pedestrian_transform_i = create_transform(
-                x[ind + 1], x[ind + 2], 0, 0, x[ind + 3], 0
-            )
-            pedestrian_i = Pedestrian(
-                model=pedestrian_type_i,
-                spawn_transform=pedestrian_transform_i,
-                trigger_distance=x[ind + 4],
-                speed=x[ind + 5],
-                dist_to_travel=x[ind + 6],
-                after_trigger_behavior="stop",
-            )
-            pedestrian_list.append(pedestrian_i)
-        ind += 7
-
-    # vehicles
-    vehicle_list = []
-    for i in range(num_of_vehicles_max):
-        if i < num_of_vehicles:
-            vehicle_type_i = vehicle_types[int(x[ind])]
-
-            vehicle_transform_i = create_transform(
-                x[ind + 1], x[ind + 2], 0, 0, x[ind + 3], 0
-            )
-
-            vehicle_initial_speed_i = x[ind + 4]
-            vehicle_trigger_distance_i = x[ind + 5]
-
-            vehicle_targeted_speed_i = x[ind + 6]
-            vehicle_waypoint_follower_i = bool(x[ind + 7])
-
-            vehicle_targeted_waypoint_i = create_transform(
-                x[ind + 8], x[ind + 9], 0, 0, 0, 0
-            )
-
-            vehicle_avoid_collision_i = bool(x[ind + 10])
-            vehicle_dist_to_travel_i = x[ind + 11]
-            vehicle_target_yaw_i = x[ind + 12]
-            x_dir = np.cos(np.deg2rad(vehicle_target_yaw_i))
-            y_dir = np.sin(np.deg2rad(vehicle_target_yaw_i))
-            vehicle_target_direction_i = carla.Vector3D(x_dir, y_dir, 0)
-
-            vehicle_color_i = vehicle_colors[int(x[ind + 13])]
-
-            ind += 14
-
-            vehicle_waypoints_perturbation_i = []
-            for _ in range(waypoints_num_limit):
-                dx = x[ind]
-                dy = x[ind + 1]
-                vehicle_waypoints_perturbation_i.append([dx, dy])
-                ind += 2
-
-            vehicle_i = Vehicle(
-                model=vehicle_type_i,
-                spawn_transform=vehicle_transform_i,
-                avoid_collision=vehicle_avoid_collision_i,
-                initial_speed=vehicle_initial_speed_i,
-                trigger_distance=vehicle_trigger_distance_i,
-                waypoint_follower=vehicle_waypoint_follower_i,
-                targeted_waypoint=vehicle_targeted_waypoint_i,
-                dist_to_travel=vehicle_dist_to_travel_i,
-                target_direction=vehicle_target_direction_i,
-                targeted_speed=vehicle_targeted_speed_i,
-                after_trigger_behavior="stop",
-                color=vehicle_color_i,
-                waypoints_perturbation=vehicle_waypoints_perturbation_i,
-            )
-            # print('\n'*3, 'vehicle', i, vehicle_transform_i, vehicle_avoid_collision_i, vehicle_initial_speed_i, vehicle_trigger_distance_i, vehicle_waypoint_follower_i, vehicle_targeted_waypoint_i, vehicle_dist_to_travel_i, vehicle_target_direction_i, vehicle_targeted_speed_i, '\n'*3)
-            vehicle_list.append(vehicle_i)
-        else:
-            ind += 14 + waypoints_num_limit * 2
-
-
-    customized_data = {
-        "friction": friction,
-        "weather_index": weather_index,
-        "num_of_static": num_of_static,
-        "num_of_pedestrians": num_of_pedestrians,
-        "num_of_vehicles": num_of_vehicles,
-        "static_list": static_list,
-        "pedestrian_list": pedestrian_list,
-        "vehicle_list": vehicle_list,
-        "using_customized_route_and_scenario": True,
-        "ego_car_waypoints_perturbation": ego_car_waypoints_perturbation,
-        "add_center": True,
-        "port": port,
-        "customized_center_transforms": customized_center_transforms,
-        "parameters_min_bounds": parameters_min_bounds,
-        "parameters_max_bounds": parameters_max_bounds,
-        "fine_grained_weather": fine_grained_weather,
-        "tmp_travel_dist_file": "tmp_travel_dist_file_" + str(port) + ".txt",
-    }
-
-    return customized_data
-
-
-def interpret_x_using_labels(x, labels):
-    assert len(x) == len(labels)
-    for i in range(len(x)):
-        print(labels[i], x[i])
-
-
 def make_hierarchical_dir(folder_names):
     cur_folder_name = ""
     for i in range(len(folder_names)):
@@ -443,11 +169,18 @@ def make_hierarchical_dir(folder_names):
         cur_folder_name += "/"
     return cur_folder_name
 
-
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(("localhost", int(port))) == 0
 
+def port_to_gpu(port):
+    import torch
+
+    # n = torch.cuda.device_count()
+    n = 2
+    gpu = port % n
+
+    return gpu
 
 def exit_handler(ports):
     for port in ports:
@@ -458,254 +191,124 @@ def exit_handler(ports):
             except:
                 continue
 
+def get_sorted_subfolders(parent_folder, folder_type='all'):
+    if 'rerun_bugs' in os.listdir(parent_folder):
+        bug_folder = os.path.join(parent_folder, "rerun_bugs")
+        non_bug_folder = os.path.join(parent_folder, "rerun_non_bugs")
+    else:
+        bug_folder = os.path.join(parent_folder, "bugs")
+        non_bug_folder = os.path.join(parent_folder, "non_bugs")
 
-def get_angle(x1, y1, x2, y2):
-    angle = np.arctan2(x1 * y2 - y1 * x2, x1 * x2 + y1 * y2)
+    if folder_type == 'all':
+        sub_folders = [
+            os.path.join(bug_folder, sub_name) for sub_name in os.listdir(bug_folder)
+        ] + [
+            os.path.join(non_bug_folder, sub_name)
+            for sub_name in os.listdir(non_bug_folder)
+        ]
+    elif folder_type == 'bugs':
+        sub_folders = [
+            os.path.join(bug_folder, sub_name) for sub_name in os.listdir(bug_folder)
+        ]
+    elif folder_type == 'non_bugs':
+        sub_folders = [
+            os.path.join(non_bug_folder, sub_name) for sub_name in os.listdir(non_bug_folder)
+        ]
 
-    return angle
+    ind_sub_folder_list = []
+    for sub_folder in sub_folders:
+        if os.path.isdir(sub_folder):
+            ind = int(re.search(".*bugs/([0-9]*)", sub_folder).group(1))
+            ind_sub_folder_list.append((ind, sub_folder))
+            # print(sub_folder)
+    ind_sub_folder_list_sorted = sorted(ind_sub_folder_list)
+    subfolders = [filename for i, filename in ind_sub_folder_list_sorted]
+    # print('len(subfolders)', len(subfolders))
+    return subfolders
 
+def load_data(subfolders):
+    data_list = []
+    is_bug_list = []
 
-# check if x is in critical regions of the tree
-def is_critical_region(x, estimator, critical_unique_leaves):
-    leave_id = estimator.apply(x.reshape(1, -1))[0]
-    print(leave_id, critical_unique_leaves)
-    return leave_id in critical_unique_leaves
+    objectives_list = []
+    mask, labels = None, None
+    for sub_folder in subfolders:
+        if os.path.isdir(sub_folder):
+            pickle_filename = os.path.join(sub_folder, "cur_info.pickle")
 
+            with open(pickle_filename, "rb") as f_in:
+                cur_info = pickle.load(f_in)
+                data, objectives, is_bug, mask, labels = reformat(cur_info)
+                data_list.append(data)
 
-def filter_critical_regions(X, y):
-    print("\n" * 20)
-    print("+" * 100, "filter_critical_regions", "+" * 100)
+                is_bug_list.append(is_bug)
+                objectives_list.append(objectives)
 
-    min_samples_split = np.max([int(0.1 * X.shape[0]), 2])
-    # estimator = tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0.01, random_state=0)
-    estimator = tree.DecisionTreeClassifier(
-        min_samples_split=min_samples_split,
-        min_impurity_decrease=0.0001,
-        random_state=0,
+    return data_list, np.array(is_bug_list), np.array(objectives_list), mask, labels, cur_info
+
+def get_picklename(parent_folder):
+    pickle_filename = parent_folder + "/non_bugs/"
+    assert os.path.isdir(pickle_filename), pickle_filename
+    i = 1
+    while True:
+        if os.path.isdir(pickle_filename + str(i)):
+            pickle_filename = pickle_filename + str(i) + "/cur_info.pickle"
+            break
+        i += 1
+    return pickle_filename
+
+def reformat(cur_info):
+    objectives = cur_info["objectives"]
+    is_bug = cur_info["is_bug"]
+
+    (
+        ego_linear_speed,
+        min_d,
+        d_angle_norm,
+        offroad_d,
+        wronglane_d,
+        dev_dist,
+        is_collision,
+        is_offroad,
+        is_wrong_lane,
+        is_run_red_light,
+    ) = objectives
+    # accident_x, accident_y = cur_info["loc"]
+
+    # route_completion = cur_info['route_completion']
+
+    # result_info = [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, accident_x, accident_y, is_bug, route_completion]
+
+    x, mask, labels = (
+        cur_info["x"][:-1],
+        cur_info["mask"],
+        cur_info["labels"]
     )
-    print(X.shape, y.shape)
-    # print(X, y)
-    estimator = estimator.fit(X, y)
 
-    leave_ids = estimator.apply(X)
-    print("leave_ids", leave_ids)
+    return x, objectives, int(is_bug), mask, labels
 
-    unique_leave_ids = np.unique(leave_ids)
-    unique_leaves_bug_num = np.zeros(unique_leave_ids.shape[0])
-    unique_leaves_normal_num = np.zeros(unique_leave_ids.shape[0])
+def set_general_seed(seed=0):
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
 
-    for j, unique_leave_id in enumerate(unique_leave_ids):
-        for i, leave_id in enumerate(leave_ids):
-            if leave_id == unique_leave_id:
-                if y[i] == 0:
-                    unique_leaves_normal_num[j] += 1
-                else:
-                    unique_leaves_bug_num[j] += 1
+    import random
+    import torch
+    import numpy as np
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    # torch.set_deterministic(True)
+    torch.backends.cudnn.benchmark = False
+    # torch.backends.cudnn.deterministic = True
+    # torch.backends.cudnn.enabled = False
 
-    for i, unique_leave_i in enumerate(unique_leave_ids):
-        print(
-            "unique_leaves",
-            unique_leave_i,
-            unique_leaves_bug_num[i],
-            unique_leaves_normal_num[i],
-        )
-
-    critical_unique_leaves = unique_leave_ids[
-        unique_leaves_bug_num >= unique_leaves_normal_num
-    ]
-
-    print("critical_unique_leaves", critical_unique_leaves)
-
-    inds = np.array([leave_id in critical_unique_leaves for leave_id in leave_ids])
-    print("\n" * 20)
-
-    return estimator, inds, critical_unique_leaves
+def rand_real(rng, low, high):
+    return rng.random() * (high - low) + low
+# ---------------- Misc -------------------
 
 
 
-
-
-
-
-
-
-def if_violate_constraints_vectorized(X, customized_constraints, labels, verbose=False):
-    labels_to_id = {label: i for i, label in enumerate(labels)}
-
-    keywords = ["coefficients", "labels", "value"]
-    extra_keywords = ["power"]
-
-    if_violate = False
-    violated_constraints = []
-    involved_labels = set()
-
-    X = np.array(X)
-    remaining_inds = np.arange(X.shape[0])
-
-    for i, constraint in enumerate(customized_constraints):
-        for k in keywords:
-            assert k in constraint
-        assert len(constraint["coefficients"]) == len(constraint["labels"])
-
-        ids = np.array([labels_to_id[label] for label in constraint["labels"]])
-
-
-        # x_ids = [x[id] for id in ids]
-        if "powers" in constraint:
-            powers = np.array(constraint["powers"])
-        else:
-            powers = np.array([1 for _ in range(len(ids))])
-
-        coeff = np.array(constraint["coefficients"])
-        # features = np.array(x_ids)
-        # print(X.shape)
-        # print(type(remaining_inds))
-        # print(type(ids))
-        # print(X[remaining_inds, ids].shape)
-        # print(powers.shape)
-        if_violate_current = (
-            np.sum(coeff * np.power(X[remaining_inds[:, None], ids], powers), axis=1) > constraint["value"]
-        )
-        remaining_inds = remaining_inds[if_violate_current==0]
-    if verbose:
-        print('constraints filtering', len(X), '->', len(remaining_inds))
-
-    return remaining_inds
-
-def if_violate_constraints(x, customized_constraints, labels, verbose=False):
-    labels_to_id = {label: i for i, label in enumerate(labels)}
-
-    keywords = ["coefficients", "labels", "value"]
-    extra_keywords = ["power"]
-
-    if_violate = False
-    violated_constraints = []
-    involved_labels = set()
-
-    for i, constraint in enumerate(customized_constraints):
-        for k in keywords:
-            assert k in constraint
-        assert len(constraint["coefficients"]) == len(constraint["labels"])
-
-        ids = [labels_to_id[label] for label in constraint["labels"]]
-        x_ids = [x[id] for id in ids]
-        if "powers" in constraint:
-            powers = np.array(constraint["powers"])
-        else:
-            powers = np.array([1 for _ in range(len(ids))])
-
-        coeff = np.array(constraint["coefficients"])
-        features = np.array(x_ids)
-
-        if_violate_current = (
-            np.sum(coeff * np.power(features, powers)) > constraint["value"]
-        )
-        if if_violate_current:
-            if_violate = True
-            violated_constraints.append(constraint)
-            involved_labels = involved_labels.union(set(constraint["labels"]))
-            if verbose:
-                print("\n" * 1, "violate_constraints!!!!", "\n" * 1)
-                print(
-                    coeff,
-                    features,
-                    powers,
-                    np.sum(coeff * np.power(features, powers)),
-                    constraint["value"],
-                    constraint["labels"],
-                )
-
-    return if_violate, [violated_constraints, involved_labels]
-
-
-
-
-
-# def parse_route_and_scenario_plain(location_list, town_name, route_str, scenario_file):
-#
-#     # Parse Route
-#     TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
-#     <routes>
-#     %s
-#     </routes>"""
-#
-#     pitch = 0
-#     roll = 0
-#     yaw = 0
-#     z = 0
-#
-#     start_str = '<route id="{}" town="{}">\n'.format(route_str, town_name)
-#     waypoint_template = (
-#         '\t<waypoint pitch="{}" roll="{}" x="{}" y="{}" yaw="{}" z="{}" />\n'
-#     )
-#     end_str = "</route>"
-#
-#     wp_str = ""
-#
-#     for x, y in location_list:
-#         wp = waypoint_template.format(pitch, roll, x, y, yaw, z)
-#         wp_str += wp
-#
-#     final_str = start_str + wp_str + end_str
-#
-#     folder = make_hierarchical_dir(["leaderboard/data/temporary_routes", town_name])
-#     route_path = folder + "/route_{}.xml".format(route_str)
-#
-#     pathlib.Path(route_path).write_text(TEMPLATE % final_str)
-#
-#     # Parse Scenario
-#     x_0, y_0 = location_list[0]
-#     parse_scenario(scenario_file, town_name, route_str, x_0, y_0)
-#
-#     return route_path
-
-
-
-
-def parse_route_file(route_filename, route_length_lower_bound=50):
-    def l2_dist(x, y, prev_x, prev_y):
-        return np.sqrt((x - prev_x) ** 2 + (y - prev_y) ** 2)
-
-    config_list = []
-    tree = ET.parse(route_filename)
-
-    for route in tree.iter("route"):
-        route_id = int(route.attrib["id"])
-        town_name = route.attrib["town"]
-
-        transform_list = []
-        first_waypoint = True
-        d = 0
-        for waypoint in route.iter("waypoint"):
-            x, y, z = (
-                float(waypoint.attrib["x"]),
-                float(waypoint.attrib["y"]),
-                float(waypoint.attrib["z"]),
-            )
-            pitch, yaw, roll = (
-                float(waypoint.attrib["pitch"]),
-                float(waypoint.attrib["yaw"]),
-                float(waypoint.attrib["roll"]),
-            )
-
-            if first_waypoint:
-                first_waypoint = False
-            else:
-                d += l2_dist(x, y, prev_x, prev_y)
-
-            transform_list.append((x, y, z, pitch, yaw, roll))
-            if d > route_length_lower_bound:
-                first_waypoint = True
-                d = 0
-
-                config_list.append([route_id, town_name, transform_list])
-                transform_list = []
-
-            prev_x, prev_y = x, y
-
-    return config_list
-
-
+# ---------------- Uniqueness -------------------
 def eliminate_duplicates_for_list(
     mask, xl, xu, p, c, th, X, prev_unique_bugs, tmp_off=[]
 ):
@@ -728,7 +331,6 @@ def eliminate_duplicates_for_list(
         if not similar:
             new_X.append(x)
     return new_X
-
 
 def is_similar(
     x_1,
@@ -789,7 +391,6 @@ def is_similar(
     else:
         equal = False
     return equal
-
 
 def is_distinct(x, X, mask, xl, xu, p, c, th, verbose=True):
     verbose = False
@@ -1007,582 +608,21 @@ def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, y=[]):
                     distinct_inds.append(i)
 
     return list(np.array(data_points)[distinct_inds]), distinct_inds
+# ---------------- Uniqueness -------------------
 
+
+
+# ---------------- Bug, Objective -------------------
 
 def check_bug(objectives):
     # speed needs to be larger than 0.1 to avoid false positive
     return objectives[0] > 0.1 or objectives[-3] or objectives[-2] or objectives[-1]
-
 
 def get_if_bug_list(objectives_list):
     if_bug_list = []
     for objective in objectives_list:
         if_bug_list.append(check_bug(objective))
     return np.array(if_bug_list)
-
-
-def start_server(port):
-    # hack: this heavily relies on the relative path of carla
-    cmd_list = shlex.split(
-        "sh ../carla_0994_no_rss/CarlaUE4.sh -opengl -carla-rpc-port="
-        + str(port)
-        + " -carla-streaming-port=0 -quality-level=Epic"
-    )
-    while is_port_in_use(int(port)):
-        try:
-            # show_ports_cmd = shlex.split('lsof -t -i:'+str(port))
-            # result = subprocess.run(show_ports_cmd, stdout=subprocess.PIPE)
-            # pids = result.stdout.decode("utf-8").strip().split('\n')
-            # own_pid = str(os.getpid())
-            #
-            # if own_pid in pids:
-            #     pids.remove(own_pid)
-            #     if len(pids) > 0:
-            #         pid_to_kill = pids[0]
-            #         print('pid_to_kill', pid_to_kill)
-            #         subprocess.run('kill -9 '+pid_to_kill, shell=True)
-            # else:
-            #     subprocess.run('kill $(lsof -t -i:'+str(port)+')', shell=True)
-            subprocess.run("kill $(lsof -t -i:" + str(port) + ")", shell=True)
-            print("-" * 20, "kill server at port", port)
-            time.sleep(2)
-        except:
-            import traceback
-
-            traceback.print_exc()
-            continue
-    subprocess.Popen(cmd_list)
-    print("-" * 20, "start server at port", port)
-    # 10s is usually enough
-    time.sleep(10)
-
-
-def start_client(obj, host, port):
-    print('initialize carla client')
-
-    while True:
-        try:
-            obj.client = carla.Client(host, port)
-            break
-        except:
-            logging.exception("__init__ error")
-            traceback.print_exc()
-
-def try_load_world(obj, town, host, port):
-    while True:
-        try:
-            print('start loading town :', town)
-            obj.world = obj.client.load_world(town)
-            print('finish loading town :', town)
-            break
-        except:
-            logging.exception("_load_and_wait_for_world error")
-            traceback.print_exc()
-
-            start_server(port)
-            obj.client = carla.Client(host, port)
-
-def correct_spawn_locations(x_data, label_to_id, all_final_generated_transforms_list_i, object_type, keys):
-    object_type_plural = object_type
-    if object_type in ['pedestrian', 'vehicle']:
-        object_type_plural += 's'
-
-    num_of_objects_ind = label_to_id['num_of_'+object_type_plural]
-    x_data[num_of_objects_ind] = 0
-
-    empty_slots = deque()
-    for j, (x, y, yaw) in enumerate(all_final_generated_transforms_list_i[object_type]):
-        if x == None:
-            empty_slots.append(j)
-        else:
-            x_data[num_of_objects_ind] += 1
-            if object_type+'_x_'+str(j) not in label_to_id:
-                print(label_to_id)
-                print(object_type+'_x_'+str(j))
-                print(all_final_generated_transforms_list_i[object_type])
-                raise
-            x_j_ind = label_to_id[object_type+'_x_'+str(j)]
-            y_j_ind = label_to_id[object_type+'_y_'+str(j)]
-            yaw_j_ind = label_to_id[object_type+'_yaw_'+str(j)]
-
-
-            # print(object_type, j)
-            # print('x', x_data[x_j_ind], '->', x)
-            # print('y', x_data[y_j_ind], '->', y)
-            # print('yaw', x_data[yaw_j_ind], '->', yaw)
-            x_data[x_j_ind] = x
-            x_data[y_j_ind] = y
-            x_data[yaw_j_ind] = yaw
-
-            if len(empty_slots) > 0:
-                q = empty_slots.popleft()
-                print('shift', j, 'to', q)
-                for k in keys:
-                    # print(k)
-                    ind_to = label_to_id[k+'_'+str(q)]
-                    ind_from = label_to_id[k+'_'+str(j)]
-                    x_data[ind_to] = x_data[ind_from]
-                if object_type == 'vehicle':
-                    for p in range(waypoints_num_limit):
-                        for waypoint_label in waypoint_labels:
-                            ind_to = label_to_id['_'.join(['vehicle', str(q), waypoint_label, str(p)])]
-                            ind_from = label_to_id['_'.join(['vehicle', str(j), waypoint_label, str(p)])]
-                            x_data[ind_to] = x_data[ind_from]
-
-                empty_slots.append(j)
-
-def port_to_gpu(port):
-    import torch
-
-    # n = torch.cuda.device_count()
-    n = 2
-    gpu = port % n
-
-    return gpu
-
-
-def estimate_objectives(save_path, default_objectives=np.array([0., 20., 1., 7., 7., 0., 0., 0., 0., 0.]), verbose=True):
-
-    events_path = os.path.join(save_path, "events.txt")
-    deviations_path = os.path.join(save_path, "deviations.txt")
-
-    # set thresholds to avoid too large influence
-    ego_linear_speed = 0
-    min_d = 20
-    offroad_d = 7
-    wronglane_d = 7
-    dev_dist = 0
-    d_angle_norm = 1
-
-    ego_linear_speed_max = 7
-    dev_dist_max = 7
-
-    is_offroad = 0
-    is_wrong_lane = 0
-    is_run_red_light = 0
-    is_collision = 0
-
-    with open(deviations_path, "r") as f_in:
-        for line in f_in:
-            type, d = line.split(",")
-            d = float(d)
-            if type == "min_d":
-                min_d = np.min([min_d, d])
-            elif type == "offroad_d":
-                offroad_d = np.min([offroad_d, d])
-            elif type == "wronglane_d":
-                wronglane_d = np.min([wronglane_d, d])
-            elif type == "dev_dist":
-                dev_dist = np.max([dev_dist, d])
-            elif type == "d_angle_norm":
-                d_angle_norm = np.min([d_angle_norm, d])
-
-    x = None
-    y = None
-    object_type = None
-
-    infraction_types = [
-        "collisions_layout",
-        "collisions_pedestrian",
-        "collisions_vehicle",
-        "red_light",
-        "on_sidewalk",
-        "outside_lane_infraction",
-        "wrong_lane",
-        "off_road",
-    ]
-
-    try:
-        with open(events_path) as json_file:
-            events = json.load(json_file)
-    except:
-        print("events_path", events_path, "is not found")
-        return default_objectives, (None, None), None
-    infractions = events["_checkpoint"]["records"][0]["infractions"]
-    status = events["_checkpoint"]["records"][0]["status"]
-
-    route_completion = float(events["values"][1])
-
-    for infraction_type in infraction_types:
-        for infraction in infractions[infraction_type]:
-            if "collisions" in infraction_type:
-                typ = re.search(".*with type=(.*) and id.*", infraction)
-                if verbose:
-                    print(infraction, typ)
-                if typ:
-                    object_type = typ.group(1)
-                loc = re.search(
-                    ".*x=(.*), y=(.*), z=(.*), ego_linear_speed=(.*), other_actor_linear_speed=(.*)\)",
-                    infraction,
-                )
-                if loc:
-                    x = float(loc.group(1))
-                    y = float(loc.group(2))
-                    ego_linear_speed = float(loc.group(4))
-                    other_actor_linear_speed = float(loc.group(5))
-
-                    # only record valid collisions to promote valid collision bugs
-                    if ego_linear_speed > 0.1:
-                        is_collision = 1
-
-            elif infraction_type == "off_road":
-                loc = re.search(".*x=(.*), y=(.*), z=(.*)\)", infraction)
-                if loc:
-                    x = float(loc.group(1))
-                    y = float(loc.group(2))
-                    is_offroad = 1
-            else:
-                if infraction_type == "wrong_lane":
-                    is_wrong_lane = 1
-                elif infraction_type == "red_light":
-                    is_run_red_light = 1
-                loc = re.search(".*x=(.*), y=(.*), z=(.*)[\),]", infraction)
-                if loc:
-                    x = float(loc.group(1))
-                    y = float(loc.group(2))
-
-    # limit impact of too large values
-    ego_linear_speed = np.min([ego_linear_speed, ego_linear_speed_max])
-    dev_dist = np.min([dev_dist, dev_dist_max])
-
-    return (
-        [
-            ego_linear_speed,
-            min_d,
-            d_angle_norm,
-            offroad_d,
-            wronglane_d,
-            dev_dist,
-            is_collision,
-            is_offroad,
-            is_wrong_lane,
-            is_run_red_light,
-        ],
-        (x, y),
-        object_type,
-        route_completion,
-    )
-
-
-def norm_2d(loc_1, loc_2):
-    return np.sqrt((loc_1.x - loc_2.x) ** 2 + (loc_1.y - loc_2.y) ** 2)
-
-
-def get_bbox(vehicle):
-    current_tra = vehicle.get_transform()
-    current_loc = current_tra.location
-
-    heading_vec = current_tra.get_forward_vector()
-    heading_vec.z = 0
-    heading_vec = heading_vec / math.sqrt(
-        math.pow(heading_vec.x, 2) + math.pow(heading_vec.y, 2)
-    )
-    perpendicular_vec = carla.Vector3D(-heading_vec.y, heading_vec.x, 0)
-
-    extent = vehicle.bounding_box.extent
-    x_boundary_vector = heading_vec * extent.x
-    y_boundary_vector = perpendicular_vec * extent.y
-
-    bbox = [
-        current_loc + carla.Location(x_boundary_vector - y_boundary_vector),
-        current_loc + carla.Location(x_boundary_vector + y_boundary_vector),
-        current_loc + carla.Location(-1 * x_boundary_vector - y_boundary_vector),
-        current_loc + carla.Location(-1 * x_boundary_vector + y_boundary_vector),
-    ]
-
-    return bbox
-
-
-def correct_travel_dist(data, labels, tmp_travel_dist_file):
-    from collections import OrderedDict
-
-    if os.path.exists(tmp_travel_dist_file):
-        label_to_id = {label: i for i, label in enumerate(labels)}
-        # add label and value of resulting variables to x
-        id_to_label = {}
-        id_to_dist = {}
-        with open(tmp_travel_dist_file, "r") as f_in:
-            for line in f_in:
-                tokens = line.strip().split(",")
-                if len(tokens) == 3:
-                    actor_id, general_actor_type, index = tokens
-                    id_to_label[actor_id] = "_".join(
-                        [general_actor_type, "dist_to_travel", index]
-                    )
-                elif len(tokens) == 2:
-                    actor_id = tokens[0]
-                    dist = float(tokens[1])
-                    if actor_id not in id_to_dist or (
-                        actor_id in id_to_dist and dist > id_to_dist[actor_id]
-                    ):
-                        id_to_dist[actor_id] = dist
-
-        for actor_id in id_to_label:
-            label = id_to_label[actor_id]
-            if actor_id in id_to_dist:
-                dist = id_to_dist[actor_id]
-            else:
-                dist = 0
-            entry_i = labels.index(label)
-            data[entry_i] = dist
-    else:
-        pass
-        # print('\n'*3, tmp_travel_dist_file, 'does not exist', '\n'*3)
-
-
-def angle_from_center_view_fov(target, ego, fov=90):
-    target_location = target.get_location()
-    ego_location = ego.get_location()
-    ego_orientation = ego.get_transform().rotation.yaw
-
-    # hack: adjust to the front central camera's location
-    # this needs to be changed when the camera's location / fov change
-    dx = 1.3 * np.cos(np.deg2rad(ego_orientation - 90))
-
-    ego_location = ego.get_location()
-    ego_x = ego_location.x + dx
-    ego_y = ego_location.y
-
-    target_vector = np.array([target_location.x - ego_x, target_location.y - ego_y])
-    norm_target = np.linalg.norm(target_vector)
-
-    if norm_target < 0.001:
-        return 0
-
-    forward_vector = np.array(
-        [
-            math.cos(math.radians(ego_orientation)),
-            math.sin(math.radians(ego_orientation)),
-        ]
-    )
-
-    try:
-        d_angle = np.abs(
-            math.degrees(math.acos(np.dot(forward_vector, target_vector) / norm_target))
-        )
-    except:
-        print(
-            "\n" * 3,
-            "np.dot(forward_vector, target_vector)",
-            np.dot(forward_vector, target_vector),
-            norm_target,
-            "\n" * 3,
-        )
-        d_angle = 0
-    # d_angle_norm == 0 when target within fov
-    d_angle_norm = np.clip((d_angle - fov / 2) / (180 - fov / 2), 0, 1)
-
-    return d_angle_norm
-
-
-def encode_fields(x, labels, labels_to_encode):
-    from sklearn.preprocessing import OneHotEncoder
-    from object_types import (
-        weather_names,
-        vehicle_colors,
-        pedestrian_types,
-        vehicle_types,
-    )
-
-
-    keywords_dict = {
-        "num_of_weathers": len(weather_names),
-        "num_of_vehicle_colors": len(vehicle_colors),
-        "num_of_pedestrian_types": len(pedestrian_types),
-        "num_of_vehicle_types": len(vehicle_types),
-    }
-    # keywords_dict = {'num_of_weathers': len(weather_names)}
-
-    x = np.array(x).astype(np.float)
-
-    encode_fields = []
-    inds_to_encode = []
-    for label in labels_to_encode:
-        for k, v in keywords_dict.items():
-            if k in label:
-                ind = labels.index(label)
-                inds_to_encode.append(ind)
-
-                encode_fields.append(v)
-                break
-    inds_non_encode = list(set(range(x.shape[1])) - set(inds_to_encode))
-
-    enc = OneHotEncoder(handle_unknown="ignore", sparse=False)
-
-    embed_dims = int(np.sum(encode_fields))
-    embed_fields_num = len(encode_fields)
-    data_for_fit_encode = np.zeros((embed_dims, embed_fields_num))
-    counter = 0
-    for i, encode_field in enumerate(encode_fields):
-        for j in range(encode_field):
-            data_for_fit_encode[counter, i] = j
-            counter += 1
-    enc.fit(data_for_fit_encode)
-
-    embed = np.array(x[:, inds_to_encode].astype(np.int))
-    embed = enc.transform(embed)
-
-    x = np.concatenate([embed, x[:, inds_non_encode]], axis=1).astype(np.float)
-
-    return x, enc, inds_to_encode, inds_non_encode, encode_fields
-
-
-def max_one_hot_op(images, encode_fields):
-    m = np.sum(encode_fields)
-    one_hotezed_images_embed = np.zeros([images.shape[0], m])
-    s = 0
-    for field_len in encode_fields:
-        max_inds = np.argmax(images[:, s : s + field_len], axis=1)
-        one_hotezed_images_embed[np.arange(images.shape[0]), s + max_inds] = 1
-        s += field_len
-    images[:, :m] = one_hotezed_images_embed
-
-
-def customized_fit(X_train, standardize, one_hot_fields_len, partial=True):
-    # print('\n'*2, 'customized_fit X_train.shape', X_train.shape, '\n'*2)
-    if partial:
-        standardize.fit(X_train[:, one_hot_fields_len:])
-    else:
-        standardize.fit(X_train)
-
-
-def customized_standardize(X, standardize, m, partial=True, scale_only=False):
-    # print(X[:, :m].shape, standardize.transform(X[:, m:]).shape)
-    if partial:
-        if scale_only:
-            res_non_encode = X[:, m:] * standardize.scale_
-        else:
-            res_non_encode = standardize.transform(X[:, m:])
-        res = np.concatenate([X[:, :m], standardize.transform(X[:, m:])], axis=1)
-    else:
-        if scale_only:
-            res = X * standardize.scale_
-        else:
-            res = standardize.transform(X)
-    return res
-
-
-def customized_inverse_standardize(X, standardize, m, partial=True, scale_only=False):
-    if partial:
-        if scale_only:
-            res_non_encode = X[:, m:] * standardize.scale_
-        else:
-            res_non_encode = standardize.inverse_transform(X[:, m:])
-        res = np.concatenate([X[:, :m], res_non_encode], axis=1)
-    else:
-        if scale_only:
-            res = X * standardize.scale_
-        else:
-            res = standardize.inverse_transform(X)
-    return res
-
-
-def decode_fields(x, enc, inds_to_encode, inds_non_encode, encode_fields, adv=False):
-    n = x.shape[0]
-    m = len(inds_to_encode) + len(inds_non_encode)
-    embed_dims = np.sum(encode_fields)
-
-    embed = x[:, :embed_dims]
-    kept = x[:, embed_dims:]
-
-    if adv:
-        one_hot_embed = np.zeros(embed.shape)
-        s = 0
-        for field_len in encode_fields:
-            max_inds = np.argmax(x[:, s : s + field_len], axis=1)
-            one_hot_embed[np.arange(x.shape[0]), s + max_inds] = 1
-            s += field_len
-        embed = one_hot_embed
-
-    x_encoded = enc.inverse_transform(embed)
-    # print('encode_fields', encode_fields)
-    # print('embed', embed[0], x_encoded[0])
-    x_decoded = np.zeros([n, m])
-    x_decoded[:, inds_non_encode] = kept
-    x_decoded[:, inds_to_encode] = x_encoded
-
-    return x_decoded
-
-
-def remove_fields_not_changing(x, embed_dims=0, xl=[], xu=[]):
-    eps = 1e-8
-    if len(xl) > 0:
-        cond = xu - xl > eps
-    else:
-        cond = np.std(x, axis=0) > eps
-    kept_fields = np.where(cond)[0]
-    if embed_dims > 0:
-        kept_fields = list(set(kept_fields).union(set(range(embed_dims))))
-
-    removed_fields = list(set(range(x.shape[1])) - set(kept_fields))
-    x_removed = x[:, removed_fields]
-    x = x[:, kept_fields]
-    return x, x_removed, kept_fields, removed_fields
-
-
-def recover_fields_not_changing(x, x_removed, kept_fields, removed_fields):
-    n = x.shape[0]
-    m = len(kept_fields) + len(removed_fields)
-
-    # this is True usually when adv is used
-    if x_removed.shape[0] != n:
-        x_removed = np.array([x_removed[0] for _ in range(n)])
-    x_recovered = np.zeros([n, m])
-    x_recovered[:, kept_fields] = x
-    x_recovered[:, removed_fields] = x_removed
-
-    return x_recovered
-
-
-def get_labels_to_encode(labels):
-    # hack: explicitly listing keywords for encode to be imported
-    keywords_for_encode = [
-        "num_of_weathers",
-        "num_of_vehicle_colors",
-        "num_of_pedestrian_types",
-        "num_of_vehicle_types",
-    ]
-    labels_to_encode = []
-    for label in labels:
-        for keyword in keywords_for_encode:
-            if keyword in label:
-                labels_to_encode.append(label)
-    return labels_to_encode
-
-
-def encode_bounds(xl, xu, inds_to_encode, inds_non_encode, encode_fields):
-    m1 = np.sum(encode_fields)
-    m2 = len(inds_non_encode)
-    m = m1 + m2
-
-    xl_embed, xu_embed = np.zeros(m1), np.ones(m1)
-
-    xl_new = np.concatenate([xl_embed, xl[inds_non_encode]])
-    xu_new = np.concatenate([xu_embed, xu[inds_non_encode]])
-
-    return xl_new, xu_new
-
-
-# analysis
-def draw_auc_roc_for_scores(scores, y_test):
-    inds_sorted = np.argsort(scores)
-    tp, fp = 0, 0
-    fpr_list, tpr_list = [], []
-    n = len(inds_sorted)
-    t = np.sum(y_test == 1)
-    f = n - t
-    for ind in inds_sorted:
-        if y_test[ind] == 1:
-            tp += 1
-        else:
-            fp += 1
-        fpr_list.append(fp / f)
-        tpr_list.append(tp / t)
-    from matplotlib import pyplot as plt
-
-    plt.plot(fpr_list, tpr_list)
-    plt.plot(np.arange(0, 1.2, 0.2), np.arange(0, 1.2, 0.2))
-    plt.show()
 
 
 def process_specific_bug(
@@ -1627,7 +667,6 @@ def classify_bug_type(objectives, object_type=''):
         if bug_type > 4:
             bug_type = 4
     return bug_type, bug_str
-
 
 def get_unique_bugs(
     X, objectives_list, mask, xl, xu, unique_coeff, objective_weights, return_mode='unique_inds_and_interested_and_bugcounts', consider_interested_bugs=1
@@ -1708,13 +747,10 @@ def get_unique_bugs(
     else:
         interested_unique_bugs = unique_bugs
 
-
     num_of_collisions = np.sum(np.array(bugs_type_list)==1)
     num_of_offroad = np.sum(np.array(bugs_type_list)==2)
     num_of_wronglane = np.sum(np.array(bugs_type_list)==3)
     num_of_redlight = np.sum(np.array(bugs_type_list)==4)
-
-
 
     if return_mode == 'unique_inds_and_interested_and_bugcounts':
         return unique_bugs, unique_bugs_inds_list, interested_unique_bugs, [num_of_collisions, num_of_offroad, num_of_wronglane, num_of_redlight,
@@ -1726,6 +762,291 @@ def get_unique_bugs(
     else:
         return unique_bugs
 
+def choose_weight_inds(objective_weights):
+    collision_activated = np.sum(objective_weights[:3] != 0) > 0
+    offroad_activated = (np.abs(objective_weights[3]) > 0) | (
+        np.abs(objective_weights[5]) > 0
+    )
+    wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
+        np.abs(objective_weights[5]) > 0
+    )
+    red_light_activated = np.abs(objective_weights[-1]) > 0
+
+    if collision_activated:
+        weight_inds = np.arange(0,3)
+    elif offroad_activated or wronglane_activated:
+        weight_inds = np.arange(3,6)
+    elif red_light_activated:
+        weight_inds = np.arange(9,10)
+    else:
+        raise
+    return weight_inds
+
+def determine_y_upon_weights(objective_list, objective_weights):
+    collision_activated = np.sum(objective_weights[:3] != 0) > 0
+    offroad_activated = (np.abs(objective_weights[3]) > 0) | (
+        np.abs(objective_weights[5]) > 0
+    )
+    wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
+        np.abs(objective_weights[5]) > 0
+    )
+    red_light_activated = np.abs(objective_weights[-1]) > 0
+
+    y = np.zeros(len(objective_list))
+    for i, obj in enumerate(objective_list):
+        cond = 0
+        if collision_activated:
+            cond |= obj[0] > 0.1
+        if offroad_activated:
+            cond |= obj[-3] == 1
+        if wronglane_activated:
+            cond |= obj[-2] == 1
+        if red_light_activated:
+            cond |= obj[-1] == 1
+        y[i] = cond
+
+    return y
+
+def get_all_y(objective_list, objective_weights):
+    # is_collision, is_offroad, is_wrong_lane, is_run_red_light
+    collision_activated = np.sum(objective_weights[:3] != 0) > 0
+    offroad_activated = (np.abs(objective_weights[3]) > 0) | (
+        np.abs(objective_weights[5]) > 0
+    )
+    wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
+        np.abs(objective_weights[5]) > 0
+    )
+    red_light_activated = np.abs(objective_weights[-1]) > 0
+
+    y_list = np.zeros((4, len(objective_list)))
+
+    for i, obj in enumerate(objective_list):
+        if collision_activated:
+            y_list[0, i] = obj[0] > 0.1
+        if offroad_activated:
+            y_list[1, i] = obj[-3] == 1
+        if wronglane_activated:
+            y_list[2, i] = obj[-2] == 1
+        if red_light_activated:
+            y_list[3, i] = obj[-1] == 1
+
+    return y_list
+
+def get_F(current_objectives, all_objectives, objective_weights, use_single_objective):
+    # standardize current objectives using all objectives so far
+    all_objectives = np.stack(all_objectives)
+    current_objectives = np.stack(current_objectives)
+
+    standardize = StandardScaler()
+    standardize.fit(all_objectives)
+    standardize.transform(current_objectives)
+
+    current_objectives *= objective_weights
+
+    if use_single_objective:
+        current_F = np.expand_dims(np.sum(current_objectives, axis=1), axis=1)
+    else:
+        current_F = np.row_stack(current_objectives)
+    return current_F
+
+def count_and_group_output_unique_bugs(inds, outputs, labels, min_bounds, max_bounds, diff_th):
+    '''
+    ***grid counting: maximum number of distinct elements
+    distinct counting: minimum number of distinct elements
+    1.general
+    bug type, normalized (/|start location - end location|) bug location, ego car speed when bug happens
+
+    2.collision specific
+    collision object type (i.e. pedestrian, bicyclist, small vehicle, or truck), normalized (/car width) relative angle of the other involved object at collision
+
+    '''
+
+    m = len(labels)
+
+    # print(outputs.shape, outputs)
+    outputs_grid_inds = ((outputs - min_bounds)*diff_th) / (max_bounds - min_bounds)
+    outputs_grid_inds = outputs_grid_inds.astype(int)
+    # print(outputs_grid_inds.shape, outputs_grid_inds)
+
+    from collections import defaultdict
+    unique_bugs_group = defaultdict(list)
+
+    for i in range(outputs.shape[0]):
+        unique_bugs_group[tuple(outputs_grid_inds[i])].append((inds[i], outputs[i]))
+
+    return unique_bugs_group
+# ---------------- Bug, Objective -------------------
+
+
+
+# ---------------- NN -------------------
+# dependent on description labels
+def encode_fields(x, labels, labels_to_encode):
+    from sklearn.preprocessing import OneHotEncoder
+    from object_types import (
+        weather_names,
+        vehicle_colors,
+        pedestrian_types,
+        vehicle_types,
+    )
+
+
+    keywords_dict = {
+        "num_of_weathers": len(weather_names),
+        "num_of_vehicle_colors": len(vehicle_colors),
+        "num_of_pedestrian_types": len(pedestrian_types),
+        "num_of_vehicle_types": len(vehicle_types),
+    }
+    # keywords_dict = {'num_of_weathers': len(weather_names)}
+
+    x = np.array(x).astype(np.float)
+
+    encode_fields = []
+    inds_to_encode = []
+    for label in labels_to_encode:
+        for k, v in keywords_dict.items():
+            if k in label:
+                ind = labels.index(label)
+                inds_to_encode.append(ind)
+
+                encode_fields.append(v)
+                break
+    inds_non_encode = list(set(range(x.shape[1])) - set(inds_to_encode))
+
+    enc = OneHotEncoder(handle_unknown="ignore", sparse=False)
+
+    embed_dims = int(np.sum(encode_fields))
+    embed_fields_num = len(encode_fields)
+    data_for_fit_encode = np.zeros((embed_dims, embed_fields_num))
+    counter = 0
+    for i, encode_field in enumerate(encode_fields):
+        for j in range(encode_field):
+            data_for_fit_encode[counter, i] = j
+            counter += 1
+    enc.fit(data_for_fit_encode)
+
+    embed = np.array(x[:, inds_to_encode].astype(np.int))
+    embed = enc.transform(embed)
+
+    x = np.concatenate([embed, x[:, inds_non_encode]], axis=1).astype(np.float)
+
+    return x, enc, inds_to_encode, inds_non_encode, encode_fields
+
+# dependent on description labels
+def get_labels_to_encode(labels):
+    # hack: explicitly listing keywords for encode to be imported
+    keywords_for_encode = [
+        "num_of_weathers",
+        "num_of_vehicle_colors",
+        "num_of_pedestrian_types",
+        "num_of_vehicle_types",
+    ]
+    labels_to_encode = []
+    for label in labels:
+        for keyword in keywords_for_encode:
+            if keyword in label:
+                labels_to_encode.append(label)
+    return labels_to_encode
+
+def max_one_hot_op(images, encode_fields):
+    m = np.sum(encode_fields)
+    one_hotezed_images_embed = np.zeros([images.shape[0], m])
+    s = 0
+    for field_len in encode_fields:
+        max_inds = np.argmax(images[:, s : s + field_len], axis=1)
+        one_hotezed_images_embed[np.arange(images.shape[0]), s + max_inds] = 1
+        s += field_len
+    images[:, :m] = one_hotezed_images_embed
+
+def customized_fit(X_train, standardize, one_hot_fields_len, partial=True):
+    # print('\n'*2, 'customized_fit X_train.shape', X_train.shape, '\n'*2)
+    if partial:
+        standardize.fit(X_train[:, one_hot_fields_len:])
+    else:
+        standardize.fit(X_train)
+
+def customized_standardize(X, standardize, m, partial=True, scale_only=False):
+    # print(X[:, :m].shape, standardize.transform(X[:, m:]).shape)
+    if partial:
+        if scale_only:
+            res_non_encode = X[:, m:] * standardize.scale_
+        else:
+            res_non_encode = standardize.transform(X[:, m:])
+        res = np.concatenate([X[:, :m], standardize.transform(X[:, m:])], axis=1)
+    else:
+        if scale_only:
+            res = X * standardize.scale_
+        else:
+            res = standardize.transform(X)
+    return res
+
+def customized_inverse_standardize(X, standardize, m, partial=True, scale_only=False):
+    if partial:
+        if scale_only:
+            res_non_encode = X[:, m:] * standardize.scale_
+        else:
+            res_non_encode = standardize.inverse_transform(X[:, m:])
+        res = np.concatenate([X[:, :m], res_non_encode], axis=1)
+    else:
+        if scale_only:
+            res = X * standardize.scale_
+        else:
+            res = standardize.inverse_transform(X)
+    return res
+
+def decode_fields(x, enc, inds_to_encode, inds_non_encode, encode_fields, adv=False):
+    n = x.shape[0]
+    m = len(inds_to_encode) + len(inds_non_encode)
+    embed_dims = np.sum(encode_fields)
+
+    embed = x[:, :embed_dims]
+    kept = x[:, embed_dims:]
+
+    if adv:
+        one_hot_embed = np.zeros(embed.shape)
+        s = 0
+        for field_len in encode_fields:
+            max_inds = np.argmax(x[:, s : s + field_len], axis=1)
+            one_hot_embed[np.arange(x.shape[0]), s + max_inds] = 1
+            s += field_len
+        embed = one_hot_embed
+
+    x_encoded = enc.inverse_transform(embed)
+    # print('encode_fields', encode_fields)
+    # print('embed', embed[0], x_encoded[0])
+    x_decoded = np.zeros([n, m])
+    x_decoded[:, inds_non_encode] = kept
+    x_decoded[:, inds_to_encode] = x_encoded
+
+    return x_decoded
+
+def remove_fields_not_changing(x, embed_dims=0, xl=[], xu=[]):
+    eps = 1e-8
+    if len(xl) > 0:
+        cond = xu - xl > eps
+    else:
+        cond = np.std(x, axis=0) > eps
+    kept_fields = np.where(cond)[0]
+    if embed_dims > 0:
+        kept_fields = list(set(kept_fields).union(set(range(embed_dims))))
+
+    removed_fields = list(set(range(x.shape[1])) - set(kept_fields))
+    x_removed = x[:, removed_fields]
+    x = x[:, kept_fields]
+    return x, x_removed, kept_fields, removed_fields
+
+def recover_fields_not_changing(x, x_removed, kept_fields, removed_fields):
+    n = x.shape[0]
+    m = len(kept_fields) + len(removed_fields)
+
+    # this is True usually when adv is used
+    if x_removed.shape[0] != n:
+        x_removed = np.array([x_removed[0] for _ in range(n)])
+    x_recovered = np.zeros([n, m])
+    x_recovered[:, kept_fields] = x
+    x_recovered[:, removed_fields] = x_removed
+
+    return x_recovered
 
 def process_X(
     initial_X,
@@ -1828,125 +1149,174 @@ def inverse_process_X(
         X, enc, inds_to_encode, inds_non_encode, encoded_fields, adv=True
     )
     return X_final_test
+# ---------------- NN -------------------
 
 
-def get_sorted_subfolders(parent_folder, folder_type='all'):
-    if 'rerun_bugs' in os.listdir(parent_folder):
-        bug_folder = os.path.join(parent_folder, "rerun_bugs")
-        non_bug_folder = os.path.join(parent_folder, "rerun_non_bugs")
-    else:
-        bug_folder = os.path.join(parent_folder, "bugs")
-        non_bug_folder = os.path.join(parent_folder, "non_bugs")
 
-    if folder_type == 'all':
-        sub_folders = [
-            os.path.join(bug_folder, sub_name) for sub_name in os.listdir(bug_folder)
-        ] + [
-            os.path.join(non_bug_folder, sub_name)
-            for sub_name in os.listdir(non_bug_folder)
-        ]
-    elif folder_type == 'bugs':
-        sub_folders = [
-            os.path.join(bug_folder, sub_name) for sub_name in os.listdir(bug_folder)
-        ]
-    elif folder_type == 'non_bugs':
-        sub_folders = [
-            os.path.join(non_bug_folder, sub_name) for sub_name in os.listdir(non_bug_folder)
-        ]
+# ---------------- ADV -------------------
+def if_violate_constraints_vectorized(X, customized_constraints, labels, verbose=False):
+    labels_to_id = {label: i for i, label in enumerate(labels)}
 
-    ind_sub_folder_list = []
-    for sub_folder in sub_folders:
-        if os.path.isdir(sub_folder):
-            ind = int(re.search(".*bugs/([0-9]*)", sub_folder).group(1))
-            ind_sub_folder_list.append((ind, sub_folder))
-            # print(sub_folder)
-    ind_sub_folder_list_sorted = sorted(ind_sub_folder_list)
-    subfolders = [filename for i, filename in ind_sub_folder_list_sorted]
-    # print('len(subfolders)', len(subfolders))
-    return subfolders
+    keywords = ["coefficients", "labels", "value"]
+    extra_keywords = ["power"]
+
+    if_violate = False
+    violated_constraints = []
+    involved_labels = set()
+
+    X = np.array(X)
+    remaining_inds = np.arange(X.shape[0])
+
+    for i, constraint in enumerate(customized_constraints):
+        for k in keywords:
+            assert k in constraint
+        assert len(constraint["coefficients"]) == len(constraint["labels"])
+
+        ids = np.array([labels_to_id[label] for label in constraint["labels"]])
 
 
-def load_data(subfolders):
-    data_list = []
-    is_bug_list = []
+        # x_ids = [x[id] for id in ids]
+        if "powers" in constraint:
+            powers = np.array(constraint["powers"])
+        else:
+            powers = np.array([1 for _ in range(len(ids))])
 
-    objectives_list = []
-    mask, labels = None, None
-    for sub_folder in subfolders:
-        if os.path.isdir(sub_folder):
-            pickle_filename = os.path.join(sub_folder, "cur_info.pickle")
+        coeff = np.array(constraint["coefficients"])
+        # features = np.array(x_ids)
+        # print(X.shape)
+        # print(type(remaining_inds))
+        # print(type(ids))
+        # print(X[remaining_inds, ids].shape)
+        # print(powers.shape)
+        if_violate_current = (
+            np.sum(coeff * np.power(X[remaining_inds[:, None], ids], powers), axis=1) > constraint["value"]
+        )
+        remaining_inds = remaining_inds[if_violate_current==0]
+    if verbose:
+        print('constraints filtering', len(X), '->', len(remaining_inds))
 
-            with open(pickle_filename, "rb") as f_in:
-                cur_info = pickle.load(f_in)
-                data, objectives, is_bug, mask, labels = reformat(cur_info)
-                data_list.append(data)
+    return remaining_inds
 
-                is_bug_list.append(is_bug)
-                objectives_list.append(objectives)
+def if_violate_constraints(x, customized_constraints, labels, verbose=False):
+    labels_to_id = {label: i for i, label in enumerate(labels)}
 
-    return data_list, np.array(is_bug_list), np.array(objectives_list), mask, labels, cur_info
+    keywords = ["coefficients", "labels", "value"]
+    extra_keywords = ["power"]
 
-def get_event_location_and_object_type(subfolders, verbose=True):
-    location_list = []
-    object_type_list = []
+    if_violate = False
+    violated_constraints = []
+    involved_labels = set()
 
-    for subfolder in subfolders:
-        _, (x, y), object_type, route_completion = estimate_objectives(subfolder, verbose=verbose)
-        location_list.append((x, y))
-        object_type_list.append(object_type)
-    locations = np.array(location_list)
-    return locations, object_type_list
+    for i, constraint in enumerate(customized_constraints):
+        for k in keywords:
+            assert k in constraint
+        assert len(constraint["coefficients"]) == len(constraint["labels"])
 
-def reformat(cur_info):
-    objectives = cur_info["objectives"]
-    is_bug = cur_info["is_bug"]
+        ids = [labels_to_id[label] for label in constraint["labels"]]
+        x_ids = [x[id] for id in ids]
+        if "powers" in constraint:
+            powers = np.array(constraint["powers"])
+        else:
+            powers = np.array([1 for _ in range(len(ids))])
 
-    (
-        ego_linear_speed,
-        min_d,
-        d_angle_norm,
-        offroad_d,
-        wronglane_d,
-        dev_dist,
-        is_collision,
-        is_offroad,
-        is_wrong_lane,
-        is_run_red_light,
-    ) = objectives
-    # accident_x, accident_y = cur_info["loc"]
+        coeff = np.array(constraint["coefficients"])
+        features = np.array(x_ids)
 
-    # route_completion = cur_info['route_completion']
+        if_violate_current = (
+            np.sum(coeff * np.power(features, powers)) > constraint["value"]
+        )
+        if if_violate_current:
+            if_violate = True
+            violated_constraints.append(constraint)
+            involved_labels = involved_labels.union(set(constraint["labels"]))
+            if verbose:
+                print("\n" * 1, "violate_constraints!!!!", "\n" * 1)
+                print(
+                    coeff,
+                    features,
+                    powers,
+                    np.sum(coeff * np.power(features, powers)),
+                    constraint["value"],
+                    constraint["labels"],
+                )
 
-    # result_info = [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, accident_x, accident_y, is_bug, route_completion]
+    return if_violate, [violated_constraints, involved_labels]
 
-    x, mask, labels = (
-        cur_info["x"][:-1],
-        cur_info["mask"],
-        cur_info["labels"]
+def encode_bounds(xl, xu, inds_to_encode, inds_non_encode, encode_fields):
+    m1 = np.sum(encode_fields)
+    m2 = len(inds_non_encode)
+    m = m1 + m2
+
+    xl_embed, xu_embed = np.zeros(m1), np.ones(m1)
+
+    xl_new = np.concatenate([xl_embed, xl[inds_non_encode]])
+    xu_new = np.concatenate([xu_embed, xu[inds_non_encode]])
+
+    return xl_new, xu_new
+# ---------------- ADV -------------------
+
+
+
+# ---------------- NSGA2-DT -------------------
+# check if x is in critical regions of the tree
+def is_critical_region(x, estimator, critical_unique_leaves):
+    leave_id = estimator.apply(x.reshape(1, -1))[0]
+    print(leave_id, critical_unique_leaves)
+    return leave_id in critical_unique_leaves
+
+def filter_critical_regions(X, y):
+    print("\n" * 20)
+    print("+" * 100, "filter_critical_regions", "+" * 100)
+
+    min_samples_split = np.max([int(0.1 * X.shape[0]), 2])
+    # estimator = tree.DecisionTreeClassifier(min_samples_split=min_samples_split, min_impurity_decrease=0.01, random_state=0)
+    estimator = tree.DecisionTreeClassifier(
+        min_samples_split=min_samples_split,
+        min_impurity_decrease=0.0001,
+        random_state=0,
     )
+    print(X.shape, y.shape)
+    # print(X, y)
+    estimator = estimator.fit(X, y)
 
-    return x, objectives, int(is_bug), mask, labels
+    leave_ids = estimator.apply(X)
+    print("leave_ids", leave_ids)
 
-def choose_weight_inds(objective_weights):
-    collision_activated = np.sum(objective_weights[:3] != 0) > 0
-    offroad_activated = (np.abs(objective_weights[3]) > 0) | (
-        np.abs(objective_weights[5]) > 0
-    )
-    wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
-        np.abs(objective_weights[5]) > 0
-    )
-    red_light_activated = np.abs(objective_weights[-1]) > 0
+    unique_leave_ids = np.unique(leave_ids)
+    unique_leaves_bug_num = np.zeros(unique_leave_ids.shape[0])
+    unique_leaves_normal_num = np.zeros(unique_leave_ids.shape[0])
 
-    if collision_activated:
-        weight_inds = np.arange(0,3)
-    elif offroad_activated or wronglane_activated:
-        weight_inds = np.arange(3,6)
-    elif red_light_activated:
-        weight_inds = np.arange(9,10)
-    else:
-        raise
-    return weight_inds
+    for j, unique_leave_id in enumerate(unique_leave_ids):
+        for i, leave_id in enumerate(leave_ids):
+            if leave_id == unique_leave_id:
+                if y[i] == 0:
+                    unique_leaves_normal_num[j] += 1
+                else:
+                    unique_leaves_bug_num[j] += 1
 
+    for i, unique_leave_i in enumerate(unique_leave_ids):
+        print(
+            "unique_leaves",
+            unique_leave_i,
+            unique_leaves_bug_num[i],
+            unique_leaves_normal_num[i],
+        )
+
+    critical_unique_leaves = unique_leave_ids[
+        unique_leaves_bug_num >= unique_leaves_normal_num
+    ]
+
+    print("critical_unique_leaves", critical_unique_leaves)
+
+    inds = np.array([leave_id in critical_unique_leaves for leave_id in leave_ids])
+    print("\n" * 20)
+
+    return estimator, inds, critical_unique_leaves
+# ---------------- NSGA2-DT -------------------
+
+
+
+# ---------------- NSGA2-SM -------------------
 def pretrain_regression_nets(initial_X, initial_objectives_list, objective_weights, xl_ori, xu_ori, labels, customized_constraints, cutoff, cutoff_end):
 
     # we are not using it so set it to 0 for placeholding
@@ -2000,71 +1370,11 @@ def pretrain_regression_nets(initial_X, initial_objectives_list, objective_weigh
 
     confs = np.array(confs)*chosen_weights
     return clfs, confs, chosen_weights, standardize
+# ---------------- NSGA2-SM -------------------
 
 
-def get_picklename(parent_folder):
-    pickle_filename = parent_folder + "/non_bugs/"
-    assert os.path.isdir(pickle_filename), pickle_filename
-    i = 1
-    while True:
-        if os.path.isdir(pickle_filename + str(i)):
-            pickle_filename = pickle_filename + str(i) + "/cur_info.pickle"
-            break
-        i += 1
-    return pickle_filename
 
-
-def determine_y_upon_weights(objective_list, objective_weights):
-    collision_activated = np.sum(objective_weights[:3] != 0) > 0
-    offroad_activated = (np.abs(objective_weights[3]) > 0) | (
-        np.abs(objective_weights[5]) > 0
-    )
-    wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
-        np.abs(objective_weights[5]) > 0
-    )
-    red_light_activated = np.abs(objective_weights[-1]) > 0
-
-    y = np.zeros(len(objective_list))
-    for i, obj in enumerate(objective_list):
-        cond = 0
-        if collision_activated:
-            cond |= obj[0] > 0.1
-        if offroad_activated:
-            cond |= obj[-3] == 1
-        if wronglane_activated:
-            cond |= obj[-2] == 1
-        if red_light_activated:
-            cond |= obj[-1] == 1
-        y[i] = cond
-
-    return y
-
-
-def get_all_y(objective_list, objective_weights):
-    # is_collision, is_offroad, is_wrong_lane, is_run_red_light
-    collision_activated = np.sum(objective_weights[:3] != 0) > 0
-    offroad_activated = (np.abs(objective_weights[3]) > 0) | (
-        np.abs(objective_weights[5]) > 0
-    )
-    wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
-        np.abs(objective_weights[5]) > 0
-    )
-    red_light_activated = np.abs(objective_weights[-1]) > 0
-
-    y_list = np.zeros((4, len(objective_list)))
-
-    for i, obj in enumerate(objective_list):
-        if collision_activated:
-            y_list[0, i] = obj[0] > 0.1
-        if offroad_activated:
-            y_list[1, i] = obj[-3] == 1
-        if wronglane_activated:
-            y_list[2, i] = obj[-2] == 1
-        if red_light_activated:
-            y_list[3, i] = obj[-1] == 1
-
-    return y_list
-
+# ---------------- acquisition related -------------------
 # TBD: greedily add point
 def calculate_rep_d(clf, X_train, X_test):
     X_train_embed = clf.extract_embed(X_train)
@@ -2103,64 +1413,6 @@ def select_batch_max_d_greedy(d_list, train_test_cutoff, batch_size):
         # print('remaining_inds after', remaining_inds)
         chosen_inds.append(chosen_ind)
     return chosen_inds
-
-def get_F(current_objectives, all_objectives, objective_weights, use_single_objective):
-    # standardize current objectives using all objectives so far
-    all_objectives = np.stack(all_objectives)
-    current_objectives = np.stack(current_objectives)
-
-    standardize = StandardScaler()
-    standardize.fit(all_objectives)
-    standardize.transform(current_objectives)
-
-    current_objectives *= objective_weights
-
-    if use_single_objective:
-        current_F = np.expand_dims(np.sum(current_objectives, axis=1), axis=1)
-    else:
-        current_F = np.row_stack(current_objectives)
-    return current_F
-
-def set_general_seed(seed=0):
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
-
-    import random
-    import torch
-    import numpy as np
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    # torch.set_deterministic(True)
-    torch.backends.cudnn.benchmark = False
-    # torch.backends.cudnn.deterministic = True
-    # torch.backends.cudnn.enabled = False
-
-
-
-def count_and_group_output_unique_bugs(inds, outputs, labels, min_bounds, max_bounds, diff_th):
-    '''
-    ***grid counting: maximum number of distinct elements
-    distinct counting: minimum number of distinct elements
-    1.general
-    bug type, normalized (/|start location - end location|) bug location, ego car speed when bug happens
-
-    2.collision specific
-    collision object type (i.e. pedestrian, bicyclist, small vehicle, or truck), normalized (/car width) relative angle of the other involved object at collision
-
-    '''
-
-    m = len(labels)
-
-    # print(outputs.shape, outputs)
-    outputs_grid_inds = ((outputs - min_bounds)*diff_th) / (max_bounds - min_bounds)
-    outputs_grid_inds = outputs_grid_inds.astype(int)
-    # print(outputs_grid_inds.shape, outputs_grid_inds)
-
-    from collections import defaultdict
-    unique_bugs_group = defaultdict(list)
-
-    for i in range(outputs.shape[0]):
-        unique_bugs_group[tuple(outputs_grid_inds[i])].append((inds[i], outputs[i]))
-
-    return unique_bugs_group
+# ---------------- acquisition related -------------------
+if __name__ == "__main__":
+    print('ok')

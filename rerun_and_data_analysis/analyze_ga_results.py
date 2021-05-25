@@ -21,10 +21,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter
 from sklearn.manifold import TSNE
-from customized_utils import  get_distinct_data_points, check_bug, filter_critical_regions, get_sorted_subfolders, load_data, get_picklename, is_distinct_vectorized, get_event_location_and_object_type
+from customized_utils import  get_distinct_data_points, check_bug, filter_critical_regions, get_sorted_subfolders, load_data, get_picklename, is_distinct_vectorized
 from ga_fuzzing import default_objectives
 from matplotlib.lines import Line2D
 
+from carla_specific_utils.carla_specific import get_event_location_and_object_type
 
 def draw_hv(bug_res_path, save_folder):
     with open(bug_res_path, 'rb') as f_in:

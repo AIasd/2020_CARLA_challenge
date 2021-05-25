@@ -38,3 +38,5 @@ tmp/*
 tmp_10hz/*
 collected_data_lbc_augment_ped/*
 exp_9/coco/coco_confusion_repair_aug
+carla_specific_utils/__pycache__/*
+fuzzing_utils/__pycache__/*

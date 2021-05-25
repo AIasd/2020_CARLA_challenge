@@ -18,7 +18,9 @@ import carla
 from srunner.scenariomanager.carla_data_provider import *
 from leaderboard.utils.route_manipulation import interpolate_trajectory
 import xml.etree.ElementTree as ET
-from customized_utils import start_server, exit_handler, create_transform
+from customized_utils import exit_handler
+from carla_specific_utils.carla_specific import start_server
+from carla_specific_utils.carla_specific_tools import create_transform
 import atexit
 import pickle
 

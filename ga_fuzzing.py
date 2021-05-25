@@ -1,3 +1,4 @@
+# python ga_fuzzing.py -p 2015 -s 8791 -d 8792 --n_gen 2 --pop_size 2 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 300 --objective_weights -1 1 1 0 0 0 0 0 0 0 --check_unique_coeff 0 0.2 0.5
 import sys
 import os
 sys.path.append('pymoo')
@@ -5,43 +6,38 @@ carla_root = '../carla_0994_no_rss'
 sys.path.append(carla_root+'/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg')
 sys.path.append(carla_root+'/PythonAPI/carla')
 sys.path.append(carla_root+'/PythonAPI')
-sys.path.append('.')
+
 sys.path.append('leaderboard')
 sys.path.append('leaderboard/team_code')
-sys.path.append('scenario_runner')
 sys.path.append('scenario_runner')
 sys.path.append('carla_project')
 sys.path.append('carla_project/src')
 
-
-
-
+sys.path.append('fuzzing_utils')
+sys.path.append('carla_specific_utils')
+os.system('export PYTHONPATH=/home/zhongzzy9/anaconda3/envs/carla99/bin/python')
 
 from pymoo.model.problem import Problem
 from pymoo.model.sampling import Sampling
 from pymoo.model.crossover import Crossover
 from pymoo.model.mutation import Mutation
 from pymoo.model.duplicate import ElementwiseDuplicateElimination, NoDuplicateElimination
-
 from pymoo.model.population import Population, pop_from_array_or_individual
 from pymoo.model.evaluator import Evaluator
-
 from pymoo.algorithms.nsga2 import NSGA2, binary_tournament
 from pymoo.algorithms.nsga3 import NSGA3, comp_by_cv_then_random
 from pymoo.operators.selection.tournament_selection import TournamentSelection
 from pymoo.algorithms.random import RandomAlgorithm
-
 from pymoo.operators.crossover.simulated_binary_crossover import SimulatedBinaryCrossover
-
 from pymoo.performance_indicator.hv import Hypervolume
 
 import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, is_critical_region, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, estimate_objectives, correct_travel_dist, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, eliminate_duplicates_for_list, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized, eliminate_repetitive_vectorized, get_sorted_subfolders, load_data, choose_weight_inds, get_F, get_unique_bugs, correct_spawn_locations, set_general_seed
+from customized_utils import rand_real,  make_hierarchical_dir, exit_handler, is_critical_region, if_violate_constraints, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, eliminate_duplicates_for_list, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized, eliminate_repetitive_vectorized, get_sorted_subfolders, load_data, choose_weight_inds, get_F, get_unique_bugs, set_general_seed
 
-
+from carla_specific_utils.carla_specific import run_carla_simulation, initialize_carla_specific, correct_spawn_locations_all
 
 from collections import deque
 
@@ -72,6 +68,9 @@ import math
 
 
 import copy
+from distutils.dir_util import copy_tree
+
+from dask.distributed import Client, LocalCluster
 
 from pymoo.factory import get_termination
 from pymoo.model.termination import Termination
@@ -82,23 +81,24 @@ from pymoo.model.repair import Repair
 from pymoo.operators.mixed_variable_operator import MixedVariableMutation, MixedVariableCrossover
 from pymoo.factory import get_crossover, get_mutation
 from pymoo.model.mating import Mating
-
-from dask.distributed import Client, LocalCluster
-
 from pymoo.model.initialization import Initialization
 from pymoo.model.duplicate import NoDuplicateElimination
 from pymoo.operators.sampling.random_sampling import FloatRandomSampling
-
 from pymoo.model.survival import Survival
 from pymoo.model.individual import Individual
-from distutils.dir_util import copy_tree
+
+
+
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPClassifier
-from pgd_attack import pgd_attack, train_net, train_regression_net
 from scipy.stats import rankdata
-from carla_specific import run_carla_simulation, initialize_carla_specific
+
+
 from setup_labels_and_bounds import emptyobject
+
+from pgd_attack import pgd_attack, train_net, train_regression_net, VanillaDataset
+from acquisition import map_acquisition
 
 # [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, is_collision]
 default_objective_weights = np.array([-1., 1., 1., 1., 1., -1., 0., 0., 0., -1.])
@@ -1012,11 +1012,13 @@ class MyMatingVectorized(Mating):
             if self.use_unique_bugs:
                 if len(_off_X) == 0:
                     continue
-
-                if len(off) > 0:
-                    prev_X = np.concatenate([np.array([x.X for x in off]), problem.interested_unique_bugs])
+                if len(off) > 0 and len(problem.interested_unique_bugs) > 0:
+                    prev_X = np.concatenate([problem.interested_unique_bugs, np.array([x.X for x in off])])
+                elif len(off) > 0:
+                    prev_X = np.array([x.X for x in off])
                 else:
                     prev_X = problem.interested_unique_bugs
+
 
                 remaining_inds = is_distinct_vectorized(_off_X, prev_X, problem.mask, problem.xl, problem.xu, problem.p, problem.c, problem.th, verbose=False)
 
@@ -1308,8 +1310,7 @@ class NSGA2_DT(NSGA2):
                 else:
 
                     if self.uncertainty:
-                        from pgd_attack import VanillaDataset
-                        from acquisition import map_acquisition
+
                         # [None, 'BUGCONF', 'Random', 'BALD', 'BatchBALD']
                         print('uncertainty', self.uncertainty)
                         uncertainty_key, uncertainty_conf = self.uncertainty.split('_')
@@ -1840,28 +1841,19 @@ class SimpleDuplicateElimination(ElementwiseDuplicateElimination):
 
 
 class MyEvaluator(Evaluator):
-    def __init__(self, correct_spawn_locations_after_run=0, **kwargs):
+    def __init__(self, correct_spawn_locations_after_run=0, correct_spawn_locations=None, **kwargs):
         super().__init__()
         self.correct_spawn_locations_after_run = correct_spawn_locations_after_run
+        self.correct_spawn_locations = correct_spawn_locations
     def _eval(self, problem, pop, **kwargs):
 
         super()._eval(problem, pop, **kwargs)
-        # print(pop[0].X)
-        # hack:
-        label_to_id = {label:i for i, label in enumerate(problem.labels)}
 
 
-        with open('tmp_folder/total.pickle', 'rb') as f_in:
-            all_final_generated_transforms_list = pickle.load(f_in)
+        if self.correct_spawn_locations_after_run:
+            correct_spawn_locations_all(pop[i].X, problem.labels)
 
-        if problem.simulator == 'carla' and self.correct_spawn_locations_after_run:
-            print('-'*10, 'correct_spawn_locations', '-'*10)
-            for i, all_final_generated_transforms_list_i in enumerate(all_final_generated_transforms_list):
-                if all_final_generated_transforms_list_i:
-                    correct_spawn_locations(pop[i].X, label_to_id, all_final_generated_transforms_list_i, 'static', static_general_labels)
-                    correct_spawn_locations(pop[i].X, label_to_id, all_final_generated_transforms_list_i, 'pedestrian', pedestrian_general_labels)
-                    correct_spawn_locations(pop[i].X, label_to_id, all_final_generated_transforms_list_i, 'vehicle', vehicle_general_labels)
-                    print('\n'*3)
+
         # print(pop[0].X)
 
 
@@ -2077,8 +2069,10 @@ def run_ga(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run_simul
 
     if hasattr(sim_specific_arguments, 'correct_spawn_locations_after_run'):
         correct_spawn_locations_after_run = sim_specific_arguments.correct_spawn_locations_after_run
+        correct_spawn_locations = sim_specific_arguments.correct_spawn_locations
     else:
         correct_spawn_locations_after_run = False
+        correct_spawn_locations = None
 
     res = customized_minimize(problem,
                    algorithm,
@@ -2086,7 +2080,7 @@ def run_ga(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run_simul
                    seed=0,
                    verbose=False,
                    save_history=False,
-                   evaluator=MyEvaluator(correct_spawn_locations_after_run=correct_spawn_locations_after_run))
+                   evaluator=MyEvaluator(correct_spawn_locations_after_run=correct_spawn_locations_after_run, correct_spawn_locations=correct_spawn_locations))
 
     print('We have found', len(problem.bugs), 'bugs in total.')
 

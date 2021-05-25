@@ -871,6 +871,25 @@ def regression_analysis(
     for name in names:
         print(name, np.mean(performance[name]), np.std(performance[name]))
 
+# def draw_auc_roc_for_scores(scores, y_test):
+#     inds_sorted = np.argsort(scores)
+#     tp, fp = 0, 0
+#     fpr_list, tpr_list = [], []
+#     n = len(inds_sorted)
+#     t = np.sum(y_test == 1)
+#     f = n - t
+#     for ind in inds_sorted:
+#         if y_test[ind] == 1:
+#             tp += 1
+#         else:
+#             fp += 1
+#         fpr_list.append(fp / f)
+#         tpr_list.append(tp / t)
+#     from matplotlib import pyplot as plt
+#
+#     plt.plot(fpr_list, tpr_list)
+#     plt.plot(np.arange(0, 1.2, 0.2), np.arange(0, 1.2, 0.2))
+#     plt.show()
 
 def classification_analysis(
     X, is_bug_list, objective_list, cutoff, cutoff_end, trial_num, encoded_fields
@@ -964,7 +983,7 @@ def classification_analysis(
             )
             performance[name].append(top_50_bugs_num)
 
-            from customized_utils import draw_auc_roc_for_scores
+
 
             # draw_auc_roc_for_scores(-1*prob, y_test)
 

@@ -37,9 +37,10 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types, weather_names
 
-from customized_utils import create_transform, rand_real,  convert_x_to_customized_data, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, parse_scenario, parse_route_file, estimate_objectives, parse_route_and_scenario_plain
+from customized_utils import  rand_real, make_hierarchical_dir, exit_handler, arguments_info, is_critical_region, setup_bounds_mask_labels_distributions_stage1, setup_bounds_mask_labels_distributions_stage2, customize_parameters, customized_bounds_and_distributions, static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit, if_violate_constraints, customized_routes, get_distinct_data_points, is_similar, check_bug, is_distinct, filter_critical_regions, parse_scenario, estimate_objectives, parse_route_and_scenario_plain
 
-
+from carla_specific_utils.carla_specific import convert_x_to_customized_data, parse_route_file
+from carla_specific_utils.carla_specific_tools import create_transform
 from collections import deque
 
 
