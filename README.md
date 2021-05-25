@@ -1,6 +1,18 @@
 ## Introduction
 This repo consists of code accompanying "AutoFuzz: Grammar-Based Fuzzing for Self-Driving Car Controller". AutoFuzz is a grammar-based input fuzzing tool for end-to-end self-driving car controllers. It analyzes CARLA specification to generate semantically and temporally valid test scenario with support of multiple search methods.
 
+## Found Bug Demos
+lbc controller going out of road:
+![](gif_demos/lbc_58_rgb.gif)
+![](gif_demos/lbc_58_rgb_with_car.gif)
+
+pid-1 controller collides with a pedestrian:
+![](gif_demos/autopilot_pid1_35_rgb.gif)
+![](gif_demos/autopilot_pid1_35_rgb_with_car.gif)
+
+pid-2 controller collides with the stopped leading car:
+![](gif_demos/pid_pid2_39_rgb.gif)
+![](gif_demos/pid_pid2_39_rgb_with_car.gif)
 
 ## Setup
 ### Requirements
