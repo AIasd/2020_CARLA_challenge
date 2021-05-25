@@ -3,16 +3,19 @@ This repo consists of code accompanying "AutoFuzz: Grammar-Based Fuzzing for Sel
 
 ## Found Bug Demos
 lbc controller going out of road:
-![](gif_demos/lbc_58_rgb.gif)
-![](gif_demos/lbc_58_rgb_with_car.gif)
+<!-- 
+<img src="gif_demos/lbc_58_rgb.gif" width="40%" height="40%"/> -->
+<img src="gif_demos/lbc_58_rgb_with_car.gif" width="40%" height="40%"/>
 
 pid-1 controller collides with a pedestrian:
-![](gif_demos/autopilot_pid1_35_rgb.gif)
-![](gif_demos/autopilot_pid1_35_rgb_with_car.gif)
+
+<!-- <img src="gif_demos/autopilot_pid1_35_rgb.gif" width="40%" height="40%"/> -->
+<img src="gif_demos/autopilot_pid1_35_rgb_with_car.gif" width="40%" height="40%"/>
 
 pid-2 controller collides with the stopped leading car:
-![](gif_demos/pid_pid2_39_rgb.gif)
-![](gif_demos/pid_pid2_39_rgb_with_car.gif)
+
+<!-- <img src="gif_demos/pid_pid2_39_rgb.gif" width="40%" height="40%"/> -->
+<img src="gif_demos/pid_pid2_39_rgb_with_car.gif" width="40%" height="40%"/>
 
 ## Setup
 ### Requirements
