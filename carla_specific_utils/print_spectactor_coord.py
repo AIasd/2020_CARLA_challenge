@@ -9,6 +9,7 @@ import glob
 import os
 import sys
 import time
+import argparse
 
 try:
     sys.path.append(glob.glob('./PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
@@ -31,26 +32,25 @@ _SLEEP_TIME_ = 1
 
 
 def main(map):
-	client = carla.Client(_HOST_, _PORT_)
-	client.set_timeout(2.0)
+    client = carla.Client(_HOST_, _PORT_)
+    client.set_timeout(2.0)
     client.load_world(map)
-	world = client.get_world()
+    world = client.get_world()
 
 	# print(help(t))
 	# print("(x,y,z) = ({},{},{})".format(t.location.x, t.location.y,t.location.z))
-
-
-	while(True):
-		t = world.get_spectator().get_transform()
-		# coordinate_str = "(x,y) = ({},{})".format(t.location.x, t.location.y)
-		coordinate_str = "(x,y,z) = ({},{},{})".format(t.location.x, t.location.y,t.location.z)
-		print (coordinate_str)
-		time.sleep(_SLEEP_TIME_)
+    while(True):
+        t = world.get_spectator().get_transform()
+        # coordinate_str = "(x,y) = ({},{})".format(t.location.x, t.location.y)
+        coordinate_str = "(x,y,z) = ({},{},{})".format(t.location.x, t.location.y,t.location.z)
+        print (coordinate_str)
+        time.sleep(_SLEEP_TIME_)
 
 
 
 if __name__ == '__main__':
-
+    argparser = argparse.ArgumentParser(
+        description='Print Spectator Coordinates')
     argparser.add_argument(
         '--map',
         default='Town05',

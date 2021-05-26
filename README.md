@@ -3,7 +3,7 @@ This repo consists of code accompanying "AutoFuzz: Grammar-Based Fuzzing for Sel
 
 ## Found Bug Demos
 lbc controller going out of road:
-<!-- 
+<!--
 <img src="gif_demos/lbc_58_rgb.gif" width="40%" height="40%"/> -->
 <img src="gif_demos/lbc_58_rgb_with_car.gif" width="40%" height="40%"/>
 
@@ -19,7 +19,7 @@ pid-2 controller collides with the stopped leading car:
 
 ## Setup
 ### Requirements
-* OS: Ubuntu 18.04
+* OS: Ubuntu 18.04, Ubuntu 20.04
 * CPU: at least 8 cores
 * GPU: at least 8GB memory
 * Python 3.7

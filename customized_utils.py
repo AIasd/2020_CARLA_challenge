@@ -176,8 +176,8 @@ def is_port_in_use(port):
 def port_to_gpu(port):
     import torch
 
-    # n = torch.cuda.device_count()
-    n = 2
+    n = torch.cuda.device_count()
+    # n = 2
     gpu = port % n
 
     return gpu
