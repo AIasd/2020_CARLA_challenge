@@ -2139,7 +2139,32 @@ def run_ga_general(fuzzing_arguments, sim_specific_arguments, fuzzing_content, r
         run_ga(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run_simulation)
 
 if __name__ == '__main__':
+    '''
+    fuzzing_arguments: parameters needed for the fuzzing process, see argparse for details.
 
+    sim_specific_arguments: parameters specific to the simulator used.
+
+    fuzzing_content: a description of the search space.
+        labels:
+        mask:
+        parameters_min_bounds:
+        parameters_max_bounds:
+        parameters_distributions:
+        customized_constraints:
+        customized_center_transforms:
+        n_var:
+        fixed_hyperparameters:
+        search_space_info:
+
+    run_simulation(x, fuzzing_content, fuzzing_arguments, sim_specific_arguments, ...) -> objectives, run_info: a simulation function specific to the simulator used.
+        objectives:
+        run_info:
+
+
+    TBD: svl simulator
+
+    TBD: flexible search objectives, flexible uniqueness filteration / bug counting
+    '''
     from scene_configs import customized_bounds_and_distributions
     from setup_labels_and_bounds import generate_fuzzing_content
 
