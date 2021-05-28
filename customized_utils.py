@@ -20,14 +20,23 @@ import subprocess
 import time
 import re
 import math
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import pickle
 import logging
 import traceback
 
 from collections import deque
 
-
+from object_types import (
+    weather_names,
+    vehicle_colors,
+    car_types,
+    motorcycle_types,
+    cyclist_types,
+    pedestrian_types,
+    vehicle_types,
+    static_types
+)
 
 
 # ---------------- Misc -------------------
@@ -882,15 +891,6 @@ def count_and_group_output_unique_bugs(inds, outputs, labels, min_bounds, max_bo
 # ---------------- NN -------------------
 # dependent on description labels
 def encode_fields(x, labels, labels_to_encode):
-    from sklearn.preprocessing import OneHotEncoder
-    from object_types import (
-        weather_names,
-        vehicle_colors,
-        pedestrian_types,
-        vehicle_types,
-    )
-
-
     keywords_dict = {
         "num_of_weathers": len(weather_names),
         "num_of_vehicle_colors": len(vehicle_colors),

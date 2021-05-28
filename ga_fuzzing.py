@@ -1213,7 +1213,7 @@ class NSGA2_DT(NSGA2):
                         cutoff_end = cutoff
                     else:
                         subfolders = get_sorted_subfolders(self.warm_up_path)
-                        initial_X, _, initial_objectives_list, _, _ = load_data(subfolders)
+                        initial_X, _, initial_objectives_list, _, _, _ = load_data(subfolders)
 
                         cutoff = self.warm_up_len
                         cutoff_end = self.warm_up_len + 100
@@ -1365,7 +1365,7 @@ class NSGA2_DT(NSGA2):
                                 raise ValueError('invalid ranking model', ranking_model)
                             print('X_train', X_train.shape)
                             print('clf.predict_proba(X_train)', clf.predict_proba(X_train).shape)
-                            if ranking_model == 'adaboost':
+                            if self.ranking_model == 'adaboost':
                                 prob_train = clf.predict_proba(X_train)[:, 0].squeeze()
                             else:
                                 prob_train = clf.predict_proba(X_train)[:, 1].squeeze()
@@ -1710,7 +1710,7 @@ class NSGA2_DT(NSGA2):
     def _initialize(self):
         if self.warm_up_path and ((self.dt and not self.problem.cumulative_info) or (not self.dt)):
             subfolders = get_sorted_subfolders(self.warm_up_path)
-            X, _, objectives_list, mask, _ = load_data(subfolders)
+            X, _, objectives_list, mask, _, _ = load_data(subfolders)
 
             if self.warm_up_len > 0:
                 X = X[:self.warm_up_len]
@@ -1723,7 +1723,7 @@ class NSGA2_DT(NSGA2):
             p, c, th = self.problem.p, self.problem.c, self.problem.th
             unique_coeff = (p, c, th)
             self.problem.unique_bugs, (self.problem.bugs, self.problem.bugs_type_list, self.problem.bugs_inds_list, self.problem.interested_unique_bugs) = get_unique_bugs(
-                X, objectives_list, mask, xl, xu, unique_coeff, self.problem.objective_weights, return_bug_info=True, consider_interested_bugs=self.problem.consider_interested_bugs
+                X, objectives_list, mask, xl, xu, unique_coeff, self.problem.objective_weights, return_mode='return_bug_info', consider_interested_bugs=self.problem.consider_interested_bugs
             )
 
             self.all_pop_run_X = np.array(X)
@@ -1913,7 +1913,7 @@ def run_nsga2_dt(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run
 
     if arguments.warm_up_path:
         subfolders = get_sorted_subfolders(warm_up_path)
-        X, _, objectives_list, _, _ = load_data(subfolders)
+        X, _, objectives_list, _, _, _ = load_data(subfolders)
 
         if arguments.warm_up_len > 0:
             X = X[:arguments.warm_up_len]
@@ -2162,8 +2162,9 @@ if __name__ == '__main__':
 
 
     TBD: svl simulator
+    TBD: flexible uniqueness filteration / bug counting, flexible search objectives
 
-    TBD: flexible search objectives, flexible uniqueness filteration / bug counting
+
     '''
     from scene_configs import customized_bounds_and_distributions
     from setup_labels_and_bounds import generate_fuzzing_content
