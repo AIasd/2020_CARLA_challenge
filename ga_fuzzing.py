@@ -450,15 +450,17 @@ class MyProblem(Problem):
                 cur_i = i + ind_start
                 total_i = i + (self.counter-len(jobs))
                 objectives, run_info, has_run  = job.result()
-
-                all_final_generated_transforms_list.append(run_info['all_final_generated_transforms'])
+                if run_info:
+                    all_final_generated_transforms_list.append(run_info['all_final_generated_transforms'])
+                else:
+                    all_final_generated_transforms_list.append(None)
 
                 self.has_run_list.append(has_run)
                 self.has_run += has_run
 
 
                 # record bug
-                if run_info['is_bug']:
+                if run_info and run_info['is_bug']:
                     self.bugs.append(X[cur_i].astype(float))
                     self.bugs_inds_list.append(total_i)
                     self.bugs_type_list.append(run_info['bug_type'])
@@ -1911,16 +1913,16 @@ def run_nsga2_dt(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run
     now = datetime.now()
     dt_time_str = now.strftime("%Y_%m_%d_%H_%M_%S")
 
-    if arguments.warm_up_path:
-        subfolders = get_sorted_subfolders(warm_up_path)
+    if fuzzing_arguments.warm_up_path:
+        subfolders = get_sorted_subfolders(fuzzing_arguments.warm_up_path)
         X, _, objectives_list, _, _, _ = load_data(subfolders)
 
-        if arguments.warm_up_len > 0:
-            X = X[:arguments.warm_up_len]
-            objectives_list = objectives_list[:arguments.warm_up_len]
+        if fuzzing_arguments.warm_up_len > 0:
+            X = X[:fuzzing_arguments.warm_up_len]
+            objectives_list = objectives_list[:fuzzing_arguments.warm_up_len]
 
-        y = determine_y_upon_weights(objectives_list, arguments.objective_weights)
-        F = get_F(objectives_list, objectives_list, arguments.objective_weights, arguments.use_single_objective)
+        y = determine_y_upon_weights(objectives_list, fuzzing_arguments.objective_weights)
+        F = get_F(objectives_list, objectives_list, fuzzing_arguments.objective_weights, fuzzing_arguments.use_single_objective)
 
         estimator, inds, critical_unique_leaves = filter_critical_regions(np.array(X), y)
         X_filtered = np.array(X)[inds]
@@ -1928,10 +1930,10 @@ def run_nsga2_dt(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run
 
 
 
-    for i in range(outer_iterations):
+    for i in range(fuzzing_arguments.outer_iterations):
         dt_time_str_i = dt_time_str
         dt = True
-        if (i == 0 and not arguments.warm_up_path) or np.sum(y)==0:
+        if (i == 0 and not fuzzing_arguments.warm_up_path) or np.sum(y)==0:
             dt = False
 
 
@@ -1955,7 +1957,7 @@ def run_nsga2_dt(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run
         if len(X_new) == 0:
             break
 
-        if i == 0 and not arguments.warm_up_path:
+        if i == 0 and not fuzzing_arguments.warm_up_path:
             X = X_new
             y = y_new
             F = F_new
@@ -1989,7 +1991,7 @@ def run_ga(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run_simul
 
     if dt_arguments.call_from_dt:
         fuzzing_arguments.termination_condition = 'generations'
-        if dt_arguments.dt and len(list(X)) == 0:
+        if dt_arguments.dt and len(list(dt_arguments.X)) == 0:
             print('No critical leaves!!! Start from random sampling!!!')
             dt_arguments.dt = False
 

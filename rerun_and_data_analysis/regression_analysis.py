@@ -177,9 +177,9 @@ python ga_fuzzing.py -p 2033 -s 8780 -d 8781 --outer_iterations 16 --n_gen 5 --p
 
 
 
-# town03 collision
+# town01 collision
 # regression-nn (active, unique)
-python ga_fuzzing.py -p 2021 -s 8794 -d 8795 --n_gen 40 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode regression_nn --warm_up_path 'run_results/seeds/nsga2_un_1500/town01_left_0/2021_02_17_22_39_22,50_30_none_1500_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01' --warm_up_len 500 --check_unique_coeff 0 0.1 0.5 --use_single_objective 0 --record_every_n_step 1
+python ga_fuzzing.py -p 2021 -s 8794 -d 8795 --n_gen 40 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2-un --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode regression_nn --warm_up_path 'run_results/seeds/nsga2_un_1500/town01_left_0/2021_02_17_22_39_22,50_30_none_1500_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01' --warm_up_len 500 --check_unique_coeff 0 0.1 0.5 --use_single_objective 0
 
 # regression-nn
 python ga_fuzzing.py -p 2015 -s 8790 -d 8791 --n_gen 40 --pop_size 50 -r 'town01_left_0' -c 'turn_left_town01' --algorithm_name nsga2 --has_run_num 700 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode regression_nn --warm_up_path 'run_results/seeds/nsga2_un_1500/town01_left_0/2021_02_17_22_39_22,50_30_none_1500_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01' --warm_up_len 500 --check_unique_coeff 0 0.1 0.5 --use_single_objective 0 --regression_nn_use_running_data 0 --only_run_unique_cases 0
