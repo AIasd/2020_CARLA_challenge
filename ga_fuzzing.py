@@ -327,6 +327,7 @@ class MyProblem(Problem):
         self.dt = dt_arguments.dt
         self.estimator = dt_arguments.estimator
         self.critical_unique_leaves = dt_arguments.critical_unique_leaves
+        self.cumulative_info = cumulative_info
         cumulative_info = dt_arguments.cumulative_info
 
         if cumulative_info:
