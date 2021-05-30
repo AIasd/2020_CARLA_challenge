@@ -651,6 +651,19 @@ def run_carla_simulation_helper(customized_data, launch_server, episode_max_time
         'all_final_generated_transforms': all_final_generated_transforms}
 
 
+        print('counter:', counter, 'bug:', is_bug, 'objectives:', objectives)
+
+        with open(cur_folder+'/'+'cur_info.pickle', 'wb') as f_out:
+            pickle.dump(run_info, f_out)
+
+
+
+        # hack:
+        cur_port = int(x[-1])
+        filename = 'tmp_folder/'+str(cur_port)+'.pickle'
+        with open(filename, 'rb') as f_in:
+            all_final_generated_transforms = pickle.load(f_in)
+
     return objectives, run_info
 
 

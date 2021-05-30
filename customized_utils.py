@@ -27,7 +27,7 @@ import traceback
 
 from collections import deque
 
-from object_types import (
+from carla_specific_utils.object_types import (
     weather_names,
     vehicle_colors,
     car_types,
@@ -257,7 +257,8 @@ def load_data(subfolders):
 
 def get_picklename(parent_folder):
     pickle_filename = parent_folder + "/non_bugs/"
-    assert os.path.isdir(pickle_filename), pickle_filename
+    if not os.path.isdir(pickle_filename):
+        pickle_filename = parent_folder + "/0/non_bugs/"
     i = 1
     while True:
         if os.path.isdir(pickle_filename + str(i)):

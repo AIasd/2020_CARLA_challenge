@@ -327,31 +327,8 @@ class MyProblem(Problem):
         self.dt = dt_arguments.dt
         self.estimator = dt_arguments.estimator
         self.critical_unique_leaves = dt_arguments.critical_unique_leaves
-        self.cumulative_info = dt_arguments.cumulative_info
-
-
-
-
-        self.labels = fuzzing_content.labels
-        self.mask = fuzzing_content.mask
-        self.parameters_min_bounds = fuzzing_content.parameters_min_bounds
-        self.parameters_max_bounds = fuzzing_content.parameters_max_bounds
-        self.parameters_distributions = fuzzing_content.parameters_distributions
-        self.customized_constraints = fuzzing_content.customized_constraints
-        self.customized_center_transforms = fuzzing_content.customized_center_transforms
-        xl = [pair[1] for pair in self.parameters_min_bounds.items()]
-        xu = [pair[1] for pair in self.parameters_max_bounds.items()]
-        n_var = fuzzing_content.n_var
-
-
-
-        self.p, self.c, self.th = self.check_unique_coeff
-        self.launch_server = True
-        self.objectives_list = []
-        self.x_list = []
-        self.y_list = []
-        self.F_list = []
         cumulative_info = dt_arguments.cumulative_info
+
         if cumulative_info:
             self.counter = cumulative_info['counter']
             self.has_run = cumulative_info['has_run']
@@ -378,6 +355,31 @@ class MyProblem(Problem):
             self.bugs_num_list = []
             self.unique_bugs_num_list = []
             self.has_run_list = []
+
+
+
+
+        self.labels = fuzzing_content.labels
+        self.mask = fuzzing_content.mask
+        self.parameters_min_bounds = fuzzing_content.parameters_min_bounds
+        self.parameters_max_bounds = fuzzing_content.parameters_max_bounds
+        self.parameters_distributions = fuzzing_content.parameters_distributions
+        self.customized_constraints = fuzzing_content.customized_constraints
+        self.customized_center_transforms = fuzzing_content.customized_center_transforms
+        xl = [pair[1] for pair in self.parameters_min_bounds.items()]
+        xu = [pair[1] for pair in self.parameters_max_bounds.items()]
+        n_var = fuzzing_content.n_var
+
+
+
+        self.p, self.c, self.th = self.check_unique_coeff
+        self.launch_server = True
+        self.objectives_list = []
+        self.x_list = []
+        self.y_list = []
+        self.F_list = []
+
+
 
         super().__init__(n_var=n_var, n_obj=4, n_constr=0, xl=xl, xu=xu)
 
@@ -425,6 +427,8 @@ class MyProblem(Problem):
                 print(counter, run_info['is_bug'], objectives)
 
                 # correct_travel_dist(x, labels, customized_data['tmp_travel_dist_file'])
+
+
 
                 return objectives, run_info, 1
 

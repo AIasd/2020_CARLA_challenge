@@ -670,14 +670,13 @@ def visualize_ped_over_time(path, save_filename='ped_over_time', bug_type='colli
     p = 0
     c, th = unique_coeffs
 
-
     subfolders = get_sorted_subfolders(path)
-    cur_X, _, cur_objectives, _, _ = load_data(subfolders)
+    cur_X, _, cur_objectives, _, _, _ = load_data(subfolders)
     cur_X = np.array(cur_X)
 
     if warmup_path:
         subfolders = get_sorted_subfolders(warmup_path)
-        prev_X, _, prev_objectives, _, _ = load_data(subfolders)
+        prev_X, _, prev_objectives, _, _, _ = load_data(subfolders)
         prev_X = np.array(prev_X)[:warmup_len]
         prev_objectives = np.array(prev_objectives)[:warmup_len]
 
@@ -879,7 +878,7 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_
 
         if warmup_pth:
             subfolders = get_sorted_subfolders(warmup_pth)
-            prev_X, _, prev_objectives, _, _ = load_data(subfolders)
+            prev_X, _, prev_objectives, _, _, _ = load_data(subfolders)
             prev_X = np.array(prev_X)[:warmup_pth_cutoff]
             prev_objectives = prev_objectives[:warmup_pth_cutoff]
         else:
@@ -899,6 +898,7 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_
         print('len(prev_X)', len(prev_X))
         num_of_unique_bugs_list = []
         for pth in pth_list:
+            print('-'*20, 'pth', pth, '-'*20)
             if 'dt' in label:
                 cur_X = []
                 cur_objectives = []
@@ -906,7 +906,7 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_
                     filepath = os.path.join(pth, filename)
                     if os.path.isdir(filepath):
                         subfolders = get_sorted_subfolders(filepath)
-                        tmp_X, _, tmp_objectives, _, _ = load_data(subfolders)
+                        tmp_X, _, tmp_objectives, _, _, _ = load_data(subfolders)
                         if len(tmp_X) > 0:
                             cur_X.append(tmp_X)
                             cur_objectives.append(tmp_objectives)
@@ -914,7 +914,7 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_
                 cur_objectives = np.concatenate(cur_objectives)
             else:
                 subfolders = get_sorted_subfolders(pth)
-                cur_X, _, cur_objectives, _, _ = load_data(subfolders)
+                cur_X, _, cur_objectives, _, _, _ = load_data(subfolders)
                 cur_X = np.array(cur_X)
 
 
@@ -972,7 +972,7 @@ def draw_accident_location(town_list, plot_prev_X=True):
         print(label)
         if warmup_pth:
             subfolders = get_sorted_subfolders(warmup_pth)
-            prev_X, _, prev_objectives, _, _ = load_data(subfolders)
+            prev_X, _, prev_objectives, _, _, _ = load_data(subfolders)
             prev_locations, prev_object_type_list = get_event_location_and_object_type(subfolders, verbose=False)
             prev_X = np.array(prev_X)[:warmup_pth_cutoff]
             prev_objectives = prev_objectives[:warmup_pth_cutoff]
@@ -996,7 +996,7 @@ def draw_accident_location(town_list, plot_prev_X=True):
         # print('len(prev_X)', len(prev_X))
 
         subfolders = get_sorted_subfolders(town_path)
-        cur_X, _, cur_objectives, _, _ = load_data(subfolders)
+        cur_X, _, cur_objectives, _, _, _ = load_data(subfolders)
         cur_X = np.array(cur_X)
         cur_locations, cur_object_type_list = get_event_location_and_object_type(subfolders, verbose=False)
 
@@ -1173,7 +1173,7 @@ if __name__ == '__main__':
     ('nsga2-sm-un-a', ['run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_10_45_59,52_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_00_19_26,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_3/2021_02_23_13_07_35,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_4/2021_05_28_21_44_39,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
     ('nsga2-sm', ['run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_10_46_11,50_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_18_41_01,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_3/2021_02_25_20_40_28,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_4/2021_05_28_21_44_44,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
     # ('nsga2-dt', ['run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_17_55_52']),
-    ('nsga2-dt', ['run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial/2021_02_23_08_49_48', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_13_53_07', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_4/2021_02_25_20_40_35'])
+    ('nsga2-dt', ['run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial/2021_02_23_08_49_48', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_13_53_07', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_4/2021_02_25_20_40_35', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_5/2021_05_29_12_37_47', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_5/2021_05_29_12_37_47'])
     ]
 
     town03_out_of_road_path_list = [
@@ -1286,7 +1286,7 @@ if __name__ == '__main__':
     # unique_coeffs_list = [[], [], [], [], [], []]
 
     town_path_lists = [town07_path_list, town01_path_list, town03_out_of_road_path_list, town05_out_of_road_path_list]
-    warmup_pths = [warmup_pth_town07, warmup_pth_town01, warmup_pth_town03_out_of_road, warmup_pth_town05_out_of_road]
+    warmup_pths = [[warmup_pth_town07], [warmup_pth_town01], [warmup_pth_town03_out_of_road], [warmup_pth_town05_out_of_road]]
     bug_types = ['collision', 'collision', 'out-of-road', 'out-of-road']
     towns = ['town07', 'town01', 'town03', 'town05']
     range_upper_bounds = [15, 15, 15, 15]
@@ -1318,14 +1318,14 @@ if __name__ == '__main__':
 
 
 
-    # for i in range(len(town_path_lists)):
-    #     town_path_list = town_path_lists[i]
-    #     warmup_pth = warmup_pths[i]
-    #     bug_type = bug_types[i]
-    #     town = towns[i]
-    #     range_upper_bound = range_upper_bounds[i]
-    #     unique_coeffs = unique_coeffs_list[i]
-    #     draw_simulation_wrapper(town_path_list, warmup_pth, bug_type, town, range_upper_bound, unique_coeffs)
+    for i in range(len(town_path_lists)):
+        town_path_list = town_path_lists[i]
+        warmup_pth = warmup_pths[i]
+        bug_type = bug_types[i]
+        town = towns[i]
+        range_upper_bound = range_upper_bounds[i]
+        unique_coeffs = unique_coeffs_list[i]
+        draw_simulation_wrapper(town_path_list, warmup_pth, bug_type, town, range_upper_bound, unique_coeffs)
 
 
 
@@ -1367,7 +1367,7 @@ if __name__ == '__main__':
     # draw_simulation_wrapper(town_path_list, warmup_pth_list, bug_type='collision', town='town07', range_upper_bound=21, unique_coeffs=[], warmup_pth_cutoff=500, plot_prev_X=True)
 
 
-    count_bug(town05_left_collision_list)
+    # count_bug(town05_left_collision_list)
 
     # rerun/bugs/train/2021_04_04_15_00_30_non_train_lbc_agent_ped_no_debug/town05_left_0_Scenario12_lbc_augment_00
     # rerun/bugs/train/2021_04_04_14_59_45_vehicle_train_lbc_agent_ped_no_debug/town05_left_0_Scenario12_lbc_augment_00
