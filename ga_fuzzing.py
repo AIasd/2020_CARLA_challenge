@@ -327,7 +327,7 @@ class MyProblem(Problem):
         self.dt = dt_arguments.dt
         self.estimator = dt_arguments.estimator
         self.critical_unique_leaves = dt_arguments.critical_unique_leaves
-        self.cumulative_info = cumulative_info
+        self.cumulative_info = dt_arguments.cumulative_info
         cumulative_info = dt_arguments.cumulative_info
 
         if cumulative_info:
@@ -517,8 +517,8 @@ class MyProblem(Problem):
 
             print('\n'*10, '+'*100)
 
+            self.unique_bugs, unique_bugs_inds_list, self.interested_unique_bugs, bugcounts = get_unique_bugs(self.x_list, self.objectives_list, self.mask, self.xl, self.xu, self.check_unique_coeff, objective_weights, return_mode='unique_inds_and_interested_and_bugcounts', consider_interested_bugs=1, bugs_type_list=self.bugs_type_list, bugs=self.bugs, bugs_inds_list=self.bugs_inds_list)
 
-            self.unique_bugs, unique_bugs_inds_list, self.interested_unique_bugs, bugcounts = get_unique_bugs(self.x_list, self.objectives_list, self.mask, self.xl, self.xu, self.check_unique_coeff, objective_weights, return_mode='unique_inds_and_interested_and_bugcounts', consider_interested_bugs=1)
 
             time_elapsed = time.time() - self.start_time
             num_of_bugs = len(self.bugs)

@@ -867,7 +867,7 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_
     for i, (label, pth_list) in enumerate(path_list):
         if len(unique_coeffs) == 0:
             c = 0.1
-            th = 0.1
+            th = 0.5
         else:
             c, th = unique_coeffs[i]
 
@@ -1169,11 +1169,11 @@ if __name__ == '__main__':
     ]
 
     town01_path_list = [
-    ('ga-un-nn-grad', ['run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_18_16_32_41,50_20_adv_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_09_14_24,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_3/2021_02_25_20_40_41,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_4/2021_05_28_21_44_54,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
-    ('nsga2-sm-un-a', ['run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_10_45_59,52_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_00_19_26,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_3/2021_02_23_13_07_35,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_4/2021_05_28_21_44_39,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
-    ('nsga2-sm', ['run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_10_46_11,50_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_18_41_01,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_3/2021_02_25_20_40_28,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_4/2021_05_28_21_44_44,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
+    ('ga-un-nn-grad', ['run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_18_16_32_41,50_20_adv_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_09_14_24,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_3/2021_02_25_20_40_41,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_4/2021_05_30_02_53_30,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('nsga2-sm-un-a', ['run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_10_45_59,52_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_00_19_26,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_3/2021_02_23_13_07_35,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_4/2021_05_30_02_53_14,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('nsga2-sm', ['run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_10_46_11,50_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_18_41_01,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_3/2021_02_25_20_40_28,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_4/2021_05_30_02_53_19,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
     # ('nsga2-dt', ['run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_17_55_52']),
-    ('nsga2-dt', ['run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial/2021_02_23_08_49_48', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_13_53_07', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_4/2021_02_25_20_40_35', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_5/2021_05_29_12_37_47', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_5/2021_05_29_12_37_47'])
+    ('nsga2-dt', ['run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial/2021_02_23_08_49_48', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_13_53_07', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_4/2021_02_25_20_40_35',])
     ]
 
     town03_out_of_road_path_list = [
@@ -1291,6 +1291,13 @@ if __name__ == '__main__':
     towns = ['town07', 'town01', 'town03', 'town05']
     range_upper_bounds = [15, 15, 15, 15]
     unique_coeffs_list = [[], [], [], []]
+
+    town_path_lists = [town01_path_list]
+    warmup_pths = [[warmup_pth_town01]]
+    bug_types = ['collision']
+    towns = ['town01']
+    range_upper_bounds = [15]
+    unique_coeffs_list = [[]]
 
     # town_path_lists = [town07_path_list_500randominitial]
     # warmup_pths = [warmup_pth_town07]

@@ -240,7 +240,7 @@ def load_data(subfolders):
     is_bug_list = []
 
     objectives_list = []
-    mask, labels = None, None
+    mask, labels, cur_info = None, None, None
     for sub_folder in subfolders:
         if os.path.isdir(sub_folder):
             pickle_filename = os.path.join(sub_folder, "cur_info.pickle")
@@ -442,6 +442,8 @@ def is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=True):
     xl = np.array(xl)
     xu = np.array(xu)
 
+    n = len(mask)
+
     variant_fields = (xu - xl) > eps
     variant_fields_num = np.sum(variant_fields)
     th_num = np.max([np.round(th * variant_fields_num), 1])
@@ -454,6 +456,9 @@ def is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=True):
     xl = np.concatenate([np.zeros(np.sum(int_inds)), xl[real_inds]])
     xu = np.concatenate([0.99*np.ones(np.sum(int_inds)), xu[real_inds]])
 
+    # hack: backward compatibility with previous run data
+    if cur_X.shape[1] == n-1:
+        cur_X = np.concatenate([cur_X, np.zeros((cur_X.shape[0], 1))], axis=1)
     cur_X = cur_X[:, variant_fields]
     cur_X = np.concatenate([cur_X[:, int_inds], cur_X[:, real_inds]], axis=1) / (np.abs(xu - xl) + eps)
 
@@ -679,18 +684,18 @@ def classify_bug_type(objectives, object_type=''):
     return bug_type, bug_str
 
 def get_unique_bugs(
-    X, objectives_list, mask, xl, xu, unique_coeff, objective_weights, return_mode='unique_inds_and_interested_and_bugcounts', consider_interested_bugs=1
+    X, objectives_list, mask, xl, xu, unique_coeff, objective_weights, return_mode='unique_inds_and_interested_and_bugcounts', consider_interested_bugs=1, bugs_type_list=[], bugs=[], bugs_inds_list=[]
 ):
     p, c, th = unique_coeff
-    bugs_type_list = []
-    bugs = []
-    bugs_inds_list = []
-    for i, (x, objectives) in enumerate(zip(X, objectives_list)):
-        if check_bug(objectives):
-            bug_type, _ = classify_bug_type(objectives)
-            bugs_type_list.append(bug_type)
-            bugs.append(x)
-            bugs_inds_list.append(i)
+
+    # hack:
+    if bugs_type_list == []:
+        for i, (x, objectives) in enumerate(zip(X, objectives_list)):
+            if check_bug(objectives):
+                bug_type, _ = classify_bug_type(objectives)
+                bugs_type_list.append(bug_type)
+                bugs.append(x)
+                bugs_inds_list.append(i)
 
     (
         unique_collision_bugs,
@@ -771,6 +776,8 @@ def get_unique_bugs(
         return unique_bugs, unique_bugs_inds_list
     else:
         return unique_bugs
+
+
 
 def choose_weight_inds(objective_weights):
     collision_activated = np.sum(objective_weights[:3] != 0) > 0
