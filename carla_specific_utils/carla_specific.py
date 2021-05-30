@@ -610,15 +610,7 @@ def run_carla_simulation_helper(customized_data, launch_server, episode_max_time
         else:
             cur_folder = make_hierarchical_dir([non_bug_folder, str(counter)])
 
-        with open(cur_folder+'/'+'cur_info.pickle', 'wb') as f_out:
-            pickle.dump(run_info, f_out)
 
-        try:
-            print('tmp_save_path, cur_folder', tmp_save_path, cur_folder)
-            copy_tree(tmp_save_path, cur_folder)
-        except:
-            print('fail to copy from', tmp_save_path)
-            traceback.print_exc()
 
         run_info = {
         'episode_max_time':fuzzing_arguments.episode_max_time,
@@ -655,6 +647,13 @@ def run_carla_simulation_helper(customized_data, launch_server, episode_max_time
 
         with open(cur_folder+'/'+'cur_info.pickle', 'wb') as f_out:
             pickle.dump(run_info, f_out)
+
+        try:
+            print('tmp_save_path, cur_folder', tmp_save_path, cur_folder)
+            copy_tree(tmp_save_path, cur_folder)
+        except:
+            print('fail to copy from', tmp_save_path)
+            traceback.print_exc()
 
 
 
