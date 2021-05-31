@@ -122,7 +122,7 @@ parser.add_argument('--simulator', type=str, default='carla')
 
 # carla specific
 parser.add_argument("--has_display", type=str, default='0')
-parser.add_argument("--debug", type=int, default=0)
+parser.add_argument("--debug", type=int, default=1)
 parser.add_argument('--correct_spawn_locations_after_run', type=int, default=0)
 
 
