@@ -288,12 +288,15 @@ def reformat(cur_info):
     # route_completion = cur_info['route_completion']
 
     # result_info = [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, accident_x, accident_y, is_bug, route_completion]
+    # hack: backward compatibility that removes the port info in x
 
     x, mask, labels = (
-        cur_info["x"][:-1],
+        cur_info["x"],
         cur_info["mask"],
         cur_info["labels"]
     )
+    if x.shape[0] == len(labels) + 1:
+        x = x[:-1]
 
     return x, objectives, int(is_bug), mask, labels
 
@@ -457,8 +460,8 @@ def is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=True):
     xu = np.concatenate([0.99*np.ones(np.sum(int_inds)), xu[real_inds]])
 
     # hack: backward compatibility with previous run data
-    if cur_X.shape[1] == n-1:
-        cur_X = np.concatenate([cur_X, np.zeros((cur_X.shape[0], 1))], axis=1)
+    # if cur_X.shape[1] == n-1:
+    #     cur_X = np.concatenate([cur_X, np.zeros((cur_X.shape[0], 1))], axis=1)
     cur_X = cur_X[:, variant_fields]
     cur_X = np.concatenate([cur_X[:, int_inds], cur_X[:, real_inds]], axis=1) / (np.abs(xu - xl) + eps)
 
@@ -688,14 +691,12 @@ def get_unique_bugs(
 ):
     p, c, th = unique_coeff
 
-    # hack:
-    if bugs_type_list == []:
-        for i, (x, objectives) in enumerate(zip(X, objectives_list)):
-            if check_bug(objectives):
-                bug_type, _ = classify_bug_type(objectives)
-                bugs_type_list.append(bug_type)
-                bugs.append(x)
-                bugs_inds_list.append(i)
+    for i, (x, objectives) in enumerate(zip(X, objectives_list)):
+        if check_bug(objectives):
+            bug_type, _ = classify_bug_type(objectives)
+            bugs_type_list.append(bug_type)
+            bugs.append(x)
+            bugs_inds_list.append(i)
 
     (
         unique_collision_bugs,

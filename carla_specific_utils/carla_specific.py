@@ -611,6 +611,8 @@ def run_carla_simulation_helper(customized_data, launch_server, episode_max_time
             cur_folder = make_hierarchical_dir([non_bug_folder, str(counter)])
 
 
+        xl = [pair[1] for pair in fuzzing_content.parameters_min_bounds.items()]
+        xu = [pair[1] for pair in fuzzing_content.parameters_max_bounds.items()]
 
         run_info = {
         'episode_max_time':fuzzing_arguments.episode_max_time,
@@ -623,9 +625,8 @@ def run_carla_simulation_helper(customized_data, launch_server, episode_max_time
         'route_str':sim_specific_arguments.route_str,
 
         'waypoints_num_limit':fuzzing_content.search_space_info.waypoints_num_limit, 'num_of_static_max':fuzzing_content.search_space_info.num_of_static_max, 'num_of_pedestrians_max':fuzzing_content.search_space_info.num_of_pedestrians_max, 'num_of_vehicles_max':fuzzing_content.search_space_info.num_of_vehicles_max,
-        # 'xl': problem.xl,
-        # 'xu': problem.xu,
-
+        'xl': xl,
+        'xu': xu,
         'customized_center_transforms':fuzzing_content.customized_center_transforms,
         'parameters_min_bounds':fuzzing_content.parameters_min_bounds,
         'parameters_max_bounds':fuzzing_content.parameters_max_bounds,

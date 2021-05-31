@@ -927,6 +927,7 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_
                 prev_objectives = []
 
             num_of_unique_bugs = []
+            print('prev_X.shape, cur_X.shape', prev_X.shape, cur_X.shape)
             for cutoff in cutoffs:
                 num = count_unique_bug_num(prev_X, cur_X, prev_objectives, cur_objectives, cutoff, label, bug_type, xl, xu, mask, p, c, th)
                 num_of_unique_bugs.append(num)
@@ -1161,7 +1162,7 @@ def count_bug(town_list):
 
 if __name__ == '__main__':
     town07_path_list = [
-    ('ga-un-nn-grad', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_17_22_40_12,50_20_adv_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_12_57_59,50_80_adv_nn_1900_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_700_500nsga2initial_2/2021_02_25_11_25_45,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('ga-un-nn-grad', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_05_30_23_15_47,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_12_57_59,50_80_adv_nn_1900_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_700_500nsga2initial_2/2021_02_25_11_25_45,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_700_500nsga2initial_2/2021_02_25_00_22_45,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
     ('nsga2-sm-un-a', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_00_23_01,50_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_11_27_47,50_80_regression_nn_1900_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_700_500nsga2initial_2/2021_02_25_21_29_48,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
     ('nsga2-sm', ['run_results/nsga2/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_500nsga2initial_1000/2021_02_18_21_53_03,50_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_11_27_54,50_80_regression_nn_1900_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_500nsga2initial_700/2021_02_25_18_13_47,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
     # ('nsga2-dt', ['run_results/nsga2-dt/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_17_56_00', 'run_results/nsga2-dt/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_11_52_50']),
@@ -1292,10 +1293,11 @@ if __name__ == '__main__':
     range_upper_bounds = [15, 15, 15, 15]
     unique_coeffs_list = [[], [], [], []]
 
-    town_path_lists = [town01_path_list]
-    warmup_pths = [[warmup_pth_town01]]
+
+    town_path_lists = [town07_path_list]
+    warmup_pths = [[warmup_pth_town07]]
     bug_types = ['collision']
-    towns = ['town01']
+    towns = ['town07']
     range_upper_bounds = [15]
     unique_coeffs_list = [[]]
 

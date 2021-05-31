@@ -814,8 +814,9 @@ class MySamplingVectorized(Sampling):
                             tmp_off_and_X = tmp_off + X
                         else:
                             tmp_off_and_X = X
-
-
+            print('\n'*10)
+            print('sampled X.shape', X.shape)
+            print('\n'*10)
             return X, sample_time
 
 
@@ -1729,6 +1730,8 @@ class NSGA2_DT(NSGA2):
             xu = self.problem.xu
             p, c, th = self.problem.p, self.problem.c, self.problem.th
             unique_coeff = (p, c, th)
+
+
             self.problem.unique_bugs, (self.problem.bugs, self.problem.bugs_type_list, self.problem.bugs_inds_list, self.problem.interested_unique_bugs) = get_unique_bugs(
                 X, objectives_list, mask, xl, xu, unique_coeff, self.problem.objective_weights, return_mode='return_bug_info', consider_interested_bugs=self.problem.consider_interested_bugs
             )
