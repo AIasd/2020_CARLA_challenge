@@ -598,7 +598,10 @@ def run_carla_simulation_helper(customized_data, launch_server, episode_max_time
     run_info = {}
     if parent_folder:
         is_bug = check_bug(objectives)
-        bug_type, bug_str = classify_bug_type(objectives, object_type)
+        if is_bug:
+            bug_type, bug_str = classify_bug_type(objectives, object_type)
+        else:
+            bug_type, bug_str = None, None
         if is_bug:
             with open(mean_objectives_across_generations_path, 'a') as f_out:
                 f_out.write(str(counter)+','+bug_str+'\n')
@@ -625,8 +628,8 @@ def run_carla_simulation_helper(customized_data, launch_server, episode_max_time
         'route_str':sim_specific_arguments.route_str,
 
         'waypoints_num_limit':fuzzing_content.search_space_info.waypoints_num_limit, 'num_of_static_max':fuzzing_content.search_space_info.num_of_static_max, 'num_of_pedestrians_max':fuzzing_content.search_space_info.num_of_pedestrians_max, 'num_of_vehicles_max':fuzzing_content.search_space_info.num_of_vehicles_max,
-        'xl': xl,
-        'xu': xu,
+        'xl': np.array(xl),
+        'xu': np.array(xu),
         'customized_center_transforms':fuzzing_content.customized_center_transforms,
         'parameters_min_bounds':fuzzing_content.parameters_min_bounds,
         'parameters_max_bounds':fuzzing_content.parameters_max_bounds,

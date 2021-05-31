@@ -322,118 +322,118 @@ def rand_real(rng, low, high):
 
 
 # ---------------- Uniqueness -------------------
-def eliminate_duplicates_for_list(
-    mask, xl, xu, p, c, th, X, prev_unique_bugs, tmp_off=[]
-):
-    new_X = []
-    similar = False
-    for x in X:
-        for x2 in prev_unique_bugs:
-            if is_similar(x, x2, mask, xl, xu, p, c, th):
-                similar = True
-                break
-        if not similar:
-            for x2 in tmp_off:
-                # print(x)
-                # print(x2)
-                # print(mask, xl, xu, p, c, th)
-                # print(len(x), len(x2), len(mask), len(xl), len(xu))
-                if is_similar(x, x2, mask, xl, xu, p, c, th):
-                    similar = True
-                    break
-        if not similar:
-            new_X.append(x)
-    return new_X
+# def eliminate_duplicates_for_list(
+#     mask, xl, xu, p, c, th, X, prev_unique_bugs, tmp_off=[]
+# ):
+#     new_X = []
+#     similar = False
+#     for x in X:
+#         for x2 in prev_unique_bugs:
+#             if is_similar(x, x2, mask, xl, xu, p, c, th):
+#                 similar = True
+#                 break
+#         if not similar:
+#             for x2 in tmp_off:
+#                 # print(x)
+#                 # print(x2)
+#                 # print(mask, xl, xu, p, c, th)
+#                 # print(len(x), len(x2), len(mask), len(xl), len(xu))
+#                 if is_similar(x, x2, mask, xl, xu, p, c, th):
+#                     similar = True
+#                     break
+#         if not similar:
+#             new_X.append(x)
+#     return new_X
 
-def is_similar(
-    x_1,
-    x_2,
-    mask,
-    xl,
-    xu,
-    p,
-    c,
-    th,
-    y_i=-1,
-    y_j=-1,
-    verbose=False,
-    labels=[],
-):
-
-    if y_i == y_j:
-        eps = 1e-8
-
-        # only consider those fields that can change when considering diversity
-        variant_fields = (xu - xl) > eps
-        mask = mask[variant_fields]
-        xl = xl[variant_fields]
-        xu = xu[variant_fields]
-        x_1 = x_1[variant_fields]
-        x_2 = x_2[variant_fields]
-        variant_fields_num = np.sum(variant_fields)
-        if verbose:
-            print(
-                variant_fields_num,
-                "/",
-                len(variant_fields),
-                "fields are used for checking similarity",
-            )
-
-        int_inds = mask == "int"
-        real_inds = mask == "real"
-        # print(int_inds, real_inds)
-        int_diff_raw = np.abs(x_1[int_inds] - x_2[int_inds])
-        int_diff = np.ones(int_diff_raw.shape) * (int_diff_raw > eps)
-
-        real_diff_raw = (
-            np.abs(x_1[real_inds] - x_2[real_inds]) / (np.abs(xu - xl) + eps)[real_inds]
-        )
-        # print(int_diff_raw, real_diff_raw)
-        real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > c)
-
-        diff = np.concatenate([int_diff, real_diff])
-        # print(diff, p)
-        diff_norm = np.linalg.norm(diff, p)
-
-        th_num = np.max([np.round(th * variant_fields_num), 1])
-        equal = diff_norm < th_num
-
-        if verbose:
-            print("diff_norm, th_num", diff_norm, th_num)
-
-    else:
-        equal = False
-    return equal
-
-def is_distinct(x, X, mask, xl, xu, p, c, th, verbose=True):
-    verbose = False
-    if len(X) == 0:
-        return True
-    else:
-        mask_np = np.array(mask)
-        xl_np = np.array(xl)
-        xu_np = np.array(xu)
-        x = np.array(x)
-        X = np.stack(X)
-        for i, x_i in enumerate(X):
-            # if verbose:
-            #     print(i, '- th prev x checking similarity')
-            similar = is_similar(
-                x,
-                x_i,
-                mask_np,
-                xl_np,
-                xu_np,
-                p,
-                c,
-                th,
-                verbose=verbose,
-            )
-            if similar:
-                if verbose:
-                    print("similar with", i)
-                return False
-        return True
+# def is_similar(
+#     x_1,
+#     x_2,
+#     mask,
+#     xl,
+#     xu,
+#     p,
+#     c,
+#     th,
+#     y_i=-1,
+#     y_j=-1,
+#     verbose=False,
+#     labels=[],
+# ):
+#
+#     if y_i == y_j:
+#         eps = 1e-8
+#
+#         # only consider those fields that can change when considering diversity
+#         variant_fields = (xu - xl) > eps
+#         mask = mask[variant_fields]
+#         xl = xl[variant_fields]
+#         xu = xu[variant_fields]
+#         x_1 = x_1[variant_fields]
+#         x_2 = x_2[variant_fields]
+#         variant_fields_num = np.sum(variant_fields)
+#         if verbose:
+#             print(
+#                 variant_fields_num,
+#                 "/",
+#                 len(variant_fields),
+#                 "fields are used for checking similarity",
+#             )
+#
+#         int_inds = mask == "int"
+#         real_inds = mask == "real"
+#         # print(int_inds, real_inds)
+#         int_diff_raw = np.abs(x_1[int_inds] - x_2[int_inds])
+#         int_diff = np.ones(int_diff_raw.shape) * (int_diff_raw > eps)
+#
+#         real_diff_raw = (
+#             np.abs(x_1[real_inds] - x_2[real_inds]) / (np.abs(xu - xl) + eps)[real_inds]
+#         )
+#         # print(int_diff_raw, real_diff_raw)
+#         real_diff = np.ones(real_diff_raw.shape) * (real_diff_raw > c)
+#
+#         diff = np.concatenate([int_diff, real_diff])
+#         # print(diff, p)
+#         diff_norm = np.linalg.norm(diff, p)
+#
+#         th_num = np.max([np.round(th * variant_fields_num), 1])
+#         equal = diff_norm < th_num
+#
+#         if verbose:
+#             print("diff_norm, th_num", diff_norm, th_num)
+#
+#     else:
+#         equal = False
+#     return equal
+#
+# def is_distinct(x, X, mask, xl, xu, p, c, th, verbose=True):
+#     verbose = False
+#     if len(X) == 0:
+#         return True
+#     else:
+#         mask_np = np.array(mask)
+#         xl_np = np.array(xl)
+#         xu_np = np.array(xu)
+#         x = np.array(x)
+#         X = np.stack(X)
+#         for i, x_i in enumerate(X):
+#             # if verbose:
+#             #     print(i, '- th prev x checking similarity')
+#             similar = is_similar(
+#                 x,
+#                 x_i,
+#                 mask_np,
+#                 xl_np,
+#                 xu_np,
+#                 p,
+#                 c,
+#                 th,
+#                 verbose=verbose,
+#             )
+#             if similar:
+#                 if verbose:
+#                     print("similar with", i)
+#                 return False
+#         return True
 
 def is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=True):
     cur_X = np.array(cur_X)
@@ -554,78 +554,78 @@ def eliminate_repetitive_vectorized(cur_X, mask, xl, xu, p, c, th, verbose=True)
 
         return remaining_inds
 
-def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, y=[]):
-
-    # ['forward', 'backward']
-    order = "forward"
-
-    mask_arr = np.array(mask)
-    xl_arr = np.array(xl)
-    xu_arr = np.array(xu)
-    # print(data_points)
-    if len(data_points) == 0:
-        return [], []
-    if len(data_points) == 1:
-        return data_points, [0]
-    else:
-        if order == "backward":
-            distinct_inds = []
-            for i in range(len(data_points) - 1):
-                similar = False
-                for j in range(i + 1, len(data_points)):
-                    if len(y) > 0:
-                        y_i = y[i]
-                        y_j = y[j]
-                    else:
-                        y_i = -1
-                        y_j = -1
-                    similar = is_similar(
-                        data_points[i],
-                        data_points[j],
-                        mask_arr,
-                        xl_arr,
-                        xu_arr,
-                        p,
-                        c,
-                        th,
-                        y_i=y_i,
-                        y_j=y_j,
-                    )
-                    if similar:
-                        break
-                if not similar:
-                    distinct_inds.append(i)
-            distinct_inds.append(len(data_points) - 1)
-        elif order == "forward":
-            distinct_inds = [0]
-            for i in range(1, len(data_points)):
-                similar = False
-                for j in distinct_inds:
-                    if len(y) > 0:
-                        y_i = y[i]
-                        y_j = y[j]
-                    else:
-                        y_i = -1
-                        y_j = -1
-                    similar = is_similar(
-                        data_points[i],
-                        data_points[j],
-                        mask_arr,
-                        xl_arr,
-                        xu_arr,
-                        p,
-                        c,
-                        th,
-                        y_i=y_i,
-                        y_j=y_j,
-                    )
-                    if similar:
-                        # print(i, j)
-                        break
-                if not similar:
-                    distinct_inds.append(i)
-
-    return list(np.array(data_points)[distinct_inds]), distinct_inds
+# def get_distinct_data_points(data_points, mask, xl, xu, p, c, th, y=[]):
+#
+#     # ['forward', 'backward']
+#     order = "forward"
+#
+#     mask_arr = np.array(mask)
+#     xl_arr = np.array(xl)
+#     xu_arr = np.array(xu)
+#     # print(data_points)
+#     if len(data_points) == 0:
+#         return [], []
+#     if len(data_points) == 1:
+#         return data_points, [0]
+#     else:
+#         if order == "backward":
+#             distinct_inds = []
+#             for i in range(len(data_points) - 1):
+#                 similar = False
+#                 for j in range(i + 1, len(data_points)):
+#                     if len(y) > 0:
+#                         y_i = y[i]
+#                         y_j = y[j]
+#                     else:
+#                         y_i = -1
+#                         y_j = -1
+#                     similar = is_similar(
+#                         data_points[i],
+#                         data_points[j],
+#                         mask_arr,
+#                         xl_arr,
+#                         xu_arr,
+#                         p,
+#                         c,
+#                         th,
+#                         y_i=y_i,
+#                         y_j=y_j,
+#                     )
+#                     if similar:
+#                         break
+#                 if not similar:
+#                     distinct_inds.append(i)
+#             distinct_inds.append(len(data_points) - 1)
+#         elif order == "forward":
+#             distinct_inds = [0]
+#             for i in range(1, len(data_points)):
+#                 similar = False
+#                 for j in distinct_inds:
+#                     if len(y) > 0:
+#                         y_i = y[i]
+#                         y_j = y[j]
+#                     else:
+#                         y_i = -1
+#                         y_j = -1
+#                     similar = is_similar(
+#                         data_points[i],
+#                         data_points[j],
+#                         mask_arr,
+#                         xl_arr,
+#                         xu_arr,
+#                         p,
+#                         c,
+#                         th,
+#                         y_i=y_i,
+#                         y_j=y_j,
+#                     )
+#                     if similar:
+#                         # print(i, j)
+#                         break
+#                 if not similar:
+#                     distinct_inds.append(i)
+#
+#     return list(np.array(data_points)[distinct_inds]), distinct_inds
 # ---------------- Uniqueness -------------------
 
 
@@ -646,14 +646,18 @@ def get_if_bug_list(objectives_list):
 def process_specific_bug(
     bug_type_ind, bugs_type_list, bugs_inds_list, bugs, mask, xl, xu, p, c, th
 ):
+    verbose = True
     chosen_bugs = np.array(bugs_type_list) == bug_type_ind
 
     specific_bugs = np.array(bugs)[chosen_bugs]
     specific_bugs_inds_list = np.array(bugs_inds_list)[chosen_bugs]
 
-    unique_specific_bugs, specific_distinct_inds = get_distinct_data_points(
-        specific_bugs, mask, xl, xu, p, c, th
-    )
+    # unique_specific_bugs, specific_distinct_inds = get_distinct_data_points(
+    #     specific_bugs, mask, xl, xu, p, c, th
+    # )
+
+    specific_distinct_inds = is_distinct_vectorized(specific_bugs, [], mask, xl, xu, p, c, th, verbose=verbose)
+    unique_specific_bugs = specific_bugs[specific_distinct_inds]
 
     unique_specific_bugs_inds_list = specific_bugs_inds_list[specific_distinct_inds]
 
@@ -665,7 +669,7 @@ def process_specific_bug(
 
 def classify_bug_type(objectives, object_type=''):
     bug_str = ''
-    bug_type = 0
+    bug_type = 5
     if objectives[0] > 0.1:
         collision_types = {'pedestrian_collision':pedestrian_types, 'car_collision':car_types, 'motercycle_collision':motorcycle_types, 'cyclist_collision':cyclist_types, 'static_collision':static_types}
         for k,v in collision_types.items():
@@ -690,13 +694,14 @@ def get_unique_bugs(
     X, objectives_list, mask, xl, xu, unique_coeff, objective_weights, return_mode='unique_inds_and_interested_and_bugcounts', consider_interested_bugs=1, bugs_type_list=[], bugs=[], bugs_inds_list=[]
 ):
     p, c, th = unique_coeff
-
-    for i, (x, objectives) in enumerate(zip(X, objectives_list)):
-        if check_bug(objectives):
-            bug_type, _ = classify_bug_type(objectives)
-            bugs_type_list.append(bug_type)
-            bugs.append(x)
-            bugs_inds_list.append(i)
+    # hack:
+    if len(bugs) == 0:
+        for i, (x, objectives) in enumerate(zip(X, objectives_list)):
+            if check_bug(objectives):
+                bug_type, _ = classify_bug_type(objectives)
+                bugs_type_list.append(bug_type)
+                bugs.append(x)
+                bugs_inds_list.append(i)
 
     (
         unique_collision_bugs,
@@ -727,19 +732,9 @@ def get_unique_bugs(
         4, bugs_type_list, bugs_inds_list, bugs, mask, xl, xu, p, c, th
     )
 
-    unique_bugs = (
-        unique_collision_bugs
-        + unique_offroad_bugs
-        + unique_wronglane_bugs
-        + unique_redlight_bugs
-    )
+    unique_bugs = unique_collision_bugs + unique_offroad_bugs + unique_wronglane_bugs + unique_redlight_bugs
     unique_bugs_num = len(unique_bugs)
-    unique_bugs_inds_list = (
-        unique_collision_bugs_inds_list
-        + unique_offroad_bugs_inds_list
-        + unique_wronglane_bugs_inds_list
-        + unique_redlight_bugs_inds_list
-    )
+    unique_bugs_inds_list = unique_collision_bugs_inds_list + unique_offroad_bugs_inds_list + unique_wronglane_bugs_inds_list + unique_redlight_bugs_inds_list
 
     if consider_interested_bugs:
         collision_activated = np.sum(objective_weights[:3] != 0) > 0

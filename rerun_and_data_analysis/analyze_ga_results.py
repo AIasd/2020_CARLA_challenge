@@ -21,7 +21,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter
 from sklearn.manifold import TSNE
-from customized_utils import  get_distinct_data_points, check_bug, filter_critical_regions, get_sorted_subfolders, load_data, get_picklename, is_distinct_vectorized
+from customized_utils import  check_bug, filter_critical_regions, get_sorted_subfolders, load_data, get_picklename, is_distinct_vectorized
 from ga_fuzzing import default_objectives
 from matplotlib.lines import Line2D
 
@@ -774,7 +774,7 @@ def count_unique_bug_num(prev_X, cur_X, prev_objectives, cur_objectives, cutoff,
     # if label == 'ga-un':
     #     cutoff_start += warmup_pth_cutoff
     #     cutoff += warmup_pth_cutoff
-
+    verbose = True
     prev_X_bug = []
     bug_num = 0
     if bug_type == 'collision':
@@ -783,7 +783,8 @@ def count_unique_bug_num(prev_X, cur_X, prev_objectives, cur_objectives, cutoff,
             prev_X_bug = prev_X[prev_inds]
         cur_inds = cur_objectives[cutoff_start:cutoff, 0] > 0.1
         cur_X_bug = cur_X[cutoff_start:cutoff][cur_inds]
-        inds = is_distinct_vectorized(cur_X_bug, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+        print('prev X bug num:', len(is_distinct_vectorized(prev_X_bug, [], mask, xl, xu, p, c, th, verbose=verbose)))
+        inds = is_distinct_vectorized(cur_X_bug, prev_X_bug, mask, xl, xu, p, c, th, verbose=verbose)
         bug_num += len(inds)
         print('all bug num: ', len(cur_X_bug))
 
@@ -794,7 +795,7 @@ def count_unique_bug_num(prev_X, cur_X, prev_objectives, cur_objectives, cutoff,
 
         cur_inds = cur_objectives[cutoff_start:cutoff, -3] == 1
         cur_X_bug_1 = cur_X[cutoff_start:cutoff][cur_inds]
-        inds = is_distinct_vectorized(cur_X_bug_1, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+        inds = is_distinct_vectorized(cur_X_bug_1, prev_X_bug, mask, xl, xu, p, c, th, verbose=verbose)
         bug_num += len(inds)
 
         prev_inds = prev_objectives[:, -2] == 1
@@ -802,7 +803,7 @@ def count_unique_bug_num(prev_X, cur_X, prev_objectives, cur_objectives, cutoff,
         prev_X_bug = prev_X[prev_inds]
         cur_X_bug_2 = cur_X[cutoff_start:cutoff][cur_inds]
 
-        inds = is_distinct_vectorized(cur_X_bug_2, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+        inds = is_distinct_vectorized(cur_X_bug_2, prev_X_bug, mask, xl, xu, p, c, th, verbose=verbose)
         bug_num += len(inds)
 
         print('all bug num: ', len(cur_X_bug_1)+len(cur_X_bug_2))
@@ -814,7 +815,7 @@ def count_unique_bug_num(prev_X, cur_X, prev_objectives, cur_objectives, cutoff,
         cur_inds = cur_objectives[cutoff_start:cutoff, 0] > 0.1
 
         cur_X_bug_1 = cur_X[cutoff_start:cutoff][cur_inds]
-        inds = is_distinct_vectorized(cur_X_bug_1, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+        inds = is_distinct_vectorized(cur_X_bug_1, prev_X_bug, mask, xl, xu, p, c, th, verbose=verbose)
         bug_num += len(inds)
 
         if len(prev_X) > 0:
@@ -824,7 +825,7 @@ def count_unique_bug_num(prev_X, cur_X, prev_objectives, cur_objectives, cutoff,
         cur_inds = cur_objectives[cutoff_start:cutoff, -3] == 1
 
         cur_X_bug_2 = cur_X[cutoff_start:cutoff][cur_inds]
-        inds = is_distinct_vectorized(cur_X_bug_2, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+        inds = is_distinct_vectorized(cur_X_bug_2, prev_X_bug, mask, xl, xu, p, c, th, verbose=verbose)
         bug_num += len(inds)
 
         prev_inds = prev_objectives[:, -2] == 1
@@ -832,7 +833,7 @@ def count_unique_bug_num(prev_X, cur_X, prev_objectives, cur_objectives, cutoff,
         prev_X_bug = prev_X[prev_inds]
         cur_X_bug_3 = cur_X[cutoff_start:cutoff][cur_inds]
 
-        inds = is_distinct_vectorized(cur_X_bug_3, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+        inds = is_distinct_vectorized(cur_X_bug_3, prev_X_bug, mask, xl, xu, p, c, th, verbose=verbose)
         bug_num += len(inds)
 
         # prev_inds = prev_objectives[:, -1] == 1
@@ -840,7 +841,7 @@ def count_unique_bug_num(prev_X, cur_X, prev_objectives, cur_objectives, cutoff,
         # prev_X_bug = prev_X[prev_inds]
         # cur_X_bug_4 = cur_X[cutoff_start:cutoff][cur_inds]
         #
-        # inds = is_distinct_vectorized(cur_X_bug_4, prev_X_bug, mask, xl, xu, p, c, th, verbose=False)
+        # inds = is_distinct_vectorized(cur_X_bug_4, prev_X_bug, mask, xl, xu, p, c, th, verbose=verbose)
         # bug_num += len(inds)
 
         print('collision:', len(cur_X_bug_1))
@@ -886,18 +887,25 @@ def draw_unique_bug_num_over_simulations(path_list, warmup_pth_list, warmup_pth_
             prev_objectives = []
 
 
-        pickle_filename = get_picklename(pth_list[0])
-        with open(pickle_filename, 'rb') as f_in:
-            d = pickle.load(f_in)
-            xl = d['xl']
-            xu = d['xu']
-            mask = d['mask']
 
-
-        print('-'*30, label, '-'*30)
-        print('len(prev_X)', len(prev_X))
         num_of_unique_bugs_list = []
         for pth in pth_list:
+            pickle_filename = get_picklename(pth)
+            with open(pickle_filename, 'rb') as f_in:
+                d = pickle.load(f_in)
+                xl = d['xl']
+                xu = d['xu']
+                mask = d['mask']
+
+
+            print('-'*30, label, '-'*30)
+            print('labels', d['labels'])
+            print('xl', xl)
+            print('xu', xu)
+            print('len(prev_X)', len(prev_X))
+            print('len(xu-xl>0)', np.sum((np.array(xu)-np.array(xl))>1e-7))
+
+
             print('-'*20, 'pth', pth, '-'*20)
             if 'dt' in label:
                 cur_X = []
@@ -1162,7 +1170,7 @@ def count_bug(town_list):
 
 if __name__ == '__main__':
     town07_path_list = [
-    ('ga-un-nn-grad', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_05_30_23_15_47,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_12_57_59,50_80_adv_nn_1900_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_700_500nsga2initial_2/2021_02_25_11_25_45,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_700_500nsga2initial_2/2021_02_25_00_22_45,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('ga-un-nn-grad', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_05_31_13_55_24,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_12_57_59,50_80_adv_nn_1900_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_700_500nsga2initial_2/2021_02_25_11_25_45,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_700_500nsga2initial_2/2021_02_25_00_22_45,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
     ('nsga2-sm-un-a', ['run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_00_23_01,50_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_11_27_47,50_80_regression_nn_1900_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_700_500nsga2initial_2/2021_02_25_21_29_48,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
     ('nsga2-sm', ['run_results/nsga2/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_500nsga2initial_1000/2021_02_18_21_53_03,50_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_11_27_54,50_80_regression_nn_1900_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_500nsga2initial_700/2021_02_25_18_13_47,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
     # ('nsga2-dt', ['run_results/nsga2-dt/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_17_56_00', 'run_results/nsga2-dt/town07_front_0/go_straight_town07/lbc/new_0.1_0.5_1900_500nsga2initial/2021_02_20_11_52_50']),
@@ -1170,11 +1178,11 @@ if __name__ == '__main__':
     ]
 
     town01_path_list = [
-    ('ga-un-nn-grad', ['run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_18_16_32_41,50_20_adv_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_09_14_24,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_3/2021_02_25_20_40_41,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_4/2021_05_30_02_53_30,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
-    ('nsga2-sm-un-a', ['run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_10_45_59,52_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_00_19_26,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_3/2021_02_23_13_07_35,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_4/2021_05_30_02_53_14,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
-    ('nsga2-sm', ['run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_10_46_11,50_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_18_41_01,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_3/2021_02_25_20_40_28,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_4/2021_05_30_02_53_19,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
+    ('ga-un-nn-grad', ['run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_18_16_32_41,50_20_adv_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_09_14_24,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_3/2021_02_25_20_40_41,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/2021_05_31_15_14_39,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('nsga2-sm-un-a', ['run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_10_45_59,52_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_00_19_26,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_3/2021_02_23_13_07_35,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', 'run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_4/2021_05_30_23_36_23,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01']),
+    ('nsga2-sm', ['run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_10_46_11,50_20_regression_nn_1000_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_18_41_01,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_3/2021_02_25_20_40_28,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01', 'run_results/nsga2/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_4/2021_05_30_23_36_33,50_40_regression_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_0_eps_1.01']),
     # ('nsga2-dt', ['run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial/2021_02_19_17_55_52']),
-    ('nsga2-dt', ['run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial/2021_02_23_08_49_48', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_13_53_07', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_4/2021_02_25_20_40_35',])
+    ('nsga2-dt', ['run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial/2021_02_23_08_49_48', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_2/2021_02_23_13_53_07', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_4/2021_02_25_20_40_35', 'run_results/nsga2-dt/town01_left_0/turn_left_town01/lbc/new_new_0.1_0.5_1000_500nsga2initial_5/2021_05_30_23_36_38'])
     ]
 
     town03_out_of_road_path_list = [
@@ -1300,6 +1308,15 @@ if __name__ == '__main__':
     towns = ['town07']
     range_upper_bounds = [15]
     unique_coeffs_list = [[]]
+
+    town_path_lists = [town01_path_list]
+    warmup_pths = [[warmup_pth_town01]]
+    bug_types = ['collision']
+    towns = ['town01']
+    range_upper_bounds = [15]
+    unique_coeffs_list = [[]]
+
+
 
     # town_path_lists = [town07_path_list_500randominitial]
     # warmup_pths = [warmup_pth_town07]

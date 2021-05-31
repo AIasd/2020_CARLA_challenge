@@ -99,7 +99,7 @@ def setup_bounds_mask_labels_distributions_stage1(use_fine_grained_weather=False
         "waypoints_num_limit": waypoints_num_limit,
     }
 
-    general_min = [0.9, 0, 0, 0, 0]
+    general_min = [0.5, 0, 0, 0, 0]
     general_max = [0.9, fixed_hyperparameters["num_of_weathers"] - 1, 2, 2, 2]
     general_mask = ["real", "int", "int", "int", "int"]
 
