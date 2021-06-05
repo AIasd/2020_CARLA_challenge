@@ -256,16 +256,16 @@ def load_data(subfolders):
     return data_list, np.array(is_bug_list), np.array(objectives_list), mask, labels, cur_info
 
 def get_picklename(parent_folder):
-    pickle_filename = parent_folder + "/non_bugs/"
-    if not os.path.isdir(pickle_filename):
-        pickle_filename = parent_folder + "/0/non_bugs/"
+    pickle_folder = parent_folder + "/bugs/"
+    if not os.path.isdir(pickle_folder):
+        pickle_folder = parent_folder + "/0/bugs/"
     i = 1
-    while True:
-        if os.path.isdir(pickle_filename + str(i)):
-            pickle_filename = pickle_filename + str(i) + "/cur_info.pickle"
+    while i < len(os.listdir(pickle_folder)):
+        if os.path.isdir(pickle_folder + str(i)):
+            pickle_folder = pickle_folder + str(i) + "/cur_info.pickle"
             break
         i += 1
-    return pickle_filename
+    return pickle_folder
 
 def reformat(cur_info):
     objectives = cur_info["objectives"]
