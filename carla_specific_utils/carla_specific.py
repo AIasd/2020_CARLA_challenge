@@ -644,7 +644,13 @@ def run_carla_simulation_helper(customized_data, launch_server, episode_max_time
         'loc': loc,
         'object_type': object_type,
         'route_completion': route_completion,
-        'all_final_generated_transforms': all_final_generated_transforms}
+        'all_final_generated_transforms': all_final_generated_transforms,
+        'fuzzing_content': fuzzing_content,
+        'fuzzing_arguments': fuzzing_arguments,
+        'sim_specific_arguments': sim_specific_arguments,
+        'dt_arguments': dt_arguments,
+        'tmp_save_path': tmp_save_path
+        }
 
 
         print('counter:', counter, 'bug:', is_bug, 'objectives:', objectives)

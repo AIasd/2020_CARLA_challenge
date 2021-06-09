@@ -1,19 +1,31 @@
+import sys
 import os
-from ga_fuzzing import run_simulation
-from object_types import pedestrian_types, vehicle_types, static_types, vehicle_colors
+
+sys.path.append('pymoo')
+carla_root = '../carla_0994_no_rss'
+sys.path.append(carla_root+'/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg')
+sys.path.append(carla_root+'/PythonAPI/carla')
+sys.path.append(carla_root+'/PythonAPI')
+
+sys.path.append('leaderboard')
+sys.path.append('leaderboard/team_code')
+sys.path.append('scenario_runner')
+sys.path.append('carla_project')
+sys.path.append('carla_project/src')
+
+sys.path.append('fuzzing_utils')
+sys.path.append('carla_specific_utils')
+os.system('export PYTHONPATH=/home/zhongzzy9/anaconda3/envs/carla99/bin/python')
+
+
+
 import random
 import pickle
+import atexit
 import numpy as np
 from datetime import datetime
-from customized_utils import make_hierarchical_dir, convert_x_to_customized_data, exit_handler, customized_routes, parse_route_and_scenario, check_bug, get_labels_to_encode, encode_fields, decode_fields, remove_fields_not_changing, recover_fields_not_changing, encode_bounds, max_one_hot_op, customized_standardize, customized_inverse_standardize, customized_fit, get_unique_bugs, get_if_bug_list, process_X, inverse_process_X, get_sorted_subfolders, load_data, get_picklename
-import atexit
-
 import traceback
 from distutils.dir_util import copy_tree
-
-
-
-
 import json
 import torch
 import torch.nn as nn
@@ -21,16 +33,49 @@ import torch.optim as optim
 import torch.utils.data as Data
 import torchvision.utils
 from torchvision import models
+import argparse
+
+from carla_specific_utils.carla_specific import run_carla_simulation
+from carla_specific_utils.object_types import pedestrian_types, vehicle_types, static_types, vehicle_colors
+
+from customized_utils import make_hierarchical_dir, exit_handler, check_bug, get_unique_bugs, get_if_bug_list, process_X, inverse_process_X, get_sorted_subfolders, load_data, get_picklename
+
+
+
+
+
+
+
 
 
 from pgd_attack import train_net, pgd_attack, extract_embed
 
-import argparse
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p','--port', type=int, default=2045, help='TCP port(s) to listen to')
+parser.add_argument('--ego_car_model', type=str, default='auto_pilot', help='model to rerun chosen scenarios')
+parser.add_argument('--task', type=str, default='rerun', help='task to execute')
+parser.add_argument('--rerun_mode', type=str, default='train', help='only valid when task==rerun, need to set to either train or test')
+parser.add_argument('--rerun_data_categories', type=str, default='bugs', help='only valid when task==rerun, need to set to either bugs or non_bugs')
+parser.add_argument('--parent_folder', type=str, default='run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_06_08_23_57_00,2_2_adv_nn_4_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_5_200_200_only_unique_1_eps_1.01', help='the parent folder consisting of fuzzing data')
+parser.add_argument('--record_every_n_step', type=int, default=5, help='how many frames to save camera images')
+
+
 arguments = parser.parse_args()
 port = arguments.port
+# ['lbc_augment', 'auto_pilot']
+ego_car_model = arguments.ego_car_model
+# ['rerun', 'adv', 'tsne']
+task = arguments.task
+# ['train', 'test']
+rerun_mode = arguments.rerun_mode
+# ['bugs', 'non_bugs']
+rerun_data_categories = arguments.rerun_data_categories
+parent_folder = arguments.parent_folder
+record_every_n_step = arguments.record_every_n_step
+
+assert os.path.isdir(parent_folder), parent_folder+' does not exist locally'
 
 
 os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
@@ -45,8 +90,8 @@ torch.backends.cudnn.benchmark = False
 os.environ['HAS_DISPLAY'] = '1'
 # '0,1'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-# 'lbc_augment', 'auto_pilot'
-ego_car_model = 'lbc_augment_ped'
+
+
 is_save = True
 
 
@@ -253,88 +298,54 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
         launch_server = True
     else:
         launch_server = False
+    counter = ind
 
     with open(pickle_filename, 'rb') as f_in:
         pf = pickle.load(f_in)
-        d = pf['info']
 
-        if len(x) == 0:
-            x = d['x']
-            # TBD: save port separately so we won't need to repetitvely save cur_info in ga_fuzzing
-            x[-1] = port
-
-        waypoints_num_limit = d['waypoints_num_limit']
-        max_num_of_static = d['num_of_static_max']
-        max_num_of_pedestrians = d['num_of_pedestrians_max']
-        max_num_of_vehicles = d['num_of_vehicles_max']
-        customized_center_transforms = d['customized_center_transforms']
-
-        if 'parameters_min_bounds' in d:
-            parameters_min_bounds = d['parameters_min_bounds']
-            parameters_max_bounds = d['parameters_max_bounds']
-        else:
-            parameters_min_bounds = None
-            parameters_max_bounds = None
+        port = pf['port']
+        x = pf['x']
+        fuzzing_content = pf['fuzzing_content']
+        fuzzing_arguments = pf['fuzzing_arguments']
+        sim_specific_arguments = pf['sim_specific_arguments']
+        dt_arguments = pf['dt_arguments']
 
 
-        episode_max_time = 60
-        call_from_dt = d['call_from_dt']
-        town_name = d['town_name']
-        scenario = d['scenario']
-        direction = d['direction']
-        route_str = d['route_str']
         route_type = d['route_type']
+        route_str = d['route_str']
+        ego_car_model = d['ego_car_model']
 
         mask = pf['mask']
         labels = pf['labels']
 
+        tmp_save_path = pf['tmp_save_path']
 
-    folder = '_'.join([route_type, scenario, ego_car_model, route_str])
-    route_info = customized_routes[route_type]
-    location_list = route_info['location_list']
-    parse_route_and_scenario(location_list, town_name, scenario, direction, route_str, scenario_file)
+        fuzzing_arguments.record_every_n_step = record_every_n_step
 
-
+    folder = '_'.join([route_type, route_str, ego_car_model])
 
 
-    customized_data = convert_x_to_customized_data(x, waypoints_num_limit, max_num_of_static, max_num_of_pedestrians, max_num_of_vehicles, static_types, pedestrian_types, vehicle_types, vehicle_colors, customized_center_transforms, parameters_min_bounds, parameters_max_bounds)
-    print('x', x)
-
-
-    objectives, loc, object_type, route_completion, info, save_path = run_simulation(customized_data, launch_server, episode_max_time, call_from_dt, town_name, scenario, direction, route_str, scenario_file, ego_car_model, rerun=True, record_every_n_step=record_every_n_step)
-    print('\n'*10, 'save_path', save_path, '\n'*10)
-
-
+    objectives, run_info = run_carla_simulation(x, fuzzing_content, fuzzing_arguments, sim_specific_arguments, dt_arguments, launch_server, counter, port)
 
     is_bug = int(check_bug(objectives))
 
     # save data
     if is_save:
-        rerun_bugs_folder = make_hierarchical_dir([rerun_save_folder, folder, 'rerun_bugs'])
-        rerun_non_bugs_folder = make_hierarchical_dir([rerun_save_folder, folder, 'rerun_non_bugs'])
-        print('rerun_bugs_folder',rerun_bugs_folder)
         print('sub_folder_name', sub_folder_name)
         if is_bug:
-
+            rerun_folder = make_hierarchical_dir([rerun_save_folder, folder, 'rerun_bugs'])
             print('\n'*3, 'rerun also causes a bug!!!', '\n'*3)
-
-            try:
-                new_path = os.path.join(rerun_bugs_folder, sub_folder_name)
-                copy_tree(save_path, new_path)
-            except:
-                print('fail to copy from', save_path)
-                traceback.print_exc()
         else:
-            try:
-                new_path = os.path.join(rerun_non_bugs_folder, sub_folder_name)
-                copy_tree(save_path, new_path)
-            except:
-                print('fail to copy from', save_path)
-                traceback.print_exc()
+            rerun_folder = make_hierarchical_dir([rerun_save_folder, folder, 'rerun_non_bugs'])
 
+        try:
+            new_path = os.path.join(rerun_bugs_folder, sub_folder_name)
+            copy_tree(tmp_save_path, new_path)
+        except:
+            print('fail to copy from', tmp_save_path)
+            traceback.print_exc()
 
-        cur_info = {'x':x, 'objectives':objectives, 'labels':labels, 'mask':mask, 'is_bug':is_bug}
-
+        cur_info = {'x':x, 'objectives':objectives, 'labels':run_info['labels'], 'mask':run_info['mask'], 'is_bug':is_bug}
 
         with open(new_path+'/'+'cur_info.pickle', 'wb') as f_out:
             pickle.dump(cur_info, f_out)
@@ -352,7 +363,7 @@ def rerun_list_of_scenarios(parent_folder, rerun_save_folder, scenario_file, dat
 
 
     if data == 'bugs':
-        cur_X, _, cur_objectives, _, _ = load_data(subfolder_names)
+        cur_X, _, cur_objectives, _, _, _ = load_data(subfolder_names)
         cur_X = np.array(cur_X)
         from customized_utils import get_event_location_and_object_type
         cur_locations, cur_object_type_list = get_event_location_and_object_type(subfolder_names, verbose=False)
@@ -446,13 +457,12 @@ if __name__ == '__main__':
 
     atexit.register(exit_handler, [port])
 
-    parent_folder = 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc_augment_ped/2021_04_04_22_48_47,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'
+
 
 
     # 'run_results/nsga2-un/town05_left_0/turn_left_town05/lbc/2021_04_02_15_40_29,50_25_none_1000_100_1.01_-4_0.9_coeff_0.0_0.2_0.2__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01'
 
-    # ['rerun', 'adv', 'tsne']
-    task = 'rerun'
+
 
     unique_coeff = [0, 0.2, 0.2]
 
@@ -478,15 +488,10 @@ if __name__ == '__main__':
 
 
     if task == 'rerun':
-        # ['bugs', 'non_bugs']
-        data = 'bugs'
-        # ['train', 'test', 'all']
-        mode = 'train'
-        print('ego_car_model', ego_car_model, 'data', data, 'mode', mode)
-        rerun_save_folder = make_hierarchical_dir(['rerun', data, mode, time_str])
-        record_every_n_step = 5
+        print('ego_car_model', ego_car_model, 'data', rerun_data_categories, 'mode', rerun_mode)
+        rerun_save_folder = make_hierarchical_dir(['rerun', rerun_data_categories, rerun_mode, time_str])
 
-        rerun_list_of_scenarios(parent_folder, rerun_save_folder, scenario_file, data, mode, ego_car_model, record_every_n_step=record_every_n_step)
+        rerun_list_of_scenarios(parent_folder, rerun_save_folder, scenario_file, rerun_data_categories, rerun_mode, ego_car_model, record_every_n_step=record_every_n_step)
 
     elif task == 'adv':
 

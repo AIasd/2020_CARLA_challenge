@@ -223,6 +223,8 @@ def get_sorted_subfolders(parent_folder, folder_type='all'):
         sub_folders = [
             os.path.join(non_bug_folder, sub_name) for sub_name in os.listdir(non_bug_folder)
         ]
+    else:
+        raise
 
     ind_sub_folder_list = []
     for sub_folder in sub_folders:

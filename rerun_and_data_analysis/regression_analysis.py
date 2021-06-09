@@ -238,6 +238,10 @@ python ga_fuzzing.py -p 2018 -s 8792 -d 8793 --n_gen 40 --pop_size 50 -r 'town03
 
 
 
+########################### testing ##################################
+
+
+python ga_fuzzing.py -p 2018 -s 8792 -d 8793 --n_gen 2 --pop_size 2 -r 'town07_front_0' -c 'go_straight_town07' --algorithm_name nsga2-un --has_run_num 4 --objective_weights -1 1 1 0 0 0 0 0 0 0 --rank_mode adv_nn --warm_up_path 'run_results/seeds/nsga2_un_1500/town07_front_0/2021_02_17_11_54_52,50_30_none_1500_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01' --warm_up_len 500 --check_unique_coeff 0 0.1 0.5 --n_offspring 5
 
 
 #############################################################

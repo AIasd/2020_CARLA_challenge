@@ -122,11 +122,21 @@ CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir pat
 ```
 
 ## Model Fixing
+### Rerun Found Bugs
+```
+CUDA_VISIBLE_DEVICES=0 python rerun_and_data_analysis/rerun_scenario.py --parent_folder path/to/data/for/finetuning
+```
 
-
+### Finetuning
 Stage 2 finetuning:
 ```
 CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir path/to/data --teacher_path path/to/model/from/stage1
+```
+
+### Test Fixed Model
+In `carla_specific_utils/carla_specific.py`, set the path `arguments.agent_config` under the condition `elif ego_car_model == 'lbc_augment'` to be that of the newly fine-tuned model.
+```
+CUDA_VISIBLE_DEVICES=0 python rerun_and_data_analysis/rerun_scenario.py --parent_folder path/to/data/for/finetuning --rerun_mode test --ego_car_model lbc_augment
 ```
 
 
