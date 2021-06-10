@@ -649,7 +649,8 @@ def run_carla_simulation_helper(customized_data, launch_server, episode_max_time
         'fuzzing_arguments': fuzzing_arguments,
         'sim_specific_arguments': sim_specific_arguments,
         'dt_arguments': dt_arguments,
-        'tmp_save_path': tmp_save_path
+        'tmp_save_path': tmp_save_path,
+        'port': customized_data['port']
         }
 
 

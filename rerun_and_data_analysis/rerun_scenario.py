@@ -35,8 +35,8 @@ import torchvision.utils
 from torchvision import models
 import argparse
 
-from carla_specific_utils.carla_specific import run_carla_simulation
-from carla_specific_utils.object_types import pedestrian_types, vehicle_types, static_types, vehicle_colors
+from carla_specific import run_carla_simulation, get_event_location_and_object_type
+from object_types import pedestrian_types, vehicle_types, static_types, vehicle_colors
 
 from customized_utils import make_hierarchical_dir, exit_handler, check_bug, get_unique_bugs, get_if_bug_list, process_X, inverse_process_X, get_sorted_subfolders, load_data, get_picklename
 
@@ -58,7 +58,7 @@ parser.add_argument('--ego_car_model', type=str, default='auto_pilot', help='mod
 parser.add_argument('--task', type=str, default='rerun', help='task to execute')
 parser.add_argument('--rerun_mode', type=str, default='train', help='only valid when task==rerun, need to set to either train or test')
 parser.add_argument('--rerun_data_categories', type=str, default='bugs', help='only valid when task==rerun, need to set to either bugs or non_bugs')
-parser.add_argument('--parent_folder', type=str, default='run_results/nsga2-un/town07_front_0/go_straight_town07/lbc/2021_06_08_23_57_00,2_2_adv_nn_4_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_5_200_200_only_unique_1_eps_1.01', help='the parent folder consisting of fuzzing data')
+parser.add_argument('--parent_folder', type=str, default='run_results/nsga2-un/town01_left_0/turn_left_town01/lbc/new_0.1_0.5_1000_500nsga2initial_6/2021_06_10_00_31_30,50_40_adv_nn_700_100_1.01_-4_0.9_coeff_0.0_0.1_0.5__one_output_n_offsprings_300_200_200_only_unique_1_eps_1.01', help='the parent folder consisting of fuzzing data')
 parser.add_argument('--record_every_n_step', type=int, default=5, help='how many frames to save camera images')
 
 
@@ -303,7 +303,8 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
     with open(pickle_filename, 'rb') as f_in:
         pf = pickle.load(f_in)
 
-        port = pf['port']
+        # port = pf['port']
+        port = 2099
         x = pf['x']
         fuzzing_content = pf['fuzzing_content']
         fuzzing_arguments = pf['fuzzing_arguments']
@@ -311,9 +312,9 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
         dt_arguments = pf['dt_arguments']
 
 
-        route_type = d['route_type']
-        route_str = d['route_str']
-        ego_car_model = d['ego_car_model']
+        route_type = pf['route_type']
+        route_str = pf['route_str']
+        ego_car_model = pf['ego_car_model']
 
         mask = pf['mask']
         labels = pf['labels']
@@ -325,6 +326,10 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
     folder = '_'.join([route_type, route_str, ego_car_model])
 
 
+    parent_folder = make_hierarchical_dir([rerun_save_folder, folder])
+    fuzzing_arguments.parent_folder = parent_folder
+    fuzzing_arguments.mean_objectives_across_generations_path = os.path.join(parent_folder, 'mean_objectives_across_generations.txt')
+
     objectives, run_info = run_carla_simulation(x, fuzzing_content, fuzzing_arguments, sim_specific_arguments, dt_arguments, launch_server, counter, port)
 
     is_bug = int(check_bug(objectives))
@@ -333,17 +338,18 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
     if is_save:
         print('sub_folder_name', sub_folder_name)
         if is_bug:
-            rerun_folder = make_hierarchical_dir([rerun_save_folder, folder, 'rerun_bugs'])
+            rerun_folder = make_hierarchical_dir([parent_folder, 'rerun_bugs'])
             print('\n'*3, 'rerun also causes a bug!!!', '\n'*3)
         else:
-            rerun_folder = make_hierarchical_dir([rerun_save_folder, folder, 'rerun_non_bugs'])
+            rerun_folder = make_hierarchical_dir([parent_folder, 'rerun_non_bugs'])
 
         try:
-            new_path = os.path.join(rerun_bugs_folder, sub_folder_name)
+            new_path = os.path.join(rerun_folder, sub_folder_name)
             copy_tree(tmp_save_path, new_path)
         except:
             print('fail to copy from', tmp_save_path)
             traceback.print_exc()
+            raise
 
         cur_info = {'x':x, 'objectives':objectives, 'labels':run_info['labels'], 'mask':run_info['mask'], 'is_bug':is_bug}
 
@@ -365,7 +371,7 @@ def rerun_list_of_scenarios(parent_folder, rerun_save_folder, scenario_file, dat
     if data == 'bugs':
         cur_X, _, cur_objectives, _, _, _ = load_data(subfolder_names)
         cur_X = np.array(cur_X)
-        from customized_utils import get_event_location_and_object_type
+
         cur_locations, cur_object_type_list = get_event_location_and_object_type(subfolder_names, verbose=False)
 
         collision_inds = cur_objectives[:, 0] > 0.01
