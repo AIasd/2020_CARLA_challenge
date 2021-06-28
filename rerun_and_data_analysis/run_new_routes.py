@@ -50,7 +50,7 @@ import carla
 from leaderboard.fuzzing import LeaderboardEvaluator
 from leaderboard.utils.route_parser import RouteParser
 from leaderboard.utils.statistics_manager import StatisticsManager
-from leaderboard.customized.object_params import Static, Pedestrian, Vehicle
+from carla_specific_utils.object_params import Static, Pedestrian, Vehicle
 
 import traceback
 import json

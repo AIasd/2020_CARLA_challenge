@@ -17,18 +17,7 @@ def cohen_d(x,y):
     dof = nx + ny - 2
     return (mean(x) - mean(y)) / sqrt(((nx-1)*std(x, ddof=1) ** 2 + (ny-1)*std(y, ddof=1) ** 2) / dof)
 
-# town03 4.8
-x3 = [156, 138, 148]
-y3 = [111, 110, 96]
-# town05 3.6
-x5 = [555,557,546]
-y5 = [517,506,479]
-# town01 8.1
-x1 = [669,675,673]
-y1 = [555,546,511]
-# town07 12.6
-x7 = [409,390,386]
-y7 = [286,281,284]
+
 
 
 
@@ -71,8 +60,22 @@ def VD_A(treatment: List[float], control: List[float]):
 
 
 if __name__ == '__main__':
+    # town03 3.75
+    x3 = [156,138,148,167,154,173]
+    y3 = [111,110,96,123,107,125]
+    # town05 3.67
+    x5 = [555,557,546,559,551,549]
+    y5 = [517,506,479,523,521,506]
+    # town01 10.52
+    x1 = [669,675,673,676,679,681]
+    y1 = [555,546,511,527,542,510]
+    # town07 7.08
+    x7 = [409,390,386,368,424,391]
+    y7 = [286,281,284,293,292,263]
+
     x = x3
     y = y3
+    print(x, y)
     print ("cohen d = ", cohen_d(x, y))
     print('Wilcoxon rank-sum statistics p value', ranksums(x, y))
     print('Vargha-Delaney effect size', VD_A(x, y))

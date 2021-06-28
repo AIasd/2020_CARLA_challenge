@@ -1,6 +1,6 @@
 import carla
 
-# pedestrian types
+
 WEATHERS = [
         carla.WeatherParameters.ClearNoon,
         carla.WeatherParameters.ClearSunset,

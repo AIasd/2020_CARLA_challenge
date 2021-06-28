@@ -12,12 +12,12 @@ from datetime import datetime
 
 from leaderboard.fuzzing import LeaderboardEvaluator
 from leaderboard.utils.statistics_manager import StatisticsManager
-from customized_utils import arguments_info, make_hierarchical_dir, check_bug, classify_bug_type
+from customized_utils import arguments_info, make_hierarchical_dir, check_bug, classify_bug_type, emptyobject
 
 
 from scene_configs import customized_bounds_and_distributions, customized_routes
-from setup_labels_and_bounds import emptyobject, generate_fuzzing_content
-from leaderboard.customized.object_params import Static, Pedestrian, Vehicle
+from setup_labels_and_bounds import generate_fuzzing_content
+from carla_specific_utils.object_params import Static, Pedestrian, Vehicle
 
 
 from setup_labels_and_bounds import static_general_labels, pedestrian_general_labels, vehicle_general_labels, waypoint_labels, waypoints_num_limit
@@ -308,8 +308,8 @@ def convert_x_to_customized_data(
         "add_center": True,
         "port": port,
         "customized_center_transforms": customized_center_transforms,
-        "parameters_min_bounds": parameters_min_bounds,
-        "parameters_max_bounds": parameters_max_bounds,
+        # "parameters_min_bounds": parameters_min_bounds,
+        # "parameters_max_bounds": parameters_max_bounds,
         "fine_grained_weather": fine_grained_weather,
         "tmp_travel_dist_file": "tmp_travel_dist_file_" + str(port) + ".txt",
     }

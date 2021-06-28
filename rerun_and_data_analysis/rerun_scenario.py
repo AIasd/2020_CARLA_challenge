@@ -89,7 +89,7 @@ torch.backends.cudnn.benchmark = False
 
 os.environ['HAS_DISPLAY'] = '1'
 # '0,1'
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
 is_save = True

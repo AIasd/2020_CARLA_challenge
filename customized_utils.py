@@ -40,6 +40,12 @@ from carla_specific_utils.object_types import (
 
 
 # ---------------- Misc -------------------
+class emptyobject():
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+    def __str__(self):
+        return str(self.__dict__)
+
 class arguments_info:
     def __init__(self):
         self.host = "localhost"
@@ -191,7 +197,9 @@ def port_to_gpu(port):
 
     return gpu
 
+# TBD: separate the two exit handlers
 def exit_handler(ports):
+    # carla
     for port in ports:
         while is_port_in_use(port):
             try:
@@ -199,6 +207,14 @@ def exit_handler(ports):
                 print("-" * 20, "kill server at port", port)
             except:
                 continue
+    # svl
+    import psutil
+    PROC_NAME = "mainboard"
+    for proc in psutil.process_iter():
+        # check whether the process to kill name matches
+        if proc.name() == PROC_NAME:
+            proc.kill()
+
 
 def get_sorted_subfolders(parent_folder, folder_type='all'):
     if 'rerun_bugs' in os.listdir(parent_folder):
@@ -464,6 +480,7 @@ def is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=True):
     # hack: backward compatibility with previous run data
     # if cur_X.shape[1] == n-1:
     #     cur_X = np.concatenate([cur_X, np.zeros((cur_X.shape[0], 1))], axis=1)
+
     cur_X = cur_X[:, variant_fields]
     cur_X = np.concatenate([cur_X[:, int_inds], cur_X[:, real_inds]], axis=1) / (np.abs(xu - xl) + eps)
 
@@ -648,6 +665,8 @@ def get_if_bug_list(objectives_list):
 def process_specific_bug(
     bug_type_ind, bugs_type_list, bugs_inds_list, bugs, mask, xl, xu, p, c, th
 ):
+    if len(bugs) == 0:
+        return [], [], 0
     verbose = True
     chosen_bugs = np.array(bugs_type_list) == bug_type_ind
 

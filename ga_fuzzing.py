@@ -17,6 +17,8 @@ sys.path.append('fuzzing_utils')
 sys.path.append('carla_specific_utils')
 os.system('export PYTHONPATH=/home/zhongzzy9/anaconda3/envs/carla99/bin/python')
 
+sys.path.append('..')
+
 from pymoo.model.problem import Problem
 from pymoo.model.sampling import Sampling
 from pymoo.model.crossover import Crossover
@@ -35,9 +37,9 @@ import matplotlib.pyplot as plt
 
 from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
 
-from customized_utils import rand_real,  make_hierarchical_dir, exit_handler, is_critical_region, if_violate_constraints, check_bug, filter_critical_regions, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized, eliminate_repetitive_vectorized, get_sorted_subfolders, load_data, choose_weight_inds, get_F, get_unique_bugs, set_general_seed
+from customized_utils import rand_real,  make_hierarchical_dir, exit_handler, is_critical_region, if_violate_constraints, check_bug, filter_critical_regions, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized, eliminate_repetitive_vectorized, get_sorted_subfolders, load_data, choose_weight_inds, get_F, get_unique_bugs, set_general_seed, emptyobject
 
-from carla_specific_utils.carla_specific import run_carla_simulation, initialize_carla_specific, correct_spawn_locations_all
+
 
 from collections import deque
 
@@ -48,7 +50,6 @@ import carla
 
 from leaderboard.utils.route_parser import RouteParser
 
-from leaderboard.customized.object_params import Static, Pedestrian, Vehicle
 
 import traceback
 import json
@@ -95,10 +96,16 @@ from sklearn.neural_network import MLPClassifier
 from scipy.stats import rankdata
 
 
-from setup_labels_and_bounds import emptyobject
 
 from pgd_attack import pgd_attack, train_net, train_regression_net, VanillaDataset
 from acquisition import map_acquisition
+
+
+
+
+
+
+
 
 # [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, is_collision]
 default_objective_weights = np.array([-1., 1., 1., 1., 1., -1., 0., 0., 0., -1.])
@@ -114,7 +121,7 @@ parser.add_argument("-c", "--scenario_type", type=str, default='default')
 parser.add_argument("-m", "--ego_car_model", type=str, default='lbc')
 parser.add_argument('-a','--algorithm_name', type=str, default='nsga2')
 
-parser.add_argument('-p','--ports', nargs='+', type=int, default=[2003, 2006], help='TCP port(s) to listen to (default: 2003 2006)')
+parser.add_argument('-p','--ports', nargs='+', type=int, default=[2003], help='TCP port(s) to listen to (default: 2003)')
 parser.add_argument("-s", "--scheduler_port", type=int, default=8785)
 parser.add_argument("-d", "--dashboard_address", type=int, default=8786)
 
@@ -423,9 +430,12 @@ class MyProblem(Problem):
                 objectives = default_objectives
                 return objectives, None, 0
             else:
+                print('before run simulation')
                 objectives, run_info  = run_simulation(x, fuzzing_content, fuzzing_arguments, sim_specific_arguments, dt_arguments, launch_server, counter, port)
 
-                print(counter, run_info['is_bug'], run_info['bug_type'], objectives)
+                print('\n'*3)
+                print("counter, run_info['is_bug'], run_info['bug_type'], objectives", counter, run_info['is_bug'], run_info['bug_type'], objectives)
+                print('\n'*3)
 
                 # correct_travel_dist(x, labels, customized_data['tmp_travel_dist_file'])
 
@@ -445,7 +455,7 @@ class MyProblem(Problem):
                 x = X[i]
                 jobs.append(client.submit(fun, x, launch_server, self.counter, port, workers=worker))
 
-                print(i, self.counter)
+                print('submit job', i, self.counter)
                 self.counter += 1
 
 
@@ -454,7 +464,8 @@ class MyProblem(Problem):
                 cur_i = i + ind_start
                 total_i = i + (self.counter-len(jobs))
                 objectives, run_info, has_run  = job.result()
-                if run_info:
+                print('get job result for', i)
+                if run_info and 'all_final_generated_transforms' in run_info:
                     all_final_generated_transforms_list.append(run_info['all_final_generated_transforms'])
                 else:
                     all_final_generated_transforms_list.append(None)
@@ -517,7 +528,7 @@ class MyProblem(Problem):
             print('\n'*10, '+'*100)
 
 
-            from copy import deepcopy
+
             bugs_type_list_tmp = self.bugs_type_list
             bugs_tmp = self.bugs
             bugs_inds_list_tmp = self.bugs_inds_list
@@ -716,6 +727,7 @@ class MySamplingVectorized(Sampling):
         labels = problem.labels
         parameters_distributions = problem.parameters_distributions
 
+
         if self.sample_multiplier >= 50:
             max_sample_times = self.sample_multiplier // 50
             n_samples_sampling = n_samples * 50
@@ -799,9 +811,6 @@ class MySamplingVectorized(Sampling):
                             tmp_off_and_X = tmp_off + X
                         else:
                             tmp_off_and_X = X
-            print('\n'*10)
-            print('sampled X.shape', X.shape)
-            print('\n'*10)
             return X, sample_time
 
 
@@ -1771,7 +1780,7 @@ class NSGA2_DT(NSGA2):
             if self.use_unique_bugs:
                 pop = self.initialization.do(self.problem, self.problem.fuzzing_arguments.pop_size, algorithm=self)
             else:
-                pop = self.plain_initialization.do(self.problem, pop_size, algorithm=self)
+                pop = self.plain_initialization.do(self.problem, self.pop_size, algorithm=self)
             pop.set("n_gen", self.n_gen)
 
 
@@ -2166,21 +2175,38 @@ if __name__ == '__main__':
 
 
     '''
-    from scene_configs import customized_bounds_and_distributions
-    from setup_labels_and_bounds import generate_fuzzing_content
-
-    # Scenario Description
-    # use some default scenario config
-    customized_config = customized_bounds_and_distributions[fuzzing_arguments.scenario_type]
-    # translate scenario config to fuzzing_content
-    fuzzing_content = generate_fuzzing_content(customized_config)
-
 
     if fuzzing_arguments.simulator == 'carla':
+        from carla_specific_utils.scene_configs import customized_bounds_and_distributions
+        from carla_specific_utils.setup_labels_and_bounds import generate_fuzzing_content
+        from carla_specific_utils.carla_specific import run_carla_simulation, initialize_carla_specific, correct_spawn_locations_all
+
+        customized_config = customized_bounds_and_distributions[fuzzing_arguments.scenario_type]
+        fuzzing_content = generate_fuzzing_content(customized_config)
         sim_specific_arguments = initialize_carla_specific(fuzzing_arguments)
         run_simulation = run_carla_simulation
+
     elif fuzzing_arguments.simulator == 'svl':
-        pass
+        from svl_script.scene_configs import customized_bounds_and_distributions
+        from svl_script.setup_labels_and_bounds import generate_fuzzing_content
+        from svl_script.svl_specific import run_svl_simulation, initialize_svl_specific
+
+        fuzzing_arguments.ego_car_model = 'apollo_6_with_signal'
+        fuzzing_arguments.route_type = 'BorregasAve_forward'
+        fuzzing_arguments.scenario_type = 'default'
+        fuzzing_arguments.ports = [8181]
+        fuzzing_arguments.root_folder = 'run_results_svl'
+
+        customized_config = customized_bounds_and_distributions[fuzzing_arguments.scenario_type]
+        fuzzing_content = generate_fuzzing_content(customized_config)
+        # print('fuzzing content', str(fuzzing_content))
+        # print(len(fuzzing_content.__dict__))
+        print(fuzzing_content.labels)
+        print(len(fuzzing_content.labels))
+        print(len(fuzzing_content.parameters_min_bounds))
+        sim_specific_arguments = initialize_svl_specific(fuzzing_arguments)
+        run_simulation = run_svl_simulation
+
     else:
         raise
     run_ga_general(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run_simulation)

@@ -1,5 +1,5 @@
 '''
-Labels API
+CARLA Labels API
 '''
 from collections import OrderedDict
 from object_types import (
@@ -12,11 +12,8 @@ from object_types import (
     motorcycle_types,
     cyclist_types,
 )
+from customized_utils import emptyobject
 
-
-class emptyobject():
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
 
 # hack:
 general_labels = [
