@@ -1,6 +1,16 @@
-## Introduction
-This repo consists of code accompanying "AutoFuzz: Grammar-Based Fuzzing for Self-Driving Car Controller". AutoFuzz is a grammar-based input fuzzing tool for end-to-end self-driving car controllers. It analyzes CARLA specification to generate semantically and temporally valid test scenario with support of multiple search methods.
+# Introduction
+This repo consists of code accompanying "AutoFuzz: Grammar-Based Fuzzing for Self-Driving Car Controller". AutoFuzz is a grammar-based input fuzzing tool for end-to-end self-driving car controllers. It analyzes CARLA simulator and SVL simulator specifications to generate semantically and temporally valid test scenario with support of multiple search methods for both simulators, respectively.
 
+# Requirements
+* OS: Ubuntu 18.04, Ubuntu 20.04
+* CPU: at least 8 cores
+* GPU: at least 8GB memory
+* Python 3.7
+* Carla 0.9.9.4 (for installation details, see below)
+* SVL 2021.1.1
+* Apollo 6.0
+
+# CARLA + learning by cheating controller / pid controllers
 ## Found Bug Demos
 lbc controller going out of road:
 <!--
@@ -18,14 +28,6 @@ pid-2 controller collides with the stopped leading car:
 <img src="gif_demos/pid_pid2_39_rgb_with_car.gif" width="40%" height="40%"/>
 
 ## Setup
-### Requirements
-* OS: Ubuntu 18.04, Ubuntu 20.04
-* CPU: at least 8 cores
-* GPU: at least 8GB memory
-* Python 3.7
-* Carla 0.9.9.4 (for installation details, see below)
-
-
 ### Cloning this Repository
 
 Clone this repo with all its submodules
@@ -137,6 +139,16 @@ CUDA_VISIBLE_DEVICES=0 python carla_project/src/image_model.py --dataset_dir pat
 In `carla_specific_utils/carla_specific.py`, set the path `arguments.agent_config` under the condition `elif ego_car_model == 'lbc_augment'` to be that of the newly fine-tuned model.
 ```
 CUDA_VISIBLE_DEVICES=0 python rerun_and_data_analysis/rerun_scenario.py --parent_folder path/to/data/for/finetuning --rerun_mode test --ego_car_model lbc_augment
+```
+
+
+
+# SVL + Apollo
+## Setup
+Install SVL2021.1.1 and Apollo 6.0 following [the documentation of Running latest Apollo with SVL Simulator](https://www.svlsimulator.com/docs/system-under-test/apollo-master-instructions/).
+## Run Fuzzing
+```
+python ga_fuzzing.py --simulator svl --n_gen 6 --pop_size 50 --algorithm_name nsga2-un --has_run_num 300 --objective_weights -1 1 1 0 0 0 0 0 0 0 --check_unique_coeff 0 0.2 0.5
 ```
 
 
