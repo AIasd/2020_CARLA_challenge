@@ -147,8 +147,9 @@ CUDA_VISIBLE_DEVICES=0 python rerun_and_data_analysis/rerun_scenario.py --parent
 ## Setup
 Install SVL2021.1.1 and Apollo 6.0 following [the documentation of Running latest Apollo with SVL Simulator](https://www.svlsimulator.com/docs/system-under-test/apollo-master-instructions/).
 ## Run Fuzzing
+Need to change `model_id` in svl_specific to one's own model_id on svl web UI.
 ```
-python ga_fuzzing.py --simulator svl --n_gen 6 --pop_size 50 --algorithm_name nsga2-un --has_run_num 300 --objective_weights -1 1 1 0 0 0 0 0 0 0 --check_unique_coeff 0 0.2 0.5
+python ga_fuzzing.py --simulator svl --n_gen 10 --pop_size 50 --algorithm_name nsga2-un --has_run_num 500 --objective_weights -1 1 1 0 0 0 0 0 0 0 --check_unique_coeff 0 0.1 0.5 --episode_max_time 25
 ```
 
 

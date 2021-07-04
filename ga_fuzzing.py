@@ -159,8 +159,8 @@ parser.add_argument('--check_unique_coeff', nargs='+', type=float, default=defau
 parser.add_argument('--use_single_objective', type=int, default=1)
 parser.add_argument('--rank_mode', type=str, default='none')
 parser.add_argument('--ranking_model', type=str, default='nn_pytorch')
-parser.add_argument('--initial_fit_th', type=int, default=100)
-parser.add_argument('--min_bug_num_to_fit_dnn', type=int, default=10)
+parser.add_argument('--initial_fit_th', type=int, default=100, help='minimum number of instances needed to train a DNN.')
+parser.add_argument('--min_bug_num_to_fit_dnn', type=int, default=10, help='minimum number of bug instances needed to train a DNN.')
 
 parser.add_argument('--pgd_eps', type=float, default=1.01)
 parser.add_argument('--adv_conf_th', type=float, default=-4)
@@ -430,7 +430,6 @@ class MyProblem(Problem):
                 objectives = default_objectives
                 return objectives, None, 0
             else:
-                print('before run simulation')
                 objectives, run_info  = run_simulation(x, fuzzing_content, fuzzing_arguments, sim_specific_arguments, dt_arguments, launch_server, counter, port)
 
                 print('\n'*3)
