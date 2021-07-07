@@ -2190,7 +2190,7 @@ if __name__ == '__main__':
         from svl_script.setup_labels_and_bounds import generate_fuzzing_content
         from svl_script.svl_specific import run_svl_simulation, initialize_svl_specific
 
-        fuzzing_arguments.ego_car_model = 'apollo_6_with_signal'
+        fuzzing_arguments.ego_car_model = 'apollo_6_modular' #'apollo_6_with_signal'
         fuzzing_arguments.route_type = 'BorregasAve_forward'
         fuzzing_arguments.scenario_type = 'default'
         fuzzing_arguments.ports = [8181]
