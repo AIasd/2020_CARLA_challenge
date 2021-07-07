@@ -35,6 +35,10 @@ Clone this repo with all its submodules
 ```
 git clone https://github.com/AIasd/2020_CARLA_challenge.git --recursive
 ```
+Make sure all the submodules are on the right branch
+```
+./switch_to_9_9.sh
+```
 ### Create Conda Environment and Install Python Packages
 All python packages used are specified in `environment.yml`.
 
@@ -150,6 +154,10 @@ Install SVL2021.1.1 and Apollo 6.0 following [the documentation of Running lates
 Need to change `model_id` in svl_specific to one's own model_id on svl web UI.
 ```
 python ga_fuzzing.py --simulator svl --n_gen 10 --pop_size 50 --algorithm_name nsga2-un --has_run_num 500 --objective_weights -1 1 1 0 0 0 0 0 0 0 --check_unique_coeff 0 0.1 0.5 --episode_max_time 25
+```
+Example code for running GA-UN-ADV-NN
+```
+python ga_fuzzing.py --simulator svl --n_gen 8 --pop_size 50 --algorithm_name nsga2-un --has_run_num 400 --objective_weights -1 1 1 0 0 0 0 0 0 0 --check_unique_coeff 0 0.1 0.5 --episode_max_time 25 --rank_mode adv_nn --warm_up_path <path-to-warm-up-data-folder>  --warm_up_len 100 --min_bug_num_to_fit_dnn 1 --initial_fit_th 3
 ```
 
 
