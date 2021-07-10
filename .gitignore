@@ -41,3 +41,4 @@ exp_9/coco/coco_confusion_repair_aug
 carla_specific_utils/__pycache__/*
 fuzzing_utils/__pycache__/*
 run_results_svl/*
+rerun_svl/*
