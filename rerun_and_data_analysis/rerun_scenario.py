@@ -75,6 +75,7 @@ data_category = arguments.data_category
 parent_folder = arguments.parent_folder
 record_every_n_step = arguments.record_every_n_step
 is_save = arguments.is_save
+debug = arguments.debug
 
 assert os.path.isdir(parent_folder), parent_folder+' does not exist locally'
 
