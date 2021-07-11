@@ -58,6 +58,7 @@ parser.add_argument('--parent_folder', type=str, default='run_results/nsga2-un/t
 parser.add_argument('--record_every_n_step', type=int, default=5, help='how many frames to save camera images')
 parser.add_argument('--is_save', type=int, default=1, help='save rerun results')
 parser.add_argument('--has_display', type=int, default=1, help='display the simulation')
+parser.add_argument("--debug", type=int, default=0, "whether using the debug mode: planned paths will be visualized.")
 
 arguments = parser.parse_args()
 port = arguments.port
@@ -122,6 +123,7 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
 
         fuzzing_arguments.record_every_n_step = record_every_n_step
         fuzzing_arguments.ego_car_model = ego_car_model
+        fuzzing_arguments.debug = debug
 
     folder = '_'.join([route_type, route_str, ego_car_model])
 
