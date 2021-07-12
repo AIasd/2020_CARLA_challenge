@@ -154,7 +154,7 @@ def rerun_simulation(pickle_filename, is_save, rerun_save_folder, ind, sub_folde
             traceback.print_exc()
             raise
 
-        cur_info = {'x':x, 'objectives':objectives, 'labels':run_info['labels'], 'mask':run_info['mask'], 'is_bug':is_bug}
+        cur_info = {'x':x, 'objectives':objectives, 'labels':run_info['labels'], 'mask':run_info['mask'], 'is_bug':is_bug, 'fuzzing_content': run_info['fuzzing_content'], 'fuzzing_arguments': run_info['fuzzing_arguments'], 'sim_specific_arguments': run_info['sim_specific_arguments'], 'dt_arguments': run_info['dt_arguments'], 'route_type': run_info['route_type'], 'route_str': run_info['route_str']}
 
         with open(new_path+'/'+'cur_info.pickle', 'wb') as f_out:
             pickle.dump(cur_info, f_out)
