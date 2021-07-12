@@ -107,8 +107,8 @@ from acquisition import map_acquisition
 
 
 
-# [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, is_collision]
-default_objective_weights = np.array([-1., 1., 1., 1., 1., -1., 0., 0., 0., -1.])
+# [ego_linear_speed, min_d, d_angle_norm, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, is_collision]
+default_objective_weights = np.array([-1., 1., 1., 1., 1., -1., 0., 0., 0., 0.])
 default_objectives = np.array([0., 20., 1., 7., 7., 0., 0., 0., 0., 0.])
 default_check_unique_coeff = [0, 0.1, 0.5]
 
@@ -152,6 +152,7 @@ parser.add_argument("--has_run_num", type=int, default=1000)
 parser.add_argument('--sample_multiplier', type=int, default=200)
 parser.add_argument('--mating_max_iterations', type=int, default=200)
 parser.add_argument('--only_run_unique_cases', type=int, default=1)
+parser.add_argument('--consider_interested_bugs', type=int, default=1)
 
 parser.add_argument("--outer_iterations", type=int, default=3)
 parser.add_argument('--objective_weights', nargs='+', type=float, default=default_objective_weights)
@@ -167,23 +168,24 @@ parser.add_argument('--adv_conf_th', type=float, default=-4)
 parser.add_argument('--attack_stop_conf', type=float, default=0.9)
 parser.add_argument('--use_single_nn', type=int, default=1)
 
+parser.add_argument('--warm_up_path', type=str, default=None)
+parser.add_argument('--warm_up_len', type=int, default=-1)
+parser.add_argument('--regression_nn_use_running_data', type=int, default=1)
+
+
+
 parser.add_argument('--uncertainty', type=str, default='')
 parser.add_argument('--model_type', type=str, default='one_output')
-
 
 parser.add_argument('--explore_iter_num', type=int, default=2)
 parser.add_argument('--exploit_iter_num', type=int, default=1)
 parser.add_argument('--high_conf_num', type=int, default=60)
 parser.add_argument('--low_conf_num', type=int, default=60)
 
-parser.add_argument('--warm_up_path', type=str, default=None)
-parser.add_argument('--warm_up_len', type=int, default=-1)
 parser.add_argument('--use_alternate_nn', type=int, default=0)
 parser.add_argument('--diversity_mode', type=str, default='none')
-parser.add_argument('--regression_nn_use_running_data', type=int, default=1)
 parser.add_argument('--adv_exploitation_only', type=int, default=0)
 parser.add_argument('--uncertainty_exploration', type=str, default='confidence')
-parser.add_argument('--consider_interested_bugs', type=int, default=1)
 
 parser.add_argument('--termination_condition', type=str, default='generations')
 parser.add_argument('--max_running_time', type=int, default=3600*24)
@@ -217,90 +219,6 @@ else:
 set_general_seed(seed=0)
 random_seeds = [10, 20, 30]
 rng = np.random.default_rng(random_seeds[0])
-
-
-
-# simulator = arguments.simulator
-#
-# ports = arguments.ports
-# scheduler_port = arguments.scheduler_port
-# dashboard_address = arguments.dashboard_address
-#
-# # ['town01_left_0', 'town07_front_0', 'town05_front_0', 'town05_right_0']
-# route_type = arguments.route_type
-# # ['default', 'leading_car_braking', 'vehicles_only', 'no_static']
-# scenario_type = arguments.scenario_type
-# # [random', 'nsga2', 'nsga2-dt', 'nsga2-un-dt', 'nsga2-emcmc', 'nsga2-un', 'nsga2-un-emcmc', 'random-un', 'nn', 'adv_nn']
-# algorithm_name = arguments.algorithm_name
-# # ['lbc', 'auto_pilot', 'pid_agent']
-# ego_car_model = arguments.ego_car_model
-#
-# # ['none', 'nn', 'adv', 'inversion']
-# rank_mode = arguments.rank_mode
-# # ['sklearn', 'pytorch']
-# ranking_model = arguments.ranking_model
-# initial_fit_th = arguments.initial_fit_th
-# min_bug_num_to_fit_dnn = arguments.min_bug_num_to_fit_dnn
-# pgd_eps = arguments.pgd_eps
-# adv_conf_th = arguments.adv_conf_th
-# attack_stop_conf = arguments.attack_stop_conf
-# use_single_nn = arguments.use_single_nn
-# uncertainty = arguments.uncertainty
-#
-# model_type = arguments.model_type
-# explore_iter_num = arguments.explore_iter_num
-# exploit_iter_num = arguments.exploit_iter_num
-# high_conf_num = arguments.high_conf_num
-# low_conf_num = arguments.low_conf_num
-#
-# regression_nn_use_running_data = arguments.regression_nn_use_running_data
-#
-# adv_exploitation_only = arguments.adv_exploitation_only
-#
-# warm_up_path = arguments.warm_up_path
-# warm_up_len = arguments.warm_up_len
-# use_alternate_nn = arguments.use_alternate_nn
-# # ['none', 'nn_rep']
-# diversity_mode = arguments.diversity_mode
-#
-# sample_multiplier = arguments.sample_multiplier
-# mating_max_iterations = arguments.mating_max_iterations
-#
-# uncertainty_exploration = arguments.uncertainty_exploration
-#
-#
-# root_folder = arguments.root_folder
-#
-#
-# episode_max_time = arguments.episode_max_time
-# global_n_gen = arguments.n_gen
-#
-# pop_size = arguments.pop_size
-# survival_multiplier = arguments.survival_multiplier
-# n_offsprings = arguments.n_offsprings
-# # only used when algorithm_name is nsga2-dt or nsga2-un-dt
-# outer_iterations = arguments.outer_iterations
-#
-#
-# # [ego_linear_speed, closest_dist, offroad_d, wronglane_d, dev_dist]
-# # objective_weights = np.array([-1, 1, 1, 1, -1])
-# objective_weights = arguments.objective_weights
-# check_unique_coeff = arguments.check_unique_coeff
-# has_run_num = arguments.has_run_num
-# only_run_unique_cases = arguments.only_run_unique_cases
-# use_single_objective = arguments.use_single_objective
-# consider_interested_bugs = arguments.consider_interested_bugs
-# record_every_n_step = arguments.record_every_n_step
-# correct_spawn_locations_after_run = arguments.correct_spawn_locations_after_run
-# # ['generations', 'max_time']
-# global_termination_condition = arguments.termination_condition
-# max_running_time = arguments.max_running_time
-
-
-
-
-
-
 
 
 
@@ -2036,9 +1954,6 @@ def run_ga(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run_simul
     selection = TournamentSelection(func_comp=binary_tournament)
     repair = ClipRepair()
 
-    # if fuzzing_arguments.use_unique_bugs:
-    #     eliminate_duplicates = SimpleDuplicateElimination(mask=problem.mask, xu=problem.xu, xl=problem.xl, check_unique_coeff=problem.check_unique_coeff)
-    # else:
     eliminate_duplicates = NoDuplicateElimination()
 
     mating = MyMatingVectorized(selection,
