@@ -476,159 +476,6 @@ class MyProblem(Problem):
 
 
 
-
-
-
-
-
-
-
-
-
-
-# class MySampling(Sampling):
-#     '''
-#     dimension correspondence
-#
-#     Define:
-#     n1=problem.waypoints_num_limit
-#     n2=problem.num_of_static_max
-#     n3=problem.num_of_pedestrians_max
-#     n4=problem.num_of_vehicles_max
-#
-#     global
-#     0: friction, real, [0, 1].
-#     1: weather_index, int, [0, problem.num_of_weathers].
-#     2: num_of_static, int, [0, n2].
-#     3: num_of_pedestrians, int, [0, n3].
-#     4: num_of_vehicles, int, [0, n4].
-#
-#     ego-car
-#     5 ~ 4+n1*2: waypoints perturbation [(dx_i, dy_i)] with length n1.
-#     dx_i, dy_i, real, ~ [problem.perturbation_min, problem.perturbation_max].
-#
-#
-#     static
-#     5+n1*2 ~ 4+n1*2+n2*4: [(static_type_i, x w.r.t. center, y w.r.t. center, yaw)] with length n2.
-#     static_type_i, int, [0, problem.num_of_static_types).
-#     x_i, real, [problem.static_x_min, problem.static_x_max].
-#     y_i, real, [problem.static_y_min, problem.static_y_max].
-#     yaw_i, real, [problem.yaw_min, problem.yaw_max).
-#
-#     pedestrians
-#     5+n1*2+n2*4 ~ 4+n1*2+n2*4+n3*7: [(pedestrian_type_i, x_i, y_i, yaw_i, trigger_distance_i, speed_i, dist_to_travel_i)] with length n3.
-#     pedestrian_type_i, int, [0, problem.num_of_static_types)
-#     x_i, real, [problem.pedestrian_x_min, problem.pedestrian_x_max].
-#     y_i, real, [problem.pedestrian_y_min, problem.pedestrian_y_max].
-#     yaw_i, real, [problem.yaw_min, problem.yaw_max).
-#     trigger_distance_i, real, [problem.pedestrian_trigger_distance_min, problem.pedestrian_trigger_distance_max].
-#     speed_i, real, [problem.pedestrian_speed_min, problem.pedestrian_speed_max].
-#     dist_to_travel_i, real, [problem.pedestrian_dist_to_travel_min, problem.pedestrian_dist_to_travel_max].
-#
-#     vehicles
-#     5+n1*2+n2*4+n3*7 ~ 4+n1*2+n2*4+n3*7+n4*(14+n1*2): [(vehicle_type_i, x_i, y_i, yaw_i, initial_speed_i, trigger_distance_i, targeted_speed_i, waypoint_follower_i, targeted_x_i, targeted_y_i, avoid_collision_i, dist_to_travel_i, target_yaw_i, color_i, [(dx_i, dy_i)] with length n1)] with length n4.
-#     vehicle_type_i, int, [0, problem.num_of_vehicle_types)
-#     x_i, real, [problem.vehicle_x_min, problem.vehicle_x_max].
-#     y_i, real, [problem.vehicle_y_min, problem.vehicle_y_max].
-#     yaw_i, real, [problem.yaw_min, problem.yaw_max).
-#     initial_speed_i, real, [problem.vehicle_initial_speed_min, problem.vehicle_initial_speed_max].
-#     trigger_distance_i, real, [problem.vehicle_trigger_distance_min, problem.vehicle_trigger_distance_max].
-#     targeted_speed_i, real, [problem.vehicle_targeted_speed_min, problem.vehicle_targeted_speed_max].
-#     waypoint_follower_i, boolean, [0, 1]
-#     targeted_x_i, real, [problem.targeted_x_min, problem.targeted_x_max].
-#     targeted_y_i, real, [problem.targeted_y_min, problem.targeted_y_max].
-#     avoid_collision_i, boolean, [0, 1]
-#     dist_to_travel_i, real, [problem.vehicle_dist_to_travel_min, problem.vehicle_dist_to_travel_max].
-#     target_yaw_i, real, [problem.yaw_min, problem.yaw_max).
-#     color_i, int, [0, problem.num_of_vehicle_colors).
-#     dx_i, dy_i, real, ~ [problem.perturbation_min, problem.perturbation_max].
-#
-#
-#     '''
-#     def __init__(self, use_unique_bugs, check_unique_coeff, sample_multiplier=500):
-#         self.use_unique_bugs = use_unique_bugs
-#         self.check_unique_coeff = check_unique_coeff
-#         self.sample_multiplier = sample_multiplier
-#         assert len(self.check_unique_coeff) == 3
-#     def _do(self, problem, n_samples, **kwargs):
-#         p, c, th = self.check_unique_coeff
-#         xl = problem.xl
-#         xu = problem.xu
-#         mask = np.array(problem.mask)
-#         labels = problem.labels
-#         parameters_distributions = problem.parameters_distributions
-#         max_sample_times = n_samples * self.sample_multiplier
-#
-#         algorithm = kwargs['algorithm']
-#
-#         tmp_off = algorithm.tmp_off
-#
-#         # print(tmp_off)
-#         tmp_off_and_X = []
-#         if len(tmp_off) > 0:
-#             tmp_off = [off.X for off in tmp_off]
-#             tmp_off_and_X = tmp_off
-#         # print(tmp_off)
-#
-#
-#         def subroutine(X, tmp_off_and_X):
-#             def sample_one_feature(typ, lower, upper, dist, label):
-#                 assert lower <= upper, label+','+str(lower)+'>'+str(upper)
-#                 if typ == 'int':
-#                     val = rng.integers(lower, upper+1)
-#                 elif typ == 'real':
-#                     if dist[0] == 'normal':
-#                         if dist[1] == None:
-#                             mean = (lower+upper)/2
-#                         else:
-#                             mean = dist[1]
-#                         val = rng.normal(mean, dist[2], 1)[0]
-#                     else: # default is uniform
-#                         val = rand_real(rng, lower, upper)
-#                     val = np.clip(val, lower, upper)
-#                 return val
-#
-#             sample_time = 0
-#             while sample_time < max_sample_times and len(X) < n_samples:
-#                 sample_time += 1
-#                 x = []
-#                 for i, dist in enumerate(parameters_distributions):
-#                     typ = mask[i]
-#                     lower = xl[i]
-#                     upper = xu[i]
-#                     label = labels[i]
-#                     val = sample_one_feature(typ, lower, upper, dist, label)
-#                     x.append(val)
-#
-#
-#                 if not if_violate_constraints(x, problem.customized_constraints, problem.labels)[0]:
-#                     if not self.use_unique_bugs or (is_distinct(x, tmp_off_and_X, mask, xl, xu, p, c, th) and is_distinct(x, problem.interested_unique_bugs, mask, xl, xu, p, c, th)):
-#                         x = np.array(x).astype(float)
-#                         X.append(x)
-#                         if len(tmp_off) > 0:
-#                             tmp_off_and_X = tmp_off + X
-#                         else:
-#                             tmp_off_and_X = X
-#                         # if self.use_unique_bugs:
-#                         #     if disable_unique_x_for_X:
-#                         #         X = eliminate_duplicates_for_list(mask, xl, xu, p, c, th, X, problem.unique_bugs)
-#                         #     else:
-#                         #         X = eliminate_duplicates_for_list(mask, xl, xu, p, c, th, X, problem.unique_bugs, tmp_off=tmp_off)
-#
-#             return X, sample_time
-#
-#
-#         X = []
-#         X, sample_time_1 = subroutine(X, tmp_off_and_X)
-#
-#         if len(X) > 0:
-#             X = np.stack(X)
-#         else:
-#             X = np.array([])
-#         print('\n'*3, 'We sampled', X.shape[0], '/', n_samples, 'samples', 'by sampling', sample_time_1, 'times' '\n'*3)
-#
-#         return X
-
 class MySamplingVectorized(Sampling):
 
     def __init__(self, use_unique_bugs, check_unique_coeff, sample_multiplier=500):
@@ -770,103 +617,6 @@ def do_emcmc(parents, off, n_gen, objective_weights):
 
     return Population.merge(parents, off)
 
-
-# class MyMating(Mating):
-#     def __init__(self,
-#                  selection,
-#                  crossover,
-#                  mutation,
-#                  use_unique_bugs,
-#                  emcmc,
-#                  **kwargs):
-#
-#         super().__init__(selection, crossover, mutation, **kwargs)
-#         self.use_unique_bugs = use_unique_bugs
-#         self.mating_max_iterations = mating_max_iterations
-#         self.emcmc = emcmc
-#
-#     def do(self, problem, pop, n_offsprings, **kwargs):
-#
-#         # the population object to be used
-#         off = pop.new()
-#         parents = pop.new()
-#
-#         # infill counter - counts how often the mating needs to be done to fill up n_offsprings
-#         n_infills = 0
-#
-#         # iterate until enough offsprings are created
-#         while len(off) < n_offsprings:
-#             # how many offsprings are remaining to be created
-#             n_remaining = n_offsprings - len(off)
-#
-#             # do the mating
-#             _off, _parents = self._do(problem, pop, n_remaining, **kwargs)
-#
-#
-#             # repair the individuals if necessary - disabled if repair is NoRepair
-#             _off_first = self.repair.do(problem, _off, **kwargs)
-#
-#             # Previous
-#             _off = []
-#             for x in _off_first:
-#                 if not if_violate_constraints(x.X, problem.customized_constraints, problem.labels)[0]:
-#                     _off.append(x.X)
-#
-#             _off = pop.new("X", _off)
-#
-#             # Previous
-#             # eliminate the duplicates - disabled if it is NoRepair
-#             if self.use_unique_bugs and len(_off) > 0:
-#                 _off, no_duplicate, _ = self.eliminate_duplicates.do(_off, problem.unique_bugs, off, return_indices=True, to_itself=True)
-#                 _parents = _parents[no_duplicate]
-#                 assert len(_parents)==len(_off)
-#
-#
-#
-#
-#             # if more offsprings than necessary - truncate them randomly
-#             if len(off) + len(_off) > n_offsprings:
-#                 # IMPORTANT: Interestingly, this makes a difference in performance
-#                 n_remaining = n_offsprings - len(off)
-#                 _off = _off[:n_remaining]
-#                 _parents = _parents[:n_remaining]
-#
-#
-#             # add to the offsprings and increase the mating counter
-#             off = Population.merge(off, _off)
-#             parents = Population.merge(parents, _parents)
-#             n_infills += 1
-#
-#             # if no new offsprings can be generated within a pre-specified number of generations
-#             if n_infills > self.mating_max_iterations:
-#                 break
-#
-#         # assert len(parents)==len(off)
-#         print('Mating finds', len(off), 'offsprings after doing', n_infills-1, '/', self.mating_max_iterations, 'mating iterations')
-#         return off, parents
-#
-#
-#
-#     # only to get parents
-#     def _do(self, problem, pop, n_offsprings, parents=None, **kwargs):
-#
-#         # if the parents for the mating are not provided directly - usually selection will be used
-#         if parents is None:
-#             # how many parents need to be select for the mating - depending on number of offsprings remaining
-#             n_select = math.ceil(n_offsprings / self.crossover.n_offsprings)
-#             # select the parents for the mating - just an index array
-#             parents = self.selection.do(pop, n_select, self.crossover.n_parents, **kwargs)
-#             parents_obj = pop[parents].reshape([-1, 1]).squeeze()
-#         else:
-#             parents_obj = parents
-#
-#
-#         # do the crossover using the parents index and the population - additional data provided if necessary
-#         _off = self.crossover.do(problem, pop, parents, **kwargs)
-#         # do the mutation on the offsprings created through crossover
-#         _off = self.mutation.do(problem, _off, **kwargs)
-#
-#         return _off, parents_obj
 
 class MyMatingVectorized(Mating):
     def __init__(self,
@@ -1117,7 +867,6 @@ class NSGA2_DT(NSGA2):
 
         # additional step to rank and select self.off after gathering initial population
         if self.rank_mode != 'none':
-            # print(self.rank_mode in ['nn', 'adv_nn'])
             # print(len(self.problem.objectives_list), self.initial_fit_th)
             # print(np.sum(determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)), self.min_bug_num_to_fit_dnn)
             if (self.rank_mode in ['nn', 'adv_nn', 'alternate_nn'] and len(self.problem.objectives_list) >= self.initial_fit_th and  np.sum(determine_y_upon_weights(self.problem.objectives_list, self.problem.objective_weights)) >= self.min_bug_num_to_fit_dnn) or (self.rank_mode in ['regression_nn'] and len(self.problem.objectives_list) >= self.pop_size):
@@ -1176,27 +925,18 @@ class NSGA2_DT(NSGA2):
                         obj_preds.append(clf.predict(X_test))
 
                     tmp_objectives = np.concatenate(obj_preds, axis=1)
-                    # print('tmp_objectives', tmp_objectives)
-                    # when using unique bugs give preference to unique inputs
 
                     if self.use_unique_bugs:
                         tmp_objectives[:self.tmp_off_type_1_len] -= 100*chosen_weights
 
-                    # print(len(tmp_objectives), self.tmp_off_type_1_len)
-                    # print('tmp_objectives after use_unique_bugs', tmp_objectives)
 
                     tmp_objectives_minus = tmp_objectives - confs
                     tmp_objectives_plus = tmp_objectives + confs
 
 
                     tmp_pop_minus = Population(X_train.shape[0]+X_test.shape[0], individual=Individual())
-                    # print(X_train.shape)
-                    # print(X_test.shape)
                     tmp_X_minus = np.concatenate([X_train, X_test])
 
-                    # print(np.array(self.problem.objectives_list)[:, :3])
-                    # print(tmp_objectives)
-                    # print(np.array(default_objective_weights[:3]))
                     tmp_objectives_minus = np.concatenate([np.array(self.problem.objectives_list)[:, weight_inds], tmp_objectives_minus]) * np.array(default_objective_weights[weight_inds])
 
                     tmp_pop_minus.set("X", tmp_X_minus)
@@ -1457,10 +1197,7 @@ class NSGA2_DT(NSGA2):
                                     high_conf_configs_ori_stack_np = np.concatenate(self.high_conf_configs_ori_stack)
 
                                     print('len(high_conf_configs_ori_stack_np) before filtering', len(high_conf_configs_ori_stack_np))
-                                    # high_conf_configs_ori_stack_np, distinct_inds = get_distinct_data_points(high_conf_configs_ori_stack_np, self.problem.mask, self.problem.xl, self.problem.xu, self.problem.p, self.problem.c, self.problem.th)
-                                    # high_conf_configs_ori_stack_np = np.array(high_conf_configs_ori_stack_np)
-                                    # high_conf_configs_stack_np = high_conf_configs_stack_np[distinct_inds]
-                                    # print('len(high_conf_configs_ori_stack_np) after filtering', len(high_conf_configs_ori_stack_np))
+
 
                                     scores = clf.predict_proba(high_conf_configs_stack_np)[:, 1]
                                     if self.use_unique_bugs:
@@ -2122,6 +1859,9 @@ if __name__ == '__main__':
         run_simulation = run_svl_simulation
 
     elif fuzzing_arguments.simulator == 'carla_op':
+        sys.path.append('../../../openpilot')
+        sys.path.append('../../../openpilot/tools/sim')
+
         from op_script.scene_configs import customized_bounds_and_distributions
         from op_script.setup_labels_and_bounds import generate_fuzzing_content
         from op_script.bridge_multiple import run_op_simulation
