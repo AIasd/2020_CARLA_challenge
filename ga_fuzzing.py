@@ -2084,7 +2084,6 @@ if __name__ == '__main__':
         run_info:
 
 
-    TBD: svl simulator
     TBD: flexible uniqueness filteration / bug counting, flexible search objectives
 
 
@@ -2121,6 +2120,22 @@ if __name__ == '__main__':
         print(len(fuzzing_content.parameters_min_bounds))
         sim_specific_arguments = initialize_svl_specific(fuzzing_arguments)
         run_simulation = run_svl_simulation
+
+    elif fuzzing_arguments.simulator == 'carla_op':
+        from op_script.scene_configs import customized_bounds_and_distributions
+        from op_script.setup_labels_and_bounds import generate_fuzzing_content
+        from op_script.bridge_multiple import run_op_simulation
+        from op_script.op_specific import initialize_op_specific
+        from op_script.scene_configs import customized_bounds_and_distributions
+
+        fuzzing_arguments.route_type = 'Town06_Opt_forward'
+        fuzzing_arguments.scenario_type = 'default'
+        fuzzing_arguments.root_folder = 'run_results_op'
+
+        customized_config = customized_bounds_and_distributions[fuzzing_arguments.scenario_type]
+        fuzzing_content = generate_fuzzing_content(customized_config)
+        sim_specific_arguments = initialize_op_specific(fuzzing_arguments)
+        run_simulation = run_op_simulation
 
     else:
         raise
