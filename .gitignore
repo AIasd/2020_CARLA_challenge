@@ -42,3 +42,4 @@ carla_specific_utils/__pycache__/*
 fuzzing_utils/__pycache__/*
 run_results_svl/*
 rerun_svl/*
+run_results_op/*

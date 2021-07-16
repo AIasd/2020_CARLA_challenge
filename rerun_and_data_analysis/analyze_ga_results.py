@@ -1053,8 +1053,34 @@ def draw_accident_location(town_list, plot_prev_X=True):
         plt.clf()
 
 def count_bug(town_list):
+    def count_and_group_output_unique_bugs(inds, outputs, labels, min_bounds, max_bounds, diff_th):
+        '''
+        ***grid counting: maximum number of distinct elements
+        distinct counting: minimum number of distinct elements
+        1.general
+        bug type, normalized (/|start location - end location|) bug location, ego car speed when bug happens
+
+        2.collision specific
+        collision object type (i.e. pedestrian, bicyclist, small vehicle, or truck), normalized (/car width) relative angle of the other involved object at collision
+
+        '''
+
+        m = len(labels)
+
+        outputs_grid_inds = ((outputs - min_bounds)*diff_th) / (max_bounds - min_bounds)
+        outputs_grid_inds = outputs_grid_inds.astype(int)
+
+        from collections import defaultdict
+        unique_bugs_group = defaultdict(list)
+
+        for i in range(outputs.shape[0]):
+            unique_bugs_group[tuple(outputs_grid_inds[i])].append((inds[i], outputs[i]))
+
+        return unique_bugs_group
+
+        
     for label, town_path, warmup_pth, warmup_pth_cutoff in town_list:
-        from customized_utils import get_event_location_and_object_type, count_and_group_output_unique_bugs
+        from customized_utils import get_event_location_and_object_type
 
         subfolders = get_sorted_subfolders(town_path)
         cur_X, _, cur_objectives, _, _, cur_info = load_data(subfolders)

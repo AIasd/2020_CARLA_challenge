@@ -1,23 +1,57 @@
-# python ga_fuzzing.py -p 2015 -s 8791 -d 8792 --n_gen 2 --pop_size 2 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 300 --objective_weights -1 1 1 0 0 0 0 0 0 0 --check_unique_coeff 0 0.2 0.5
 import sys
-import os
-sys.path.append('pymoo')
-carla_root = '../carla_0994_no_rss'
-sys.path.append(carla_root+'/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg')
-sys.path.append(carla_root+'/PythonAPI/carla')
-sys.path.append(carla_root+'/PythonAPI')
+from customized_utils import parse_fuzzing_arguments
 
+sys.path.append('..')
 sys.path.append('leaderboard')
 sys.path.append('leaderboard/team_code')
 sys.path.append('scenario_runner')
 sys.path.append('carla_project')
 sys.path.append('carla_project/src')
-
 sys.path.append('fuzzing_utils')
 sys.path.append('carla_specific_utils')
-os.system('export PYTHONPATH=/home/zhongzzy9/anaconda3/envs/carla99/bin/python')
 
-sys.path.append('..')
+sys.path.append('pymoo')
+
+
+fuzzing_arguments = parse_fuzzing_arguments()
+
+if fuzzing_arguments.simulator in ['carla', 'svl']:
+    carla_root = '../carla_0994_no_rss'
+    sys.path.append(carla_root+'/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg')
+    sys.path.append(carla_root+'/PythonAPI/carla')
+    sys.path.append(carla_root+'/PythonAPI')
+elif fuzzing_arguments.simulator in ['carla_op']:
+    carla_root = '../carla_0911_no_rss'
+    sys.path.append(carla_root+'/PythonAPI/carla/dist/carla-0.9.11-py3.7-linux-x86_64.egg')
+    sys.path.append(carla_root+'/PythonAPI/carla')
+    sys.path.append(carla_root+'/PythonAPI')
+
+    # TBD: change to relative paths
+    sys.path.append('/home/zhongzzy9/openpilot')
+    sys.path.append('/home/zhongzzy9/openpilot/tools/sim')
+
+
+import os
+import json
+import re
+import time
+import pathlib
+import pickle
+import copy
+import atexit
+import traceback
+import math
+from datetime import datetime
+from distutils.dir_util import copy_tree
+
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.neural_network import MLPClassifier
+from scipy.stats import rankdata
+
+import dask
+dask.config.set({'distributed.worker.daemon': False})
+from dask.distributed import Client, LocalCluster
 
 from pymoo.model.problem import Problem
 from pymoo.model.sampling import Sampling
@@ -32,46 +66,6 @@ from pymoo.operators.selection.tournament_selection import TournamentSelection
 from pymoo.algorithms.random import RandomAlgorithm
 from pymoo.operators.crossover.simulated_binary_crossover import SimulatedBinaryCrossover
 from pymoo.performance_indicator.hv import Hypervolume
-
-import matplotlib.pyplot as plt
-
-from object_types import WEATHERS, pedestrian_types, vehicle_types, static_types, vehicle_colors, car_types, motorcycle_types, cyclist_types
-
-from customized_utils import rand_real,  make_hierarchical_dir, exit_handler, is_critical_region, if_violate_constraints, check_bug, filter_critical_regions, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, process_X, inverse_process_X, determine_y_upon_weights, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized, eliminate_repetitive_vectorized, get_sorted_subfolders, load_data, choose_weight_inds, get_F, get_unique_bugs, set_general_seed, emptyobject
-
-
-
-from collections import deque
-
-
-import numpy as np
-import carla
-
-
-from leaderboard.utils.route_parser import RouteParser
-
-
-import traceback
-import json
-import re
-import time
-from datetime import datetime
-
-import pathlib
-from distutils.dir_util import copy_tree
-import dill as pickle
-# import pickle
-import argparse
-import atexit
-import traceback
-import math
-
-
-
-import copy
-from distutils.dir_util import copy_tree
-
-from dask.distributed import Client, LocalCluster
 
 from pymoo.factory import get_termination
 from pymoo.model.termination import Termination
@@ -89,138 +83,17 @@ from pymoo.model.survival import Survival
 from pymoo.model.individual import Individual
 
 
-
-
-from sklearn.preprocessing import StandardScaler
-from sklearn.neural_network import MLPClassifier
-from scipy.stats import rankdata
-
-
-
 from pgd_attack import pgd_attack, train_net, train_regression_net, VanillaDataset
 from acquisition import map_acquisition
 
+from customized_utils import rand_real,  make_hierarchical_dir, exit_handler, is_critical_region, if_violate_constraints, filter_critical_regions, encode_fields, remove_fields_not_changing, get_labels_to_encode, customized_fit, customized_standardize, customized_inverse_standardize, decode_fields, encode_bounds, recover_fields_not_changing, process_X, inverse_process_X, calculate_rep_d, select_batch_max_d_greedy, if_violate_constraints_vectorized, is_distinct_vectorized, eliminate_repetitive_vectorized, get_sorted_subfolders, load_data, get_F, set_general_seed, emptyobject
 
 
-
-
-
-
-
-# [ego_linear_speed, min_d, d_angle_norm, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, is_collision]
-default_objective_weights = np.array([-1., 1., 1., 1., 1., -1., 0., 0., 0., 0.])
-default_objectives = np.array([0., 20., 1., 7., 7., 0., 0., 0., 0., 0.])
-default_check_unique_coeff = [0, 0.1, 0.5]
-
-
-parser = argparse.ArgumentParser()
-
-# general
-parser.add_argument("-r", "--route_type", type=str, default='town05_right_0')
-parser.add_argument("-c", "--scenario_type", type=str, default='default')
-parser.add_argument("-m", "--ego_car_model", type=str, default='lbc')
-parser.add_argument('-a','--algorithm_name', type=str, default='nsga2')
-
-parser.add_argument('-p','--ports', nargs='+', type=int, default=[2003], help='TCP port(s) to listen to (default: 2003)')
-parser.add_argument("-s", "--scheduler_port", type=int, default=8785)
-parser.add_argument("-d", "--dashboard_address", type=int, default=8786)
-
-parser.add_argument('--simulator', type=str, default='carla')
-
-# carla specific
-parser.add_argument("--has_display", type=str, default='0')
-parser.add_argument("--debug", type=int, default=1, help="whether using the debug mode: planned paths will be visualized.")
-parser.add_argument('--correct_spawn_locations_after_run', type=int, default=0)
-
-
-
-# logistic
-parser.add_argument("--root_folder", type=str, default='run_results')
-parser.add_argument("--parent_folder", type=str, default='') # will be automatically created
-parser.add_argument("--mean_objectives_across_generations_path", type=str, default='') # will be automatically created
-parser.add_argument("--episode_max_time", type=int, default=60)
-parser.add_argument('--record_every_n_step', type=int, default=2000)
-parser.add_argument('--gpus', type=str, default='0,1')
-
-
-# algorithm related
-parser.add_argument("--n_gen", type=int, default=2)
-parser.add_argument("--pop_size", type=int, default=50)
-parser.add_argument("--survival_multiplier", type=int, default=1)
-parser.add_argument("--n_offsprings", type=int, default=300)
-parser.add_argument("--has_run_num", type=int, default=1000)
-parser.add_argument('--sample_multiplier', type=int, default=200)
-parser.add_argument('--mating_max_iterations', type=int, default=200)
-parser.add_argument('--only_run_unique_cases', type=int, default=1)
-parser.add_argument('--consider_interested_bugs', type=int, default=1)
-
-parser.add_argument("--outer_iterations", type=int, default=3)
-parser.add_argument('--objective_weights', nargs='+', type=float, default=default_objective_weights)
-parser.add_argument('--check_unique_coeff', nargs='+', type=float, default=default_check_unique_coeff)
-parser.add_argument('--use_single_objective', type=int, default=1)
-parser.add_argument('--rank_mode', type=str, default='none')
-parser.add_argument('--ranking_model', type=str, default='nn_pytorch')
-parser.add_argument('--initial_fit_th', type=int, default=100, help='minimum number of instances needed to train a DNN.')
-parser.add_argument('--min_bug_num_to_fit_dnn', type=int, default=10, help='minimum number of bug instances needed to train a DNN.')
-
-parser.add_argument('--pgd_eps', type=float, default=1.01)
-parser.add_argument('--adv_conf_th', type=float, default=-4)
-parser.add_argument('--attack_stop_conf', type=float, default=0.9)
-parser.add_argument('--use_single_nn', type=int, default=1)
-
-parser.add_argument('--warm_up_path', type=str, default=None)
-parser.add_argument('--warm_up_len', type=int, default=-1)
-parser.add_argument('--regression_nn_use_running_data', type=int, default=1)
-
-
-
-parser.add_argument('--uncertainty', type=str, default='')
-parser.add_argument('--model_type', type=str, default='one_output')
-
-parser.add_argument('--explore_iter_num', type=int, default=2)
-parser.add_argument('--exploit_iter_num', type=int, default=1)
-parser.add_argument('--high_conf_num', type=int, default=60)
-parser.add_argument('--low_conf_num', type=int, default=60)
-
-parser.add_argument('--use_alternate_nn', type=int, default=0)
-parser.add_argument('--diversity_mode', type=str, default='none')
-parser.add_argument('--adv_exploitation_only', type=int, default=0)
-parser.add_argument('--uncertainty_exploration', type=str, default='confidence')
-
-parser.add_argument('--termination_condition', type=str, default='generations')
-parser.add_argument('--max_running_time', type=int, default=3600*24)
-
-parser.add_argument('--emcmc', type=int, default=0)
-parser.add_argument('--use_unique_bugs', type=int, default=1)
-parser.add_argument('--finish_after_has_run', type=int, default=1)
-
-fuzzing_arguments = parser.parse_args()
-
-
-os.environ['HAS_DISPLAY'] = fuzzing_arguments.has_display
-os.environ['CUDA_VISIBLE_DEVICES'] = fuzzing_arguments.gpus
-fuzzing_arguments.objective_weights = np.array(fuzzing_arguments.objective_weights)
-# ['BNN', 'one_output']
-# BALD and BatchBALD only support BNN
-if fuzzing_arguments.uncertainty.split('_')[0] in ['BALD', 'BatchBALD']:
-    fuzzing_arguments.model_type = 'BNN'
-
-if 'un' in fuzzing_arguments.algorithm_name:
-    fuzzing_arguments.use_unique_bugs = 1
-else:
-    fuzzing_arguments.use_unique_bugs = 0
-
-if fuzzing_arguments.algorithm_name in ['nsga2-emcmc', 'nsga2-un-emcmc']:
-    fuzzing_arguments.emcmc = 1
-else:
-    fuzzing_arguments.emcmc = 0
 
 # eliminate some randomness
 set_general_seed(seed=0)
 random_seeds = [10, 20, 30]
 rng = np.random.default_rng(random_seeds[0])
-
-
 
 
 
@@ -246,6 +119,12 @@ class MyProblem(Problem):
         self.record_every_n_step = fuzzing_arguments.record_every_n_step
         self.use_single_objective = fuzzing_arguments.use_single_objective
         self.simulator = fuzzing_arguments.simulator
+
+
+        if self.fuzzing_arguments.sample_avoid_ego_position and hasattr(self.sim_specific_arguments, 'ego_start_position'):
+            self.ego_start_position = self.sim_specific_arguments.ego_start_position
+        else:
+            self.ego_start_position = None
 
 
         self.call_from_dt = dt_arguments.call_from_dt
@@ -335,6 +214,8 @@ class MyProblem(Problem):
         sim_specific_arguments = self.sim_specific_arguments
         dt_arguments = self.dt_arguments
 
+        default_objectives = self.fuzzing_arguments.default_objectives
+
 
 
         all_final_generated_transforms_list = []
@@ -371,8 +252,6 @@ class MyProblem(Problem):
                 worker = workers[j]
                 x = X[i]
                 jobs.append(client.submit(fun, x, launch_server, self.counter, port, workers=worker))
-
-                print('submit job', i, self.counter)
                 self.counter += 1
 
 
@@ -381,7 +260,7 @@ class MyProblem(Problem):
                 cur_i = i + ind_start
                 total_i = i + (self.counter-len(jobs))
                 objectives, run_info, has_run  = job.result()
-                print('get job result for', i)
+                print('get job result for', total_i)
                 if run_info and 'all_final_generated_transforms' in run_info:
                     all_final_generated_transforms_list.append(run_info['all_final_generated_transforms'])
                 else:
@@ -414,8 +293,6 @@ class MyProblem(Problem):
 
             # record time elapsed and bug numbers
             self.time_list.append(time_elapsed)
-
-
 
 
 
@@ -544,7 +421,7 @@ class MySamplingVectorized(Sampling):
                 cur_X = np.swapaxes(np.stack(cur_X),0,1)
 
 
-                remaining_inds = if_violate_constraints_vectorized(cur_X, problem.customized_constraints, problem.labels, verbose=False)
+                remaining_inds = if_violate_constraints_vectorized(cur_X, problem.customized_constraints, problem.labels, problem.ego_start_position, verbose=False)
                 if len(remaining_inds) == 0:
                     continue
 
@@ -591,7 +468,7 @@ class MySamplingVectorized(Sampling):
 
 
 
-def do_emcmc(parents, off, n_gen, objective_weights):
+def do_emcmc(parents, off, n_gen, objective_weights, default_objectives):
     base_val = np.sum(np.array(default_objectives[:len(objective_weights)])*np.array(objective_weights))
     filtered_off = []
     F_list = []
@@ -671,7 +548,7 @@ class MyMatingVectorized(Mating):
 
             # Vectorized
             _off_X = np.array([x.X for x in _off_first])
-            remaining_inds = if_violate_constraints_vectorized(_off_X, problem.customized_constraints, problem.labels, verbose=False)
+            remaining_inds = if_violate_constraints_vectorized(_off_X, problem.customized_constraints, problem.labels, problem.ego_start_position, verbose=False)
             _off_X = _off_X[remaining_inds]
 
             _off = _off_first[remaining_inds]
@@ -893,7 +770,7 @@ class NSGA2_DT(NSGA2):
 
 
                     # print('self.problem.labels', self.problem.labels)
-                    clfs, confs, chosen_weights, standardize_prev = pretrain_regression_nets(initial_X, initial_objectives_list, self.problem.objective_weights, self.problem.xl, self.problem.xu, self.problem.labels, self.problem.customized_constraints, cutoff, cutoff_end)
+                    clfs, confs, chosen_weights, standardize_prev = pretrain_regression_nets(initial_X, initial_objectives_list, self.problem.objective_weights, self.problem.xl, self.problem.xu, self.problem.labels, self.problem.customized_constraints, cutoff, cutoff_end, self.problem.fuzzing_content.keywords_dict)
                 else:
                     standardize_prev = None
 
@@ -908,10 +785,8 @@ class NSGA2_DT(NSGA2):
                 partial = True
                 # print('initial_X.shape', np.array(initial_X).shape, cutoff, cutoff_end)
                 # print('len(self.problem.labels)', len(self.problem.labels))
-                X_train, X_test, xl, xu, labels_used, standardize, one_hot_fields_len, param_for_recover_and_decode = process_X(initial_X, self.problem.labels, self.problem.xl, self.problem.xu, cutoff, cutoff_end, partial, len(self.problem.interested_unique_bugs), standardize_prev=standardize_prev)
-                # print('X_train.shape[0]', X_train.shape[0])
-                # print('labels_used', labels_used)
-                # print('process_X X_train.shape, X_test.shape', X_train.shape, X_test.shape)
+                X_train, X_test, xl, xu, labels_used, standardize, one_hot_fields_len, param_for_recover_and_decode = process_X(initial_X, self.problem.labels, self.problem.xl, self.problem.xu, cutoff, cutoff_end, partial, len(self.problem.interested_unique_bugs), self.problem.fuzzing_content.keywords_dict, standardize_prev=standardize_prev)
+
                 (X_removed, kept_fields, removed_fields, enc, inds_to_encode, inds_non_encode, encoded_fields, _, _, unique_bugs_len) = param_for_recover_and_decode
 
                 print('process_X finished')
@@ -937,7 +812,7 @@ class NSGA2_DT(NSGA2):
                     tmp_pop_minus = Population(X_train.shape[0]+X_test.shape[0], individual=Individual())
                     tmp_X_minus = np.concatenate([X_train, X_test])
 
-                    tmp_objectives_minus = np.concatenate([np.array(self.problem.objectives_list)[:, weight_inds], tmp_objectives_minus]) * np.array(default_objective_weights[weight_inds])
+                    tmp_objectives_minus = np.concatenate([np.array(self.problem.objectives_list)[:, weight_inds], tmp_objectives_minus]) * np.array(self.problem.objective_weights[weight_inds])
 
                     tmp_pop_minus.set("X", tmp_X_minus)
                     tmp_pop_minus.set("F", tmp_objectives_minus)
@@ -953,7 +828,7 @@ class NSGA2_DT(NSGA2):
                         tmp_pop_plus = Population(X_test.shape[0], individual=Individual())
 
                         tmp_X_plus = X_test
-                        tmp_objectives_plus = tmp_objectives_plus * np.array(default_objective_weights[weight_inds])
+                        tmp_objectives_plus = tmp_objectives_plus * np.array(self.problem.objective_weights[weight_inds])
 
                         tmp_pop_plus.set("X", tmp_X_plus)
                         tmp_pop_plus.set("F", tmp_objectives_plus)
@@ -1041,7 +916,6 @@ class NSGA2_DT(NSGA2):
                                 self.adv_conf_th = attack_stop_conf
 
                         else:
-                            from customized_utils import get_all_y
 
                             y_list = get_all_y(self.problem.objectives_list, self.problem.objective_weights)
                             clf_list = []
@@ -1341,7 +1215,7 @@ class NSGA2_DT(NSGA2):
         if self.algorithm_name == 'random':
             self.pop = self.off
         elif self.emcmc:
-            new_pop = do_emcmc(parents, self.off, self.n_gen, self.problem.objective_weights)
+            new_pop = do_emcmc(parents, self.off, self.n_gen, self.problem.objective_weights, self.problem.fuzzing_arguments.default_objectives)
 
             self.pop = Population.merge(self.pop, new_pop)
 
@@ -1829,7 +1703,8 @@ if __name__ == '__main__':
     if fuzzing_arguments.simulator == 'carla':
         from carla_specific_utils.scene_configs import customized_bounds_and_distributions
         from carla_specific_utils.setup_labels_and_bounds import generate_fuzzing_content
-        from carla_specific_utils.carla_specific import run_carla_simulation, initialize_carla_specific, correct_spawn_locations_all
+        from carla_specific_utils.carla_specific import run_carla_simulation, initialize_carla_specific, correct_spawn_locations_all, get_unique_bugs, choose_weight_inds, determine_y_upon_weights, get_all_y
+
 
         customized_config = customized_bounds_and_distributions[fuzzing_arguments.scenario_type]
         fuzzing_content = generate_fuzzing_content(customized_config)
@@ -1839,7 +1714,8 @@ if __name__ == '__main__':
     elif fuzzing_arguments.simulator == 'svl':
         from svl_script.scene_configs import customized_bounds_and_distributions
         from svl_script.setup_labels_and_bounds import generate_fuzzing_content
-        from svl_script.svl_specific import run_svl_simulation, initialize_svl_specific
+        from svl_script.svl_specific import run_svl_simulation, initialize_svl_specific, get_unique_bugs, choose_weight_inds, determine_y_upon_weights, get_all_y
+
 
         # 'apollo_6_with_signal', 'apollo_6_modular'
         fuzzing_arguments.ego_car_model = 'apollo_6_with_signal'
@@ -1865,12 +1741,16 @@ if __name__ == '__main__':
         from op_script.scene_configs import customized_bounds_and_distributions
         from op_script.setup_labels_and_bounds import generate_fuzzing_content
         from op_script.bridge_multiple import run_op_simulation
-        from op_script.op_specific import initialize_op_specific
-        from op_script.scene_configs import customized_bounds_and_distributions
+        from op_script.op_specific import initialize_op_specific, get_unique_bugs, choose_weight_inds, determine_y_upon_weights, get_all_y
+
+        fuzzing_arguments.sample_avoid_ego_position = 1
 
         fuzzing_arguments.route_type = 'Town06_Opt_forward'
         fuzzing_arguments.scenario_type = 'default'
         fuzzing_arguments.root_folder = 'run_results_op'
+
+        fuzzing_arguments.objective_weights = np.array([1., 0])
+        fuzzing_arguments.default_objectives = np.array([20., 0])
 
         customized_config = customized_bounds_and_distributions[fuzzing_arguments.scenario_type]
         fuzzing_content = generate_fuzzing_content(customized_config)

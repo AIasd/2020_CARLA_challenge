@@ -97,7 +97,7 @@ python ga_fuzzing.py -p 2015 -s 8791 -d 8792 --n_gen 6 --pop_size 50 -r 'town05_
 For more API information, checkout the interface inside `ga_fuzzing.py`.
 
 
-
+python ga_fuzzing.py -p 2015 -s 8791 -d 8792 --n_gen 2 --pop_size 2 -r 'town05_right_0' -c 'leading_car_braking_town05_fixed_npc_num' --algorithm_name nsga2-un --has_run_num 4 --objective_weights -1 1 1 0 0 0 0 0 0 0 --check_unique_coeff 0 0.2 0.5
 
 
 ## Check out maps and find coordinates
@@ -152,6 +152,8 @@ CUDA_VISIBLE_DEVICES=0 python rerun_and_data_analysis/rerun_scenario.py --parent
 Install SVL2021.1.1 and Apollo 6.0 following [the documentation of Running latest Apollo with SVL Simulator](https://www.svlsimulator.com/docs/system-under-test/apollo-master-instructions/).
 ## Run Fuzzing
 Need to change `model_id` in svl_specific to one's own model_id on svl web UI.
+
+Start Apollo and SVL API only respectively. Then in a separate terminal:
 ```
 python ga_fuzzing.py --simulator svl --n_gen 10 --pop_size 50 --algorithm_name nsga2-un --has_run_num 500 --objective_weights -1 1 1 0 0 0 0 0 0 0 --check_unique_coeff 0 0.1 0.5 --episode_max_time 25
 ```
@@ -160,7 +162,18 @@ Example code for running GA-UN-ADV-NN
 python ga_fuzzing.py --simulator svl --n_gen 8 --pop_size 50 --algorithm_name nsga2-un --has_run_num 400 --objective_weights -1 1 1 0 0 0 0 0 0 0 --check_unique_coeff 0 0.1 0.5 --episode_max_time 25 --rank_mode adv_nn --warm_up_path <path-to-warm-up-data-folder>  --warm_up_len 100 --min_bug_num_to_fit_dnn 1 --initial_fit_th 3
 ```
 
+# CARLA 0.9.11 + OP
+## Setup
 
+## Run Fuzzing
+In `openpilot/tools/sim`:
+```
+./launch_openpilot.sh
+```
+Then in a separate terminal:
+```
+python ga_fuzzing.py --simulator carla_op --n_gen 2 --pop_size 2 --algorithm_name nsga2 --has_run_num 4 --episode_max_time 100 -p 2000
+```
 
 # Reference
 This repo is partially built on top of [Carla Challenge (with LBC supported)](https://github.com/bradyz/2020_CARLA_challenge) and [pymoo](https://github.com/msu-coinlab/pymoo)

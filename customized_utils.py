@@ -1,42 +1,18 @@
-import argparse
-import carla
 import os
-import numpy as np
-
-from dask.distributed import Client, LocalCluster
-from psutil import process_iter
-from signal import SIGTERM
-import socket
-from collections import OrderedDict
-
 import sys
-import xml.etree.ElementTree as ET
-import pathlib
-
-import json
-from sklearn import tree
-import shlex
+import argparse
+import socket
+import random
+import torch
 import subprocess
-import time
 import re
-import math
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import pickle
-import logging
-import traceback
+import numpy as np
+import xml.etree.ElementTree as ET
+from psutil import process_iter
+from sklearn import tree
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
-from collections import deque
-
-from carla_specific_utils.object_types import (
-    weather_names,
-    vehicle_colors,
-    car_types,
-    motorcycle_types,
-    cyclist_types,
-    pedestrian_types,
-    vehicle_types,
-    static_types
-)
 
 
 # ---------------- Misc -------------------
@@ -175,6 +151,124 @@ def specify_args():
 
     return arguments
 
+def parse_fuzzing_arguments():
+    # [ego_linear_speed, min_d, d_angle_norm, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, is_collision]
+    default_objective_weights = np.array([-1., 1., 1., 1., 1., -1., 0., 0., 0., 0.])
+    default_objectives = np.array([0., 20., 1., 7., 7., 0., 0., 0., 0., 0.])
+    default_check_unique_coeff = [0, 0.1, 0.5]
+
+
+    parser = argparse.ArgumentParser()
+
+    # general
+    parser.add_argument("-r", "--route_type", type=str, default='town05_right_0')
+    parser.add_argument("-c", "--scenario_type", type=str, default='default')
+    parser.add_argument("-m", "--ego_car_model", type=str, default='lbc')
+    parser.add_argument('-a','--algorithm_name', type=str, default='nsga2')
+
+    parser.add_argument('-p','--ports', nargs='+', type=int, default=[2003], help='TCP port(s) to listen to (default: 2003)')
+    parser.add_argument("-s", "--scheduler_port", type=int, default=8785)
+    parser.add_argument("-d", "--dashboard_address", type=int, default=8786)
+
+    parser.add_argument('--simulator', type=str, default='carla')
+
+    # carla specific
+    parser.add_argument("--has_display", type=str, default='0')
+    parser.add_argument("--debug", type=int, default=1, help="whether using the debug mode: planned paths will be visualized.")
+    parser.add_argument('--correct_spawn_locations_after_run', type=int, default=0)
+
+
+
+    # logistic
+    parser.add_argument("--root_folder", type=str, default='run_results')
+    parser.add_argument("--parent_folder", type=str, default='') # will be automatically created
+    parser.add_argument("--mean_objectives_across_generations_path", type=str, default='') # will be automatically created
+    parser.add_argument("--episode_max_time", type=int, default=60)
+    parser.add_argument('--record_every_n_step', type=int, default=2000)
+    parser.add_argument('--gpus', type=str, default='0,1')
+
+
+    # algorithm related
+    parser.add_argument("--n_gen", type=int, default=2)
+    parser.add_argument("--pop_size", type=int, default=50)
+    parser.add_argument("--survival_multiplier", type=int, default=1)
+    parser.add_argument("--n_offsprings", type=int, default=300)
+    parser.add_argument("--has_run_num", type=int, default=1000)
+    parser.add_argument('--sample_multiplier', type=int, default=200)
+    parser.add_argument('--mating_max_iterations', type=int, default=200)
+    parser.add_argument('--only_run_unique_cases', type=int, default=1)
+    parser.add_argument('--consider_interested_bugs', type=int, default=1)
+
+    parser.add_argument("--outer_iterations", type=int, default=3)
+    parser.add_argument('--objective_weights', nargs='+', type=float, default=default_objective_weights)
+    parser.add_argument('--default_objectives', nargs='+', type=float, default=default_objectives)
+
+    parser.add_argument('--check_unique_coeff', nargs='+', type=float, default=default_check_unique_coeff)
+    parser.add_argument('--use_single_objective', type=int, default=1)
+    parser.add_argument('--rank_mode', type=str, default='none')
+    parser.add_argument('--ranking_model', type=str, default='nn_pytorch')
+    parser.add_argument('--initial_fit_th', type=int, default=100, help='minimum number of instances needed to train a DNN.')
+    parser.add_argument('--min_bug_num_to_fit_dnn', type=int, default=10, help='minimum number of bug instances needed to train a DNN.')
+
+    parser.add_argument('--pgd_eps', type=float, default=1.01)
+    parser.add_argument('--adv_conf_th', type=float, default=-4)
+    parser.add_argument('--attack_stop_conf', type=float, default=0.9)
+    parser.add_argument('--use_single_nn', type=int, default=1)
+
+    parser.add_argument('--warm_up_path', type=str, default=None)
+    parser.add_argument('--warm_up_len', type=int, default=-1)
+    parser.add_argument('--regression_nn_use_running_data', type=int, default=1)
+
+    parser.add_argument('--sample_avoid_ego_position', type=int, default=0)
+
+
+
+
+    parser.add_argument('--uncertainty', type=str, default='')
+    parser.add_argument('--model_type', type=str, default='one_output')
+
+    parser.add_argument('--explore_iter_num', type=int, default=2)
+    parser.add_argument('--exploit_iter_num', type=int, default=1)
+    parser.add_argument('--high_conf_num', type=int, default=60)
+    parser.add_argument('--low_conf_num', type=int, default=60)
+
+    parser.add_argument('--use_alternate_nn', type=int, default=0)
+    parser.add_argument('--diversity_mode', type=str, default='none')
+    parser.add_argument('--adv_exploitation_only', type=int, default=0)
+    parser.add_argument('--uncertainty_exploration', type=str, default='confidence')
+
+    parser.add_argument('--termination_condition', type=str, default='generations')
+    parser.add_argument('--max_running_time', type=int, default=3600*24)
+
+    parser.add_argument('--emcmc', type=int, default=0)
+    parser.add_argument('--use_unique_bugs', type=int, default=1)
+    parser.add_argument('--finish_after_has_run', type=int, default=1)
+
+    fuzzing_arguments = parser.parse_args()
+
+
+    os.environ['HAS_DISPLAY'] = fuzzing_arguments.has_display
+    os.environ['CUDA_VISIBLE_DEVICES'] = fuzzing_arguments.gpus
+    fuzzing_arguments.objective_weights = np.array(fuzzing_arguments.objective_weights)
+    # ['BNN', 'one_output']
+    # BALD and BatchBALD only support BNN
+    if fuzzing_arguments.uncertainty.split('_')[0] in ['BALD', 'BatchBALD']:
+        fuzzing_arguments.model_type = 'BNN'
+
+    if 'un' in fuzzing_arguments.algorithm_name:
+        fuzzing_arguments.use_unique_bugs = 1
+    else:
+        fuzzing_arguments.use_unique_bugs = 0
+
+    if fuzzing_arguments.algorithm_name in ['nsga2-emcmc', 'nsga2-un-emcmc']:
+        fuzzing_arguments.emcmc = 1
+    else:
+        fuzzing_arguments.emcmc = 0
+
+    return fuzzing_arguments
+
+
+
 def make_hierarchical_dir(folder_names):
     cur_folder_name = ""
     for i in range(len(folder_names)):
@@ -189,8 +283,6 @@ def is_port_in_use(port):
         return s.connect_ex(("localhost", int(port))) == 0
 
 def port_to_gpu(port):
-    import torch
-
     n = torch.cuda.device_count()
     # n = 2
     gpu = port % n
@@ -265,13 +357,19 @@ def load_data(subfolders):
 
             with open(pickle_filename, "rb") as f_in:
                 cur_info = pickle.load(f_in)
-                data, objectives, is_bug, mask, labels = reformat(cur_info)
+
+                data, objectives, is_bug, mask, labels = cur_info["x"], cur_info["objectives"], int(cur_info["is_bug"]), cur_info["mask"], cur_info["labels"]
+                # hack: backward compatibility that removes the port info in x
+                if data.shape[0] == len(labels) + 1:
+                    data = data[:-1]
+
                 data_list.append(data)
 
                 is_bug_list.append(is_bug)
                 objectives_list.append(objectives)
 
     return data_list, np.array(is_bug_list), np.array(objectives_list), mask, labels, cur_info
+
 
 def get_picklename(parent_folder):
     pickle_folder = parent_folder + "/bugs/"
@@ -285,46 +383,11 @@ def get_picklename(parent_folder):
         i += 1
     return pickle_folder
 
-def reformat(cur_info):
-    objectives = cur_info["objectives"]
-    is_bug = cur_info["is_bug"]
-
-    (
-        ego_linear_speed,
-        min_d,
-        d_angle_norm,
-        offroad_d,
-        wronglane_d,
-        dev_dist,
-        is_collision,
-        is_offroad,
-        is_wrong_lane,
-        is_run_red_light,
-    ) = objectives
-    # accident_x, accident_y = cur_info["loc"]
-
-    # route_completion = cur_info['route_completion']
-
-    # result_info = [ego_linear_speed, min_d, offroad_d, wronglane_d, dev_dist, is_offroad, is_wrong_lane, is_run_red_light, accident_x, accident_y, is_bug, route_completion]
-    # hack: backward compatibility that removes the port info in x
-
-    x, mask, labels = (
-        cur_info["x"],
-        cur_info["mask"],
-        cur_info["labels"]
-    )
-    if x.shape[0] == len(labels) + 1:
-        x = x[:-1]
-
-    return x, objectives, int(is_bug), mask, labels
 
 def set_general_seed(seed=0):
     os.environ['PYTHONHASHSEED'] = str(seed)
     os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
 
-    import random
-    import torch
-    import numpy as np
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -459,229 +522,11 @@ def eliminate_repetitive_vectorized(cur_X, mask, xl, xu, p, c, th, verbose=True)
             print('cur X filtering:',cur_X.shape[0], '->', len(remaining_inds))
 
         return remaining_inds
-
-
 # ---------------- Uniqueness -------------------
 
 
 
 # ---------------- Bug, Objective -------------------
-
-def check_bug(objectives):
-    # speed needs to be larger than 0.1 to avoid false positive
-    return objectives[0] > 0.1 or objectives[-3] or objectives[-2] or objectives[-1]
-
-def get_if_bug_list(objectives_list):
-    if_bug_list = []
-    for objective in objectives_list:
-        if_bug_list.append(check_bug(objective))
-    return np.array(if_bug_list)
-
-
-def process_specific_bug(
-    bug_type_ind, bugs_type_list, bugs_inds_list, bugs, mask, xl, xu, p, c, th
-):
-    if len(bugs) == 0:
-        return [], [], 0
-    verbose = True
-    chosen_bugs = np.array(bugs_type_list) == bug_type_ind
-
-    specific_bugs = np.array(bugs)[chosen_bugs]
-    specific_bugs_inds_list = np.array(bugs_inds_list)[chosen_bugs]
-
-    # unique_specific_bugs, specific_distinct_inds = get_distinct_data_points(
-    #     specific_bugs, mask, xl, xu, p, c, th
-    # )
-
-    specific_distinct_inds = is_distinct_vectorized(specific_bugs, [], mask, xl, xu, p, c, th, verbose=verbose)
-    unique_specific_bugs = specific_bugs[specific_distinct_inds]
-
-    unique_specific_bugs_inds_list = specific_bugs_inds_list[specific_distinct_inds]
-
-    return (
-        list(unique_specific_bugs),
-        list(unique_specific_bugs_inds_list),
-        len(unique_specific_bugs),
-    )
-
-def classify_bug_type(objectives, object_type=''):
-    bug_str = ''
-    bug_type = 5
-    if objectives[0] > 0.1:
-        collision_types = {'pedestrian_collision':pedestrian_types, 'car_collision':car_types, 'motercycle_collision':motorcycle_types, 'cyclist_collision':cyclist_types, 'static_collision':static_types}
-        for k,v in collision_types.items():
-            if object_type in v:
-                bug_str = k
-        if not bug_str:
-            bug_str = 'unknown_collision'+'_'+object_type
-        bug_type = 1
-    elif objectives[-3]:
-        bug_str = 'offroad'
-        bug_type = 2
-    elif objectives[-2]:
-        bug_str = 'wronglane'
-        bug_type = 3
-    if objectives[-1]:
-        bug_str += 'run_red_light'
-        if bug_type > 4:
-            bug_type = 4
-    return bug_type, bug_str
-
-def get_unique_bugs(
-    X, objectives_list, mask, xl, xu, unique_coeff, objective_weights, return_mode='unique_inds_and_interested_and_bugcounts', consider_interested_bugs=1, bugs_type_list=[], bugs=[], bugs_inds_list=[]
-):
-    p, c, th = unique_coeff
-    # hack:
-    if len(bugs) == 0:
-        for i, (x, objectives) in enumerate(zip(X, objectives_list)):
-            if check_bug(objectives):
-                bug_type, _ = classify_bug_type(objectives)
-                bugs_type_list.append(bug_type)
-                bugs.append(x)
-                bugs_inds_list.append(i)
-
-    (
-        unique_collision_bugs,
-        unique_collision_bugs_inds_list,
-        unique_collision_num,
-    ) = process_specific_bug(
-        1, bugs_type_list, bugs_inds_list, bugs, mask, xl, xu, p, c, th
-    )
-    (
-        unique_offroad_bugs,
-        unique_offroad_bugs_inds_list,
-        unique_offroad_num,
-    ) = process_specific_bug(
-        2, bugs_type_list, bugs_inds_list, bugs, mask, xl, xu, p, c, th
-    )
-    (
-        unique_wronglane_bugs,
-        unique_wronglane_bugs_inds_list,
-        unique_wronglane_num,
-    ) = process_specific_bug(
-        3, bugs_type_list, bugs_inds_list, bugs, mask, xl, xu, p, c, th
-    )
-    (
-        unique_redlight_bugs,
-        unique_redlight_bugs_inds_list,
-        unique_redlight_num,
-    ) = process_specific_bug(
-        4, bugs_type_list, bugs_inds_list, bugs, mask, xl, xu, p, c, th
-    )
-
-    unique_bugs = unique_collision_bugs + unique_offroad_bugs + unique_wronglane_bugs + unique_redlight_bugs
-    unique_bugs_num = len(unique_bugs)
-    unique_bugs_inds_list = unique_collision_bugs_inds_list + unique_offroad_bugs_inds_list + unique_wronglane_bugs_inds_list + unique_redlight_bugs_inds_list
-
-    if consider_interested_bugs:
-        collision_activated = np.sum(objective_weights[:3] != 0) > 0
-        offroad_activated = (np.abs(objective_weights[3]) > 0) | (
-            np.abs(objective_weights[5]) > 0
-        )
-        wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
-            np.abs(objective_weights[5]) > 0
-        )
-        red_light_activated = np.abs(objective_weights[-1]) > 0
-
-        interested_unique_bugs = []
-        if collision_activated:
-            interested_unique_bugs += unique_collision_bugs
-        if offroad_activated:
-            interested_unique_bugs += unique_offroad_bugs
-        if wronglane_activated:
-            interested_unique_bugs += unique_wronglane_bugs
-        if red_light_activated:
-            interested_unique_bugs += unique_redlight_bugs
-    else:
-        interested_unique_bugs = unique_bugs
-
-    num_of_collisions = np.sum(np.array(bugs_type_list)==1)
-    num_of_offroad = np.sum(np.array(bugs_type_list)==2)
-    num_of_wronglane = np.sum(np.array(bugs_type_list)==3)
-    num_of_redlight = np.sum(np.array(bugs_type_list)==4)
-
-    if return_mode == 'unique_inds_and_interested_and_bugcounts':
-        return unique_bugs, unique_bugs_inds_list, interested_unique_bugs, [num_of_collisions, num_of_offroad, num_of_wronglane, num_of_redlight,
-        unique_collision_num, unique_offroad_num, unique_wronglane_num, unique_redlight_num]
-    elif return_mode == 'return_bug_info':
-        return unique_bugs, (bugs, bugs_type_list, bugs_inds_list, interested_unique_bugs)
-    elif return_mode == 'return_indices':
-        return unique_bugs, unique_bugs_inds_list
-    else:
-        return unique_bugs
-
-
-
-def choose_weight_inds(objective_weights):
-    collision_activated = np.sum(objective_weights[:3] != 0) > 0
-    offroad_activated = (np.abs(objective_weights[3]) > 0) | (
-        np.abs(objective_weights[5]) > 0
-    )
-    wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
-        np.abs(objective_weights[5]) > 0
-    )
-    red_light_activated = np.abs(objective_weights[-1]) > 0
-
-    if collision_activated:
-        weight_inds = np.arange(0,3)
-    elif offroad_activated or wronglane_activated:
-        weight_inds = np.arange(3,6)
-    elif red_light_activated:
-        weight_inds = np.arange(9,10)
-    else:
-        raise
-    return weight_inds
-
-def determine_y_upon_weights(objective_list, objective_weights):
-    collision_activated = np.sum(objective_weights[:3] != 0) > 0
-    offroad_activated = (np.abs(objective_weights[3]) > 0) | (
-        np.abs(objective_weights[5]) > 0
-    )
-    wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
-        np.abs(objective_weights[5]) > 0
-    )
-    red_light_activated = np.abs(objective_weights[-1]) > 0
-
-    y = np.zeros(len(objective_list))
-    for i, obj in enumerate(objective_list):
-        cond = 0
-        if collision_activated:
-            cond |= obj[0] > 0.1
-        if offroad_activated:
-            cond |= obj[-3] == 1
-        if wronglane_activated:
-            cond |= obj[-2] == 1
-        if red_light_activated:
-            cond |= obj[-1] == 1
-        y[i] = cond
-
-    return y
-
-def get_all_y(objective_list, objective_weights):
-    # is_collision, is_offroad, is_wrong_lane, is_run_red_light
-    collision_activated = np.sum(objective_weights[:3] != 0) > 0
-    offroad_activated = (np.abs(objective_weights[3]) > 0) | (
-        np.abs(objective_weights[5]) > 0
-    )
-    wronglane_activated = (np.abs(objective_weights[4]) > 0) | (
-        np.abs(objective_weights[5]) > 0
-    )
-    red_light_activated = np.abs(objective_weights[-1]) > 0
-
-    y_list = np.zeros((4, len(objective_list)))
-
-    for i, obj in enumerate(objective_list):
-        if collision_activated:
-            y_list[0, i] = obj[0] > 0.1
-        if offroad_activated:
-            y_list[1, i] = obj[-3] == 1
-        if wronglane_activated:
-            y_list[2, i] = obj[-2] == 1
-        if red_light_activated:
-            y_list[3, i] = obj[-1] == 1
-
-    return y_list
-
 def get_F(current_objectives, all_objectives, objective_weights, use_single_objective):
     # standardize current objectives using all objectives so far
     all_objectives = np.stack(all_objectives)
@@ -698,47 +543,13 @@ def get_F(current_objectives, all_objectives, objective_weights, use_single_obje
     else:
         current_F = np.row_stack(current_objectives)
     return current_F
-
-def count_and_group_output_unique_bugs(inds, outputs, labels, min_bounds, max_bounds, diff_th):
-    '''
-    ***grid counting: maximum number of distinct elements
-    distinct counting: minimum number of distinct elements
-    1.general
-    bug type, normalized (/|start location - end location|) bug location, ego car speed when bug happens
-
-    2.collision specific
-    collision object type (i.e. pedestrian, bicyclist, small vehicle, or truck), normalized (/car width) relative angle of the other involved object at collision
-
-    '''
-
-    m = len(labels)
-
-    # print(outputs.shape, outputs)
-    outputs_grid_inds = ((outputs - min_bounds)*diff_th) / (max_bounds - min_bounds)
-    outputs_grid_inds = outputs_grid_inds.astype(int)
-    # print(outputs_grid_inds.shape, outputs_grid_inds)
-
-    from collections import defaultdict
-    unique_bugs_group = defaultdict(list)
-
-    for i in range(outputs.shape[0]):
-        unique_bugs_group[tuple(outputs_grid_inds[i])].append((inds[i], outputs[i]))
-
-    return unique_bugs_group
 # ---------------- Bug, Objective -------------------
 
 
 
 # ---------------- NN -------------------
 # dependent on description labels
-def encode_fields(x, labels, labels_to_encode):
-    keywords_dict = {
-        "num_of_weathers": len(weather_names),
-        "num_of_vehicle_colors": len(vehicle_colors),
-        "num_of_pedestrian_types": len(pedestrian_types),
-        "num_of_vehicle_types": len(vehicle_types),
-    }
-    # keywords_dict = {'num_of_weathers': len(weather_names)}
+def encode_fields(x, labels, labels_to_encode, keywords_dict):
 
     x = np.array(x).astype(np.float)
 
@@ -774,14 +585,7 @@ def encode_fields(x, labels, labels_to_encode):
     return x, enc, inds_to_encode, inds_non_encode, encode_fields
 
 # dependent on description labels
-def get_labels_to_encode(labels):
-    # hack: explicitly listing keywords for encode to be imported
-    keywords_for_encode = [
-        "num_of_weathers",
-        "num_of_vehicle_colors",
-        "num_of_pedestrian_types",
-        "num_of_vehicle_types",
-    ]
+def get_labels_to_encode(labels, keywords_for_encode):
     labels_to_encode = []
     for label in labels:
         for keyword in keywords_for_encode:
@@ -898,10 +702,12 @@ def process_X(
     cutoff_end,
     partial,
     unique_bugs_len,
+    keywords_dict,
     standardize_prev=None,
 ):
+    keywords_for_encode = list(keywords_dict.keys())
 
-    labels_to_encode = get_labels_to_encode(labels)
+    labels_to_encode = get_labels_to_encode(labels, keywords_for_encode)
     X, enc, inds_to_encode, inds_non_encode, encoded_fields = encode_fields(
         initial_X, labels, labels_to_encode
     )
@@ -995,7 +801,7 @@ def inverse_process_X(
 
 
 # ---------------- ADV -------------------
-def if_violate_constraints_vectorized(X, customized_constraints, labels, verbose=False):
+def if_violate_constraints_vectorized(X, customized_constraints, labels, ego_start_position=None, verbose=False):
     labels_to_id = {label: i for i, label in enumerate(labels)}
 
     keywords = ["coefficients", "labels", "value"]
@@ -1023,16 +829,46 @@ def if_violate_constraints_vectorized(X, customized_constraints, labels, verbose
             powers = np.array([1 for _ in range(len(ids))])
 
         coeff = np.array(constraint["coefficients"])
-        # features = np.array(x_ids)
-        # print(X.shape)
-        # print(type(remaining_inds))
-        # print(type(ids))
-        # print(X[remaining_inds, ids].shape)
-        # print(powers.shape)
+
         if_violate_current = (
             np.sum(coeff * np.power(X[remaining_inds[:, None], ids], powers), axis=1) > constraint["value"]
         )
         remaining_inds = remaining_inds[if_violate_current==0]
+
+    # beta: eliminate NPC vehicles having generation collision with the ego car
+    # TBD: consider customized_center_transforms, customizable NPC vehicle size
+    # consider OP for now
+    print('remaining_inds before', len(remaining_inds))
+    if ego_start_position:
+        j = 0
+        ego_x, ego_y, ego_yaw = ego_start_position
+        ego_w = 0.93
+        vehicle_w_j = 0.93
+        ego_l = 2.35
+        vehicle_l_j = 2.35
+        dw = ego_w + vehicle_w_j
+        dl = ego_l + vehicle_l_j
+        while 'vehicle_x_'+str(j) in labels:
+            x_ind = labels.index('vehicle_x_'+str(j))
+            y_ind = labels.index('vehicle_y_'+str(j))
+
+            vehicle_x_j = X[remaining_inds, x_ind]
+            vehicle_y_j = X[remaining_inds, y_ind]
+
+            dx = vehicle_x_j
+            dy = vehicle_y_j
+            # TBD: need to check if this step is correct
+            dx_rel = dx*np.cos(np.rad2deg(ego_yaw)) - dy*np.sin(np.rad2deg(ego_yaw))
+            dy_rel = dx*np.sin(np.rad2deg(ego_yaw)) + dy*np.cos(np.rad2deg(ego_yaw))
+
+            x_far_inds = remaining_inds[np.abs(dx_rel) > dw]
+            x_close_inds = remaining_inds[np.abs(dx_rel) <= dw]
+            y_far_inds = x_close_inds[dy_rel[x_close_inds] > dl]
+            remaining_inds = np.concatenate([x_far_inds, y_far_inds])
+
+            j += 1
+
+
     if verbose:
         print('constraints filtering', len(X), '->', len(remaining_inds))
 
@@ -1158,7 +994,7 @@ def filter_critical_regions(X, y):
 
 
 # ---------------- NSGA2-SM -------------------
-def pretrain_regression_nets(initial_X, initial_objectives_list, objective_weights, xl_ori, xu_ori, labels, customized_constraints, cutoff, cutoff_end):
+def pretrain_regression_nets(initial_X, initial_objectives_list, objective_weights, xl_ori, xu_ori, labels, customized_constraints, cutoff, cutoff_end, keywords_dict):
 
     # we are not using it so set it to 0 for placeholding
     unique_bugs_len = 0
@@ -1176,7 +1012,7 @@ def pretrain_regression_nets(initial_X, initial_objectives_list, objective_weigh
         one_hot_fields_len,
         param_for_recover_and_decode,
     ) = process_X(
-        initial_X, labels, xl_ori, xu_ori, cutoff, cutoff_end, partial, unique_bugs_len
+        initial_X, labels, xl_ori, xu_ori, cutoff, cutoff_end, partial, unique_bugs_len, keywords_dict
     )
 
     (
@@ -1255,5 +1091,6 @@ def select_batch_max_d_greedy(d_list, train_test_cutoff, batch_size):
         chosen_inds.append(chosen_ind)
     return chosen_inds
 # ---------------- acquisition related -------------------
+
 if __name__ == "__main__":
     print('ok')

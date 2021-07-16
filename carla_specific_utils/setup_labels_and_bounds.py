@@ -4,6 +4,7 @@ CARLA Labels API
 from collections import OrderedDict
 from object_types import (
     WEATHERS,
+    weather_names,
     pedestrian_types,
     vehicle_types,
     static_types,
@@ -15,7 +16,13 @@ from object_types import (
 from customized_utils import emptyobject
 
 
-# hack:
+keywords_dict = {
+    "num_of_weathers": len(weather_names),
+    "num_of_vehicle_colors": len(vehicle_colors),
+    "num_of_pedestrian_types": len(pedestrian_types),
+    "num_of_vehicle_types": len(vehicle_types),
+}
+
 general_labels = [
     "friction",
     "num_of_weathers",
@@ -338,10 +345,9 @@ def generate_fuzzing_content(customized_config):
 
 
     fuzzing_content = emptyobject(labels=labels, mask=mask, parameters_min_bounds=parameters_min_bounds, parameters_max_bounds=parameters_max_bounds, parameters_distributions=parameters_distributions, customized_constraints=customized_constraints, customized_center_transforms=customized_center_transforms, n_var=n_var, fixed_hyperparameters=fixed_hyperparameters,
-    search_space_info=search_space_info)
+    search_space_info=search_space_info, keywords_dict=keywords_dict)
 
     return fuzzing_content
-
 
 # Customize parameters
 def customize_parameters(parameters, customized_parameters):
