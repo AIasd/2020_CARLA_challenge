@@ -46,11 +46,11 @@ With conda installed, create the conda environment and install python packages u
 ```
 conda env create -f environment.yml
 ```
-A conda environment with name `carla99` should be created.
+A conda environment with name `py385` should be created.
 
 Activate this environment by running:
 ```
-conda activate carla99
+conda activate py385
 ```
 
 
