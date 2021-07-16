@@ -1718,7 +1718,9 @@ if __name__ == '__main__':
 
 
         # 'apollo_6_with_signal', 'apollo_6_modular'
-        fuzzing_arguments.ego_car_model = 'apollo_6_with_signal'
+        if fuzzing_arguments.ego_car_model not in ['apollo_6_with_signal', 'apollo_6_modular']:
+            print('not supported fuzzing_arguments.ego_car_model for svl', fuzzing_arguments.ego_car_model, 'set ot to apollo_6_modular')
+            fuzzing_arguments.ego_car_model = 'apollo_6_modular'
         fuzzing_arguments.route_type = 'BorregasAve_forward'
         fuzzing_arguments.scenario_type = 'default'
         fuzzing_arguments.ports = [8181]
