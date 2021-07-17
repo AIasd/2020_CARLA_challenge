@@ -12,4 +12,4 @@
 	url = https://github.com/AIasd/pymoo.git
 [submodule "svl_script"]
 	path = svl_script
-	url = https://github.com/AIasd/svl_script
+	url = https://github.com/AIasd/svl_script.git
