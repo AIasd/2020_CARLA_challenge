@@ -177,6 +177,10 @@ def parse_fuzzing_arguments():
     parser.add_argument("--debug", type=int, default=1, help="whether using the debug mode: planned paths will be visualized.")
     parser.add_argument('--correct_spawn_locations_after_run', type=int, default=0)
 
+    # no_simulation specific
+    parser.add_argument('--no_simulation_data_path', type=str, default=None)
+    parser.add_argument('--objective_labels', type=str, nargs='+', default=[])
+
 
 
     # logistic
@@ -404,6 +408,8 @@ def rand_real(rng, low, high):
 
 # ---------------- Uniqueness -------------------
 def is_distinct_vectorized(cur_X, prev_X, mask, xl, xu, p, c, th, verbose=True):
+    if len(cur_X) == 0:
+        return []
     cur_X = np.array(cur_X)
     prev_X = np.array(prev_X)
     eps = 1e-10

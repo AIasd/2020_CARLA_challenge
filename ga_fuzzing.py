@@ -341,12 +341,19 @@ class MyProblem(Problem):
 
             with open(self.fuzzing_arguments.mean_objectives_across_generations_path, 'a') as f_out:
 
-                combined_list = [self.counter, self.has_run, time_elapsed, num_of_bugs, num_of_unique_bugs, num_of_interested_unique_bugs
-                ]+['bugcounts']+bugcounts+['mean_objectives_this_generation']+mean_objectives_this_generation.tolist()+['\n']
-                info_str = ','.join([str(x) for x in combined_list])
-                f_out.write(info_str)
+                info_dict = {
+                    'counter': self.counter,
+                    'has_run': self.has_run,
+                    'time_elapsed': time_elapsed,
+                    'num_of_bugs': num_of_bugs,
+                    'num_of_unique_bugs': num_of_unique_bugs,
+                    'num_of_interested_unique_bugs': num_of_interested_unique_bugs,
+                    'bugcounts and unique bug counts': bugcounts, 'mean_objectives_this_generation': mean_objectives_this_generation.tolist()
+                }
+
+                f_out.write(str(info_dict))
                 f_out.write(';'.join([str(ind) for ind in unique_bugs_inds_list])+' objective_weights : '+str(self.objective_weights)+'\n')
-            print(info_str)
+            print(info_dict)
             print('+'*100, '\n'*10)
 
 
@@ -1758,7 +1765,25 @@ if __name__ == '__main__':
         fuzzing_content = generate_fuzzing_content(customized_config)
         sim_specific_arguments = initialize_op_specific(fuzzing_arguments)
         run_simulation = run_op_simulation
+    elif fuzzing_arguments.simulator == 'no_simulation':
+        # TBD: Placeholder for this block
+        from no_simulation_script.no_simulation_specific import generate_fuzzing_content, run_no_simulation, initialize_no_simulation_specific
+        from no_simulation_script.no_simulation_objectives_and_bugs import get_unique_bugs, choose_weight_inds, determine_y_upon_weights, get_all_y
 
+        if not fuzzing_arguments.no_simulation_data_path:
+            print('no fuzzing_arguments.no_simulation_data_path is specified. It is set to no_simulation_script/grid.csv')
+            fuzzing_arguments.no_simulation_data_path = 'no_simulation_script/grid.csv'
+
+
+        # These need to be modified to fit one's requirements for objectives
+        fuzzing_arguments.objective_weights = np.array([1., 1., 1., -1., 0., 0.])
+        fuzzing_arguments.default_objectives = np.array([20., 1, 10, -1, 0, 0])
+        fuzzing_arguments.objective_labels = ['min_dist', 'min_angle', 'min_ttc', 'collision_speed', 'collision', 'oob']
+
+        fuzzing_content = generate_fuzzing_content()
+
+        sim_specific_arguments = initialize_no_simulation_specific(fuzzing_arguments)
+        run_simulation = run_no_simulation
     else:
         raise
     run_ga_general(fuzzing_arguments, sim_specific_arguments, fuzzing_content, run_simulation)

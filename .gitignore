@@ -43,3 +43,5 @@ fuzzing_utils/__pycache__/*
 run_results_svl/*
 rerun_svl/*
 run_results_op/*
+no_simulation_script/__pycache__/*
+no_simulation_script/grid.csv

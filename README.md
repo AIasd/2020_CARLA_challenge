@@ -162,6 +162,8 @@ Example code for running GA-UN-ADV-NN
 python ga_fuzzing.py --simulator svl --n_gen 8 --pop_size 50 --algorithm_name nsga2-un --has_run_num 400 --objective_weights -1 1 1 0 0 0 0 0 0 0 --check_unique_coeff 0 0.1 0.5 --episode_max_time 25 --rank_mode adv_nn --warm_up_path <path-to-warm-up-data-folder>  --warm_up_len 100 --min_bug_num_to_fit_dnn 1 --initial_fit_th 3
 ```
 
+
+
 # CARLA 0.9.11 + OP
 ## Setup
 
@@ -172,8 +174,20 @@ In `openpilot/tools/sim`:
 ```
 Then in a separate terminal:
 ```
-python ga_fuzzing.py --simulator carla_op --n_gen 2 --pop_size 2 --algorithm_name nsga2 --has_run_num 4 --episode_max_time 100 -p 2000
+python ga_fuzzing.py --simulator carla_op --n_gen 2 --pop_size 2 --algorithm_name nsga2-un --has_run_num 4 --episode_max_time 100 -p 2000
 ```
+
+
+
+# No Simulation
+## Setup
+Need to prepare data in csv format (A small dataset will be provided as an example).
+## Run Fuzzing
+```
+python ga_fuzzing.py --simulator no_simulation --n_gen 2 --pop_size 2 --algorithm_name nsga2 --has_run_num 4 --no_simulation_data_path <path-to-csv-data>
+```
+
+
 
 # Reference
 This repo is partially built on top of [Carla Challenge (with LBC supported)](https://github.com/bradyz/2020_CARLA_challenge) and [pymoo](https://github.com/msu-coinlab/pymoo)
