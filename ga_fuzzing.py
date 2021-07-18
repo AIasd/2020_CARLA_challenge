@@ -1,4 +1,5 @@
 import sys
+import os
 from customized_utils import parse_fuzzing_arguments
 
 sys.path.append('..')
@@ -21,7 +22,10 @@ if fuzzing_arguments.simulator in ['carla', 'svl']:
     sys.path.append(carla_root+'/PythonAPI/carla')
     sys.path.append(carla_root+'/PythonAPI')
 elif fuzzing_arguments.simulator in ['carla_op']:
-    carla_root = '../carla_0911_no_rss'
+    carla_root = '../carla_0911_rss'
+    if not os.path.exists(carla_root):
+        carla_root = '../carla_0911_no_rss'
+        fuzzing_arguments.carla_path = "../carla_0911_no_rss/CarlaUE4.sh"
     sys.path.append(carla_root+'/PythonAPI/carla/dist/carla-0.9.11-py3.7-linux-x86_64.egg')
     sys.path.append(carla_root+'/PythonAPI/carla')
     sys.path.append(carla_root+'/PythonAPI')
@@ -263,8 +267,7 @@ class MyProblem(Problem):
                 print('get job result for', total_i)
                 if run_info and 'all_final_generated_transforms' in run_info:
                     all_final_generated_transforms_list.append(run_info['all_final_generated_transforms'])
-                else:
-                    all_final_generated_transforms_list.append(None)
+
 
                 self.has_run_list.append(has_run)
                 self.has_run += has_run
@@ -287,8 +290,9 @@ class MyProblem(Problem):
 
 
             # hack:
-            with open('tmp_folder/total.pickle', 'wb') as f_out:
-                pickle.dump(all_final_generated_transforms_list, f_out)
+            if run_info and 'all_final_generated_transforms' in run_info:
+                with open('tmp_folder/total.pickle', 'wb') as f_out:
+                    pickle.dump(all_final_generated_transforms_list, f_out)
 
 
             # record time elapsed and bug numbers
@@ -1744,8 +1748,8 @@ if __name__ == '__main__':
         run_simulation = run_svl_simulation
 
     elif fuzzing_arguments.simulator == 'carla_op':
-        sys.path.append('../../../openpilot')
-        sys.path.append('../../../openpilot/tools/sim')
+        sys.path.append('../openpilot')
+        sys.path.append('../openpilot/tools/sim')
 
         from op_script.scene_configs import customized_bounds_and_distributions
         from op_script.setup_labels_and_bounds import generate_fuzzing_content

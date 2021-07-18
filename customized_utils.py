@@ -178,7 +178,7 @@ def parse_fuzzing_arguments():
     parser.add_argument('--correct_spawn_locations_after_run', type=int, default=0)
 
     # carla_op specific
-    parser.add_argument('--carla_path', type=str, default="../carla_0911_no_rss/CarlaUE4.sh")
+    parser.add_argument('--carla_path', type=str, default="../carla_0911_rss/CarlaUE4.sh")
 
     # no_simulation specific
     parser.add_argument('--no_simulation_data_path', type=str, default=None)
