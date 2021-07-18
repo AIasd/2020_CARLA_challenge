@@ -1732,7 +1732,8 @@ if __name__ == '__main__':
         if fuzzing_arguments.ego_car_model not in ['apollo_6_with_signal', 'apollo_6_modular']:
             print('not supported fuzzing_arguments.ego_car_model for svl', fuzzing_arguments.ego_car_model, 'set ot to apollo_6_modular')
             fuzzing_arguments.ego_car_model = 'apollo_6_modular'
-        fuzzing_arguments.route_type = 'BorregasAve_forward'
+        if fuzzing_arguments.route_type not in ['BorregasAve_forward', 'SanFrancisco_right']:
+            fuzzing_arguments.route_type = 'BorregasAve_forward'
         fuzzing_arguments.scenario_type = 'default'
         fuzzing_arguments.ports = [8181]
         fuzzing_arguments.root_folder = 'run_results_svl'
