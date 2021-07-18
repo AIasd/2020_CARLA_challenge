@@ -848,6 +848,7 @@ def if_violate_constraints_vectorized(X, customized_constraints, labels, ego_sta
     # TBD: consider customized_center_transforms, customizable NPC vehicle size
     # consider OP for now
     print('remaining_inds before', len(remaining_inds))
+    tmp_remaining_inds = remaining_inds.copy()
     if ego_start_position:
         j = 0
         ego_x, ego_y, ego_yaw = ego_start_position
@@ -858,11 +859,13 @@ def if_violate_constraints_vectorized(X, customized_constraints, labels, ego_sta
         dw = ego_w + vehicle_w_j
         dl = ego_l + vehicle_l_j
         while 'vehicle_x_'+str(j) in labels:
+            remaining_inds_i = remaining_inds.copy()
+
             x_ind = labels.index('vehicle_x_'+str(j))
             y_ind = labels.index('vehicle_y_'+str(j))
 
-            vehicle_x_j = X[remaining_inds, x_ind]
-            vehicle_y_j = X[remaining_inds, y_ind]
+            vehicle_x_j = X[remaining_inds_i, x_ind]
+            vehicle_y_j = X[remaining_inds_i, y_ind]
 
             dx = vehicle_x_j
             dy = vehicle_y_j
@@ -870,12 +873,15 @@ def if_violate_constraints_vectorized(X, customized_constraints, labels, ego_sta
             dx_rel = dx*np.cos(np.rad2deg(ego_yaw)) - dy*np.sin(np.rad2deg(ego_yaw))
             dy_rel = dx*np.sin(np.rad2deg(ego_yaw)) + dy*np.cos(np.rad2deg(ego_yaw))
 
-            x_far_inds = remaining_inds[np.abs(dx_rel) > dw]
-            x_close_inds = remaining_inds[np.abs(dx_rel) <= dw]
-            y_far_inds = x_close_inds[dy_rel[x_close_inds] > dl]
-            remaining_inds = np.concatenate([x_far_inds, y_far_inds])
+            x_far_inds = remaining_inds_i[np.abs(dx_rel) > dw]
+            x_close_inds = remaining_inds_i[np.abs(dx_rel) <= dw]
 
+            y_far_inds = x_close_inds[dy_rel[x_close_inds] > dl]
+
+            remaining_inds_i = np.concatenate([x_far_inds, y_far_inds])
+            tmp_remaining_inds = np.intersect1d(tmp_remaining_inds, remaining_inds_i)
             j += 1
+    remaining_inds = tmp_remaining_inds
 
 
     if verbose:
