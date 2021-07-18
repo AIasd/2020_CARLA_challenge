@@ -2,8 +2,8 @@ cd leaderboard
 git checkout master
 cd ..
 cd scenario_runner
-cd ..
 git checkout master
+cd ..
 cd carla_project
 git checkout master
 cd ..

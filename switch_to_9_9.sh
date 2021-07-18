@@ -2,8 +2,8 @@ cd leaderboard
 git checkout 0.9.9
 cd ..
 cd scenario_runner
-cd ..
 git checkout 0.9.9
+cd ..
 cd carla_project
 git checkout 0.9.9
 cd ..
