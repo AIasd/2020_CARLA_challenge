@@ -5,9 +5,8 @@ This repo consists of code accompanying "AutoFuzz: Grammar-Based Fuzzing for Sel
 * OS: Ubuntu 18.04, Ubuntu 20.04
 * CPU: at least 8 cores
 * GPU: at least 8GB memory
-* Python 3.7
 * Carla 0.9.9.4 (for installation details, see below)
-* SVL 2021.1.1
+* SVL 2021.2
 * Apollo 6.0
 
 # CARLA + learning by cheating controller / pid controllers
@@ -35,10 +34,7 @@ Clone this repo with all its submodules
 ```
 git clone https://github.com/AIasd/2020_CARLA_challenge.git --recursive
 ```
-Make sure all the submodules are on the right branch
-```
-./switch_to_9_9.sh
-```
+
 ### Create Conda Environment and Install Python Packages
 All python packages used are specified in `environment.yml`.
 
@@ -164,18 +160,6 @@ python ga_fuzzing.py --simulator svl --n_gen 8 --pop_size 50 --algorithm_name ns
 
 
 
-# CARLA 0.9.11 + OP
-## Setup
-
-## Run Fuzzing
-In `openpilot/tools/sim`:
-```
-./launch_openpilot.sh
-```
-Then in a separate terminal:
-```
-python ga_fuzzing.py --simulator carla_op --n_gen 2 --pop_size 2 --algorithm_name nsga2-un --has_run_num 4 --episode_max_time 100 -p 2000
-```
 
 
 
@@ -186,6 +170,24 @@ Need to prepare data in csv format (A small dataset will be provided as an examp
 ```
 python ga_fuzzing.py --simulator no_simulation --n_gen 2 --pop_size 2 --algorithm_name nsga2 --has_run_num 4 --no_simulation_data_path <path-to-csv-data>
 ```
+
+
+
+<!-- # CARLA 0.9.11 + OP
+## Setup
+
+## Run Fuzzing
+In `openpilot/tools/sim`:
+```
+./launch_openpilot.sh
+```
+Then in a separate terminal:
+```
+python ga_fuzzing.py --simulator carla_op --n_gen 2 --pop_size 2 --algorithm_name nsga2-un --has_run_num 4 --episode_max_time 100
+``` -->
+
+
+
 <!-- # To-Do-List
 * separate carla and fuzzing into separate repos with fuzzing the parent repo
 * clean up fuzzing logic, removing unnecessary parts
