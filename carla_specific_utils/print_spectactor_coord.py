@@ -10,14 +10,18 @@ import os
 import sys
 import time
 import argparse
+import atexit
+sys.path.append('.')
 
-try:
-    sys.path.append(glob.glob('./PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
-        sys.version_info.major,
-        sys.version_info.minor,
-        'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
-except IndexError:
-    pass
+
+
+carla_root = '../carla_0994_no_rss'
+sys.path.append(carla_root+'/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg')
+sys.path.append(carla_root+'/PythonAPI/carla')
+sys.path.append(carla_root+'/PythonAPI')
+
+from customized_utils import exit_handler
+from carla_specific_utils.carla_specific_tools import start_server
 
 # ==============================================================================
 # -- imports -------------------------------------------------------------------
@@ -32,8 +36,11 @@ _SLEEP_TIME_ = 1
 
 
 def main(map):
+    start_server(_PORT_)
+    atexit.register(exit_handler, [_PORT_])
     client = carla.Client(_HOST_, _PORT_)
     client.set_timeout(2.0)
+    print('map', map)
     client.load_world(map)
     world = client.get_world()
 
@@ -53,7 +60,7 @@ if __name__ == '__main__':
         description='Print Spectator Coordinates')
     argparser.add_argument(
         '--map',
-        default='Town05',
+        default='Town04',
         help='which map to use')
     args = argparser.parse_args()
     main(args.map)

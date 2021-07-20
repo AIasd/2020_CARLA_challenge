@@ -1759,8 +1759,8 @@ if __name__ == '__main__':
 
         fuzzing_arguments.sample_avoid_ego_position = 1
 
-        fuzzing_arguments.route_type = 'Town06_Opt_forward'
-        fuzzing_arguments.scenario_type = 'default'
+        fuzzing_arguments.route_type = 'Town04_Opt_left_highway_entrance'
+        fuzzing_arguments.scenario_type = 'Town04_Opt_highway_entrance'
         fuzzing_arguments.root_folder = 'run_results_op'
 
         fuzzing_arguments.objective_weights = np.array([1., 0])
