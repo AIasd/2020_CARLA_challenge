@@ -539,12 +539,11 @@ def eliminate_repetitive_vectorized(cur_X, mask, xl, xu, p, c, th, verbose=True)
 def get_F(current_objectives, all_objectives, objective_weights, use_single_objective):
     # standardize current objectives using all objectives so far
     all_objectives = np.stack(all_objectives)
-    current_objectives = np.stack(current_objectives)
+    current_objectives = np.stack(current_objectives).astype(np.float64)
 
     standardize = StandardScaler()
     standardize.fit(all_objectives)
     standardize.transform(current_objectives)
-
     current_objectives *= objective_weights
 
     if use_single_objective:
