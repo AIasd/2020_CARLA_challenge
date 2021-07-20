@@ -175,7 +175,9 @@ python ga_fuzzing.py --simulator no_simulation --n_gen 2 --pop_size 2 --algorith
 
 <!-- # CARLA 0.9.11 + OP
 ## Setup
-
+```
+pip install filterpy
+```
 ## Run Fuzzing
 In `openpilot/tools/sim`:
 ```
@@ -187,25 +189,6 @@ python ga_fuzzing.py --simulator carla_op --n_gen 2 --pop_size 2 --algorithm_nam
 ``` -->
 
 
-
-<!-- # To-Do-List
-* separate carla and fuzzing into separate repos with fuzzing the parent repo
-* clean up fuzzing logic, removing unnecessary parts
-* clean up code logics
-* simplify bugs/objectives for better interface
-* support more carla challenge controllers
-* svl data retrivement on Apollo side through cyberRT pythpn API
-* more generalized fuzzing API for other fuzzing algorithms
-* clean up absolute/relative paths
-* Look into Autoware.AI (need ubuntu18.04 OS)
-* more/better documentation and tests
-* better parameter interface
-* support for pure scenario runner
-* support for original leaderboard
-* better interface for bug count (so do bug definitions)
-* make 0.9.9 the master branch and remove existing master branch
-* more flexible / better tutorial on fuzzing space design (for svl and carla respectively)
-* better interface for plugging in a new controller (for svl and carla respectively) -->
 
 # Reference
 This repo is partially built on top of [Carla Challenge (with LBC supported)](https://github.com/bradyz/2020_CARLA_challenge) and [pymoo](https://github.com/msu-coinlab/pymoo)
