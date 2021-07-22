@@ -845,7 +845,7 @@ def if_violate_constraints_vectorized(X, customized_constraints, labels, ego_sta
 
     # beta: eliminate NPC vehicles having generation collision with the ego car
     # TBD: consider customized_center_transforms, customizable NPC vehicle size
-    # consider OP for now
+    # also only consider OP for now
     print('remaining_inds before', len(remaining_inds))
     tmp_remaining_inds = remaining_inds.copy()
     if ego_start_position:
@@ -866,16 +866,14 @@ def if_violate_constraints_vectorized(X, customized_constraints, labels, ego_sta
             vehicle_x_j = X[remaining_inds_i, x_ind]
             vehicle_y_j = X[remaining_inds_i, y_ind]
 
-            dx = vehicle_x_j
-            dy = vehicle_y_j
-            # TBD: need to check if this step is correct
-            dx_rel = dx*np.cos(np.rad2deg(ego_yaw)) - dy*np.sin(np.rad2deg(ego_yaw))
-            dy_rel = dx*np.sin(np.rad2deg(ego_yaw)) + dy*np.cos(np.rad2deg(ego_yaw))
+            dx_rel = vehicle_x_j
+            dy_rel = vehicle_y_j
+
 
             x_far_inds = remaining_inds_i[np.abs(dx_rel) > dw]
             x_close_inds = remaining_inds_i[np.abs(dx_rel) <= dw]
 
-            y_far_inds = x_close_inds[dy_rel[x_close_inds] > dl]
+            y_far_inds = x_close_inds[np.abs(dy_rel[x_close_inds]) > dl]
 
             remaining_inds_i = np.concatenate([x_far_inds, y_far_inds])
             tmp_remaining_inds = np.intersect1d(tmp_remaining_inds, remaining_inds_i)
@@ -887,6 +885,15 @@ def if_violate_constraints_vectorized(X, customized_constraints, labels, ego_sta
         print('constraints filtering', len(X), '->', len(remaining_inds))
 
     return remaining_inds
+
+def rotate_via_numpy(xy, radians):
+    """Use numpy to build a rotation matrix and take the dot product."""
+    x, y = xy
+    c, s = np.cos(radians), np.sin(radians)
+    j = np.array([[c, -s], [s, c]])
+    m = np.dot(j, np.array([x, y]))
+
+    return m[0], m[1]
 
 def if_violate_constraints(x, customized_constraints, labels, verbose=False):
     labels_to_id = {label: i for i, label in enumerate(labels)}
