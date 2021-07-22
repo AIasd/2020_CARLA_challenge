@@ -1763,8 +1763,8 @@ if __name__ == '__main__':
         fuzzing_arguments.scenario_type = 'Town04_Opt_left_highway'
         fuzzing_arguments.root_folder = 'run_results_op'
 
-        fuzzing_arguments.objective_weights = np.array([1., 0])
-        fuzzing_arguments.default_objectives = np.array([130., 0])
+        fuzzing_arguments.objective_weights = np.array([1., 0., 0., 0.])
+        fuzzing_arguments.default_objectives = np.array([130., 0., 0., 1.])
 
         customized_config = customized_bounds_and_distributions[fuzzing_arguments.scenario_type]
         fuzzing_content = generate_fuzzing_content(customized_config)
